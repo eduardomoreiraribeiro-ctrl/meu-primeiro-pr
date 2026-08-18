@@ -4,7 +4,7 @@ Este repositório existe para eu praticar o fluxo de Pull Request no GitHub, do 
 
 ## Sobre
 
-Este é um repositorio de teste criado para aprender o workflow de contribuição em projetos open source: branch, commit, push e pull request.
+Este é um repositório de teste criado para aprender o workflow de contribuição em projetos open source: branch, commit, push e pull request.
 
 ## Como praticar
 
