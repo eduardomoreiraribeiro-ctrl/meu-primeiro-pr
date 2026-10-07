@@ -2,7 +2,7 @@
 
 Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. Nada aqui foi implementado ainda: a ideia é revisar e ajustar este plano antes de começar a construir.
 
-**Versão 6** — inclui **agenda completa por profissional**, novas **origens de leads** (com indicação de clientes), **anamnese**, **fotos de antes e depois**, **pacotes longos** (ex.: 12 consultas em 12 meses) e **controle de retorno e recorrência**. As decisões estão na seção 17.
+**Versão 7** — inclui agenda por profissional, origens de leads, anamnese (com **pré-anamnese enviada pelo WhatsApp**), fotos de antes e depois, pacotes longos e controle de retorno. Todas as decisões estão na seção 17; nenhuma em aberto.
 
 ---
 
@@ -27,7 +27,7 @@ Quatro perfis:
 | Perfil | Quem é |
 |---|---|
 | **Administrador** | dono(a) da clínica; também pode ser profissional. Configura tudo |
-| **Profissional** | nutricionista que atende. Vê a própria agenda e o prontuário dos seus clientes |
+| **Profissional** | nutricionista que atende. Vê todas as agendas e o prontuário de todos os clientes |
 | **Recepção** | agenda, cadastro, Kanban, financeiro e WhatsApp; **sem acesso a dados clínicos** |
 | **Agente de IA** | Assistente Nutri Dudu no WhatsApp; só vê dados da pessoa que está conversando, sem nada clínico (seção 12.6) |
 
@@ -38,8 +38,8 @@ Quatro perfis:
 | Agendar, remarcar, cancelar, confirmar consultas | ✅ | ✅ na sua agenda | ✅ |
 | Kanban — funil comercial e de acompanhamento | ✅ | ✅ | ✅ (sem dados clínicos) |
 | Clientes — cadastro (nome, contato, origem, tags) | ✅ | ✅ | ✅ |
-| **Anamnese, anotações clínicas, plano alimentar** 🔒 | ✅ | ✅ dos seus clientes¹ | ❌ |
-| **Avaliação física e fotos** 🔒 | ✅ | ✅ dos seus clientes¹ | ❌ |
+| **Anamnese, anotações clínicas, plano alimentar** 🔒 | ✅ | ✅ de todos os clientes | ❌ |
+| **Avaliação física e fotos** 🔒 | ✅ | ✅ de todos os clientes | ❌ |
 | Registrar atendimento (consulta realizada) | ✅ | ✅ | ❌ |
 | Financeiro — cobranças e baixa de pagamentos | ✅ | 👁️ só visualiza os seus | ✅ |
 | Pacotes — contratar e ver saldo | ✅ | ✅ | ✅ |
@@ -49,7 +49,7 @@ Quatro perfis:
 | Configurar agente de IA e automações | ✅ | ❌ | ❌ |
 | Restaurar, exportar ou apagar dados | ✅ | ❌ | ❌ |
 
-¹ "Seus clientes" = clientes dos quais é o **profissional responsável** ou que já atendeu. Sugestão a confirmar (seção 17).
+**Situação atual:** a clínica começa com **uma nutricionista**, que também é a administradora. O sistema já nasce preparado para mais nutricionistas (agenda por profissional, cor, horários), sem precisar mudar nada quando alguém entrar. Todos os profissionais são nutricionistas e todos veem o prontuário de todos os clientes.
 
 - **No protótipo** (dados só no navegador) não existe login de verdade: um seletor "Ver como: Admin / Profissional / Recepção" no topo simula o perfil, só para validar as telas.
 - **Na versão na nuvem** (fase 9) o login é obrigatório e as permissões são aplicadas também no banco de dados (regras de segurança do Supabase), não só escondendo botões na tela.
@@ -108,7 +108,7 @@ O mesmo cadastro (**Pessoa**) serve para lead e cliente. O que muda é **em qual
 | **origem** | opção | **Instagram, WhatsApp direto, Indicação de cliente, Presencial**, Outro |
 | **indicado por** | referência → Pessoa | obrigatório quando a origem é "Indicação de cliente" |
 | objetivo | opção | emagrecimento, hipertrofia, saúde, esportiva, gestante, outro |
-| **profissional responsável** | referência → Profissional | define quem vê o prontuário e a agenda preferida |
+| **profissional responsável** | referência → Profissional | agenda preferida e quem acompanha o cliente (hoje, sempre a nutricionista da clínica) |
 | funil / etapa | opção | funil `comercial` ou `acompanhamento` e a etapa (seção 8) |
 | etapa desde | data-hora | para calcular "dias na etapa" |
 | motivo da perda | opção + texto | quando vai para "Perdido" |
@@ -135,7 +135,7 @@ O mesmo cadastro (**Pessoa**) serve para lead e cliente. O que muda é **em qual
 | Campo | Observação |
 |---|---|
 | nome, foto | |
-| especialidade / registro | ex.: Nutricionista — CRN 0000 |
+| registro | Nutricionista — CRN (todos os profissionais são nutricionistas) |
 | cor na agenda | cada profissional tem uma cor |
 | serviços que realiza | referência → Serviços |
 | usuário de acesso e perfil | profissional ou admin |
@@ -192,6 +192,13 @@ Preenchida na primeira consulta e **revisada** nas seguintes. Cada revisão gera
 
 - **Alertas visíveis:** alergias graves e contraindicações aparecem como **faixa vermelha no topo da ficha** e no formulário de atendimento, para o profissional nunca deixar passar.
 - Campos em lista (alergias, medicamentos) são estruturados, não texto livre, para poder filtrar ("clientes que usam metformina") e alertar.
+
+**Pré-anamnese (preenchida pelo paciente):**
+- Ao agendar a **primeira consulta**, o agente envia pelo WhatsApp um **link para um formulário** com parte da anamnese: objetivo, histórico de saúde, alergias, medicamentos, hábitos de vida e alimentares.
+- O link é **único, pessoal e expira** (ex.: até a data da consulta). O formulário é uma página segura do próprio sistema, simples de preencher no celular, e começa pedindo o consentimento para dados de saúde.
+- As respostas entram na ficha como **"pré-anamnese — a revisar"**, visíveis só para a nutricionista. Na consulta, ela confere, completa e confirma, gerando a primeira versão da anamnese.
+- O **agente não lê as respostas**: ele só envia o link e pode lembrar o paciente de preencher (1 lembrete, 2 dias antes da consulta).
+- A agenda e a ficha mostram se a pré-anamnese foi **enviada, preenchida ou pendente**.
 
 ### 4.5 Avaliação física 🔒
 
@@ -498,7 +505,7 @@ Comercial                              Acompanhamento
 | Aba | Conteúdo |
 |---|---|
 | **Visão geral** | dados cadastrais, origem e indicações (quem indicou e quem ele indicou), consentimentos, observações, tags |
-| **Anamnese** 🔒 | ficha atual por seções (seção 4.4), alergias e medicamentos em lista, botão **"Revisar anamnese"**, histórico de versões |
+| **Anamnese** 🔒 | ficha atual por seções (seção 4.4), alergias e medicamentos em lista, pré-anamnese a revisar (se houver), botão **"Revisar anamnese"**, histórico de versões |
 | **Consultas** | linha do tempo de consultas (passadas e futuras) com profissional e status; **"Agendar"** (todos os perfis) e **"Registrar atendimento"** 🔒 |
 | **Avaliação física** 🔒 | avaliações lado a lado (primeira × última), gráficos de peso, IMC, % de gordura, massa magra, circunferências e soma de dobras |
 | **Fotos** 🔒 | galeria por data e ângulo; **comparador antes × depois** |
@@ -507,7 +514,7 @@ Comercial                              Acompanhamento
 | **Histórico** | linha do tempo com todas as interações (manuais e automáticas), com filtro por tipo e autor |
 
 **Registrar atendimento** 🔒 (fluxo único, em etapas, para o profissional não pular nada):
-1. **Anamnese** — mostra a atual com os alertas; "sem alterações" ou revisar.
+1. **Anamnese** — mostra a atual com os alertas (ou a pré-anamnese enviada pelo paciente, para conferir); "sem alterações" ou revisar.
 2. **Avaliação física** — medidas, com o valor anterior ao lado de cada campo.
 3. **Fotos** — câmera ou arquivo, marcando o ângulo.
 4. **Evolução e condutas** — anotações e plano alimentar.
@@ -556,6 +563,7 @@ Toda ação do agente vira uma **interação automática** com autor "agente de 
 
 | Automação | Quando | Exemplo |
 |---|---|---|
+| **Pré-anamnese** | ao agendar a primeira consulta; lembrete 2 dias antes se não preenchida | "Para aproveitarmos melhor sua consulta, preencha este formulário rápido (5 min): [link]. Suas respostas só serão vistas pela nutricionista." |
 | Lembrete de consulta | 24 h antes | "Olá, Maria! Lembrando da sua consulta amanhã às 14h com a Dra. Ana. Responda 1 para confirmar ou 2 para remarcar." |
 | Confirmação | a resposta atualiza a consulta | "confirmada" aparece na agenda; "remarcar" abre o fluxo de remarcação |
 | **Retorno pendente** | regras da seção 6 (ex.: 60 dias sem consulta e sem retorno marcado) | "Oi, Fernanda! Já faz 2 meses da sua última consulta com a Dra. Ana. Que tal marcar seu retorno? Tenho quinta 10h ou sexta 15h." |
@@ -632,6 +640,7 @@ Resposta enviada pela API do WhatsApp + salva em Conversas
 | `saldo_do_pacote` | saldo, validade e ritmo do pacote ativo |
 | `pagamentos_em_aberto` | valores pendentes e chave Pix |
 | `atualizar_cadastro_lead` | nome, e-mail, objetivo, origem, quem indicou |
+| `enviar_pre_anamnese` | gera o link pessoal do formulário e envia; o agente não tem acesso às respostas |
 | `chamar_equipe` | marca a conversa como "aguardando equipe", com motivo e resumo |
 
 Boas práticas técnicas previstas:
@@ -644,7 +653,7 @@ Boas práticas técnicas previstas:
 ### 12.6 Segurança e limites do agente
 
 - **Sem orientação clínica:** não dá dieta, diagnóstico, nem opina sobre exames ou medicamentos. Pergunta clínica → `chamar_equipe`.
-- **Sem dados clínicos:** as ferramentas **não acessam** anamnese, avaliações, fotos, anotações ou plano alimentar. A restrição está no servidor, não só nas instruções.
+- **Sem dados clínicos:** as ferramentas **não acessam** anamnese (nem as respostas da pré-anamnese), avaliações, fotos, anotações ou plano alimentar. A restrição está no servidor, não só nas instruções.
 - **Só os dados de quem está conversando:** toda ferramenta filtra pelo número de WhatsApp da conversa, no servidor.
 - **Mensagens de pacientes são dados, não ordens:** o agente não muda de comportamento por instruções escritas na conversa. Descontos e exceções de preço vão para a equipe.
 - **Ações confirmadas:** agendar, remarcar e cancelar só depois de a pessoa confirmar profissional, data, hora e serviço.
@@ -726,7 +735,8 @@ O agente e as automações **precisam de um servidor** (receber mensagens a qual
 Dados de saúde e fotos do corpo são **dados pessoais sensíveis** pela LGPD. Para uso real com pacientes:
 
 - login obrigatório e permissões por perfil aplicadas no banco (fase 9). **Sem isso, o sistema não deve receber dados reais**;
-- prontuário (anamnese, avaliações, fotos, anotações) visível só para profissional responsável/que atendeu e admin; recepção e agente não acessam;
+- prontuário (anamnese, avaliações, fotos, anotações) visível só para os nutricionistas e o admin; recepção e agente não acessam;
+- formulário de pré-anamnese em página segura do sistema, com link pessoal que expira; respostas nunca trafegam pelo texto do WhatsApp;
 - fotos em armazenamento privado, sem links públicos;
 - consentimentos separados e registrados: dados de saúde, WhatsApp, fotos clínicas e uso de imagem em divulgação;
 - registro de quem criou, alterou **e acessou** o prontuário;
@@ -753,7 +763,7 @@ Dados de saúde e fotos do corpo são **dados pessoais sensíveis** pela LGPD. P
 | **9. Nuvem** | Supabase: banco, **login com perfis**, regras de permissão, armazenamento privado de fotos, migração dos dados |
 | **10a. WhatsApp na caixa de entrada** | API oficial, página Conversas, equipe responde, lead criado automaticamente |
 | **10b. Agente de IA** | agente com ferramentas (dúvidas, cadastro, agendamento por profissional), passagem para a equipe, resumo, testes, limite de gasto |
-| **10c. Automações** | modelos aprovados pela Meta, lembrete e confirmação de consulta, retorno pendente, pacote, cobrança, reativação, agradecimento de indicação |
+| **10c. Automações** | modelos aprovados pela Meta, **pré-anamnese**, lembrete e confirmação de consulta, retorno pendente, pacote, cobrança, reativação, agradecimento de indicação |
 
 O agente começa em modo **piloto**: algumas semanas com revisão diária das conversas antes de atender sem acompanhamento.
 
@@ -789,11 +799,9 @@ Cada fase vira uma branch e um Pull Request, para revisar aos poucos.
 | 20 | Fotos | Antes e depois anexadas à consulta, com comparador por ângulo |
 | 21 | Retorno e recorrência | Alerta quando o cliente passa de N dias (padrão 60) sem consulta e sem retorno marcado, entre outras regras da seção 6 |
 
-### Em aberto (sugestões já aplicadas no plano; confirmar)
+| 22 | Acesso ao prontuário | Todos os nutricionistas veem o prontuário de todos os clientes; recepção e agente não |
+| 23 | Profissionais | Só nutricionistas; hoje **uma nutricionista**, sistema preparado para mais |
+| 24 | Repasse/comissão | Não necessário por enquanto (uma única profissional); fica para o futuro |
+| 25 | Pré-anamnese | O agente envia, ao agendar a primeira consulta, um link pessoal para o paciente preencher parte da anamnese; a nutricionista revisa |
 
-1. **Quem vê o prontuário de quem:** sugestão aplicada — cada profissional vê os clientes de que é responsável ou que já atendeu; o admin vê todos. Alternativa: todos os profissionais veem todos os clientes (mais simples, menos restrito).
-2. **Quantos profissionais e de quais áreas:** só nutricionistas ou também outras áreas (ex.: educador físico, psicólogo)? Muda os campos da ficha e os serviços.
-3. **Repasse/comissão por profissional:** a clínica paga os profissionais por consulta (precisa de relatório de repasse) ou são todos fixos?
-4. **Pré-anamnese pelo paciente:** enviar pelo WhatsApp, antes da primeira consulta, um formulário para o paciente preencher parte da anamnese? Sugestão: sim, na fase 10c.
-
-Próximo passo: confirmar os itens acima (não bloqueiam as fases 1 a 3) e começar a **fase 1 (Base)**.
+Nenhuma decisão em aberto. Próximo passo: **fase 1 (Base)**.
