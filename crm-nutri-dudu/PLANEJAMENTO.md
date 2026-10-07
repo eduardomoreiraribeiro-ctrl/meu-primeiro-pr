@@ -1,6 +1,6 @@
 # CRM Nutri Dudu — Planejamento
 
-Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fases 1 a 5 (Base, Serviços e profissionais, Clientes, Agenda, Prontuário + Pacotes e financeiro) concluídas, e **primeira parte do Dashboard** adiantada (seção 7.1) — ver [`README.md`](README.md). Próxima: fase 6 (Kanban).
+Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fases 1 a 6 (Base, Serviços e profissionais, Clientes, Agenda, Prontuário + Pacotes e financeiro, Kanban) concluídas, e **primeira parte do Dashboard** adiantada (seção 7.1) — ver [`README.md`](README.md). Próxima: fase 7 (Retornos e Dashboard).
 
 **Versão 7** — inclui agenda por profissional, origens de leads, anamnese (com **pré-anamnese enviada pelo WhatsApp**), fotos de antes e depois, pacotes longos e controle de retorno. Todas as decisões estão na seção 17; nenhuma em aberto.
 
@@ -718,7 +718,7 @@ Todas as páginas falam com uma única **camada de dados** (`store.js`), já ass
 
 **Bibliotecas:**
 - **Chart.js** — gráficos.
-- **SortableJS** — arrastar e soltar no Kanban.
+- ~~SortableJS~~ — o arrastar e soltar do Kanban foi feito sem biblioteca (mouse e toque).
 - **Agenda** — feita sem biblioteca externa (decidido na fase 4): grade própria de dia (uma coluna por profissional), semana, mês e lista, com arrastar para remarcar. Assim funciona sem internet, sem custo e com as regras da clínica (horários, bloqueios, intervalo, encaixe). As regras ficam em `js/agenda.js`, que o agente do WhatsApp também vai usar.
 
 **Fotos:** no protótipo, ficam no armazenamento do navegador (IndexedDB), reduzidas, apenas com imagens de exemplo. Na nuvem, num **armazenamento privado** (Supabase Storage), acessível só por links temporários para usuários autorizados.

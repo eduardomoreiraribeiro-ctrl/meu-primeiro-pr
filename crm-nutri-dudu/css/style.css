@@ -462,28 +462,40 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 .aba:hover { text-decoration: none; color: var(--text); }
 .aba.ativa { background: var(--primary); color: #fff; }
 
-/* Kanban (somente leitura nesta fase) */
+/* Kanban */
+.kanban-topo { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.9rem; }
+.kanban-topo .abas { margin-bottom: 0; }
+.aba-contagem { margin-left: 0.25rem; padding: 0 0.45rem; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-size: 0.75rem; }
+.aba.ativa .aba-contagem { background: rgba(255, 255, 255, 0.25); color: #fff; }
+.filtros-kanban { margin-bottom: 0.5rem; }
+.filtros-kanban input[type="search"] { flex: 1 1 220px; }
+.filtros-extra { display: contents; }
+.kanban-ajuda { margin: 0 0 0.75rem; }
 .kanban-board {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(230px, 1fr);
+  grid-auto-columns: minmax(240px, 1fr);
   gap: 0.85rem;
   overflow-x: auto;
   padding-bottom: 0.5rem;
+  align-items: start;
 }
 .kanban-col {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
   padding: 0.75rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  min-height: 160px;
+  min-height: 180px;
+  transition: background 0.12s, border-color 0.12s;
 }
+.kanban-col.alvo { background: var(--primary-soft); border-color: var(--primary); border-style: dashed; }
 .kanban-col-header {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -496,17 +508,58 @@ h1 { font-size: 1.5rem; font-weight: 700; }
   font-size: 0.75rem;
   line-height: 1.5rem;
 }
+.kanban-soma { font-size: 0.78rem; color: var(--text-muted); margin-top: -0.3rem; }
+.kanban-cards { display: flex; flex-direction: column; gap: 0.5rem; min-height: 40px; }
+.kanban-vazio, .kanban-dica { margin: 0; font-size: 0.78rem; color: var(--text-muted); }
+.kanban-vazio { padding: 0.75rem; border: 1px dashed var(--border); border-radius: var(--radius-sm); text-align: center; }
 .kanban-card {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
+  gap: 0.2rem;
   padding: 0.7rem 0.8rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
-.kanban-card:hover { border-color: var(--primary); text-decoration: none; }
+.kanban-card[data-arrastavel] { cursor: grab; }
+.kanban-card:hover { border-color: var(--primary); }
+.kanban-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.kanban-card.arrastando { opacity: 0.35; }
+.kanban-card-fechado { opacity: 0.6; background: transparent; }
+.kanban-card-topo { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.kanban-card-topo strong { font-size: 0.92rem; }
+.kanban-card-rodape { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.15rem 0.5rem; margin-top: 0.15rem; }
+.kanban-card-rodape .link-whatsapp { margin-left: auto; }
+.kanban-card .barra-pacote.barra-mini { height: 6px; }
+.link-whatsapp { font-weight: 600; }
+.tempo-etapa { font-size: 0.75rem; white-space: nowrap; }
+.tempo-ok { color: var(--text-muted); }
+.tempo-alerta { color: var(--alerta); }
+.tempo-perigo { color: var(--perigo); font-weight: 600; }
+.kanban-fantasma {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+  border-color: var(--primary);
+  cursor: grabbing;
+}
+.com-arraste, .com-arraste * { cursor: grabbing !important; }
+.lista-dados { display: grid; grid-template-columns: max-content 1fr; gap: 0.35rem 1rem; margin: 0.75rem 0; font-size: 0.9rem; }
+.lista-dados div { display: contents; }
+.lista-dados dt { color: var(--text-muted); }
+.lista-dados dd { margin: 0; }
+.painel-subtitulo { font-size: 0.85rem; margin: 1rem 0 0.35rem; }
+.mover-para { margin-top: 1rem; }
+.linha-mover { display: flex; gap: 0.5rem; }
+.linha-mover select { flex: 1; }
 
 /* Serviços */
 .grid-cards {
@@ -1197,6 +1250,15 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
 /* ---------- Celular e tablet ---------- */
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }
+  .kanban-board { grid-auto-columns: 82vw; scroll-snap-type: x mandatory; }
+  .filtros-kanban .so-celular { display: inline-flex; }
+  .filtros-kanban input[type="search"] { flex: 1 1 0; min-width: 0; }
+  .filtros-extra { display: none; }
+  .filtros-extra.aberto { display: flex; flex-wrap: wrap; gap: 0.6rem; width: 100%; }
+  .filtros-extra.aberto select { flex: 1 1 100%; }
+  .kanban-col { scroll-snap-align: start; }
+  .lista-dados { grid-template-columns: 1fr; gap: 0.1rem; }
+  .lista-dados dd { margin-bottom: 0.4rem; }
 
   .sidebar {
     position: fixed;

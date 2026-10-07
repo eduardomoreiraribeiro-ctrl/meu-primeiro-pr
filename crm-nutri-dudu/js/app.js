@@ -50,6 +50,8 @@
     // Renderiza fora da tela e só troca se ninguém navegou nesse meio-tempo.
     const destino = document.createElement('div');
     try {
+      // Movimentos automáticos do funil de acompanhamento (retorno, renovação…).
+      await NutriDudu.funil.sincronizar();
       await pagina.render(destino, params);
     } catch (erro) {
       console.error(erro);

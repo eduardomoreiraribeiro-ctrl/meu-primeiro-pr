@@ -40,7 +40,7 @@ NutriDudu.financeiro = (function () {
   // ---------------- Pacotes ----------------
 
   /** Contratar (ou renovar) um pacote. Sem `pessoa`, o formulário pede o paciente. */
-  async function contratarPacote({ pessoa = null, renovarDe = null } = {}) {
+  async function contratarPacote({ pessoa = null, renovarDe = null, servicoId = null } = {}) {
     const { store, form: f, modal, ui, utils, config } = NutriDudu;
     const servicos = (await store.list('servicos', (s) => s.categoria === 'pacote' && s.ativo))
       .sort((a, b) => a.qtdConsultas - b.qtdConsultas);
@@ -49,7 +49,7 @@ NutriDudu.financeiro = (function () {
       return;
     }
     const hoje = utils.isoDia(new Date());
-    const inicial = servicos.find((s) => s.id === renovarDe?.servicoId) || servicos[0];
+    const inicial = servicos.find((s) => s.id === (servicoId || renovarDe?.servicoId)) || servicos[0];
 
     const corpo = `
       ${pessoa ? '' : f.selecao('pessoaId', 'Paciente', await opcoesPessoas(), '', { obrigatorio: true, vazio: 'Escolha o paciente…' })}
@@ -189,16 +189,17 @@ NutriDudu.financeiro = (function () {
 
   // ---------------- Lançamentos ----------------
 
-  async function novoLancamento({ pessoa = null } = {}) {
+  async function novoLancamento({ pessoa = null, servicoId = null } = {}) {
     const { store, form: f, modal, ui, utils, config } = NutriDudu;
     const servicos = await store.list('servicos', (s) => s.ativo);
+    const preServico = servicos.find((s) => s.id === servicoId) || null;
     const hoje = utils.isoDia(new Date());
     const corpo = `
       ${pessoa ? '' : f.selecao('pessoaId', 'Paciente', await opcoesPessoas(), '', { obrigatorio: true, vazio: 'Escolha o paciente…' })}
-      ${f.selecao('servicoId', 'Serviço (opcional)', servicos.map((s) => [s.id, s.nome]), '', { vazio: 'Nenhum' })}
-      ${f.texto('descricao', 'Descrição', '', { obrigatorio: true, placeholder: 'Ex.: Consulta inicial' })}
+      ${f.selecao('servicoId', 'Serviço (opcional)', servicos.map((s) => [s.id, s.nome]), preServico?.id || '', { vazio: 'Nenhum' })}
+      ${f.texto('descricao', 'Descrição', preServico?.nome || '', { obrigatorio: true, placeholder: 'Ex.: Consulta inicial' })}
       <div class="grade-3">
-        ${f.texto('valor', 'Valor (R$)', '', { tipo: 'number', obrigatorio: true, atributos: 'step="0.01" min="0"' })}
+        ${f.texto('valor', 'Valor (R$)', preServico?.valor ?? '', { tipo: 'number', obrigatorio: true, atributos: 'step="0.01" min="0"' })}
         ${f.texto('desconto', 'Desconto (R$)', '0', { tipo: 'number', atributos: 'step="0.01" min="0"' })}
         ${f.texto('vencimento', 'Vencimento', hoje, { tipo: 'date', obrigatorio: true })}
       </div>

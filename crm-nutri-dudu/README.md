@@ -56,6 +56,16 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - **Perfis:** recepção não vê as abas clínicas nem registra atendimento; quem dá baixa em pagamento é administrador ou recepção.
 - Cálculos em `js/avaliacao.js` e `js/calculos.js`; telas em `js/pages/cliente.js` e `js/components/` (`anamnese.js`, `atendimento.js`, `financeiro.js`).
 
+### Fase 6 — Kanban
+
+- **Dois funis** (Comercial e Acompanhamento), com contador e soma por coluna (valor em negociação no comercial; valor em aberto no acompanhamento).
+- **Arrastar e soltar** com o mouse ou, no celular, segurando o card antes de arrastar (deslizar o dedo continua rolando o quadro). Também dá para mover pelo resumo do card ("Mover para") e pelo teclado.
+- **Ao mover:** para "Fechado" → janela "Fechar venda" (serviço vendido e profissional); o lead vira cliente ativo, passa para o acompanhamento e, em seguida, abre o registro do pacote ou da cobrança. Para "Perdido" → pede o motivo. Para "Encerrado" → o cliente fica inativo. Arrastar de volta reabre o lead ou reativa o cliente. Tudo vai para o histórico.
+- **Movimentos automáticos no acompanhamento:** primeira consulta feita → "Em tratamento"; sem retorno marcado → "Retorno a agendar" (e volta sozinho quando o retorno é agendado); pacote acabando, vencido ou concluído → "Renovação"; pacote novo → "Renovado". Um movimento feito à mão continua valendo até a situação do cliente mudar.
+- **Cards:** tempo na etapa (verde, amarelo, vermelho), objetivo, origem e quem indicou, serviço de interesse, próxima consulta, uso do pacote, última consulta, valor em aberto e atalho para o WhatsApp. Quem fechou fica visível em "Fechado" por 30 dias, esmaecido.
+- **Filtros:** nome/telefone, origem, objetivo, serviço e profissional (no celular ficam no botão "Filtros").
+- Regras em `js/funil.js`; tela em `js/pages/kanban.js`.
+
 ### Adiantado da fase 7
 
 **Dashboard**: filtro de período (hoje, 7 dias, 30 dias, este mês, mês passado, personalizado), clientes novos, atendimentos, faturamento estimado, conversão de leads, agendamentos do dia, leads por etapa do Kanban, serviços/planos mais realizados, origem dos leads e dias mais movimentados. Os cálculos ficam em `js/indicadores.js`.
@@ -82,6 +92,7 @@ crm-nutri-dudu/
     ├── permissoes.js     # o que cada perfil pode ver e fazer
     ├── indicadores.js    # cálculos do Dashboard
     ├── calculos.js       # regras: saldo de pacote, atrasos, sem retorno
+    ├── funil.js          # regras do Kanban: movimentos automáticos, fechar, perder, encerrar
     ├── agenda.js         # regras da agenda: horários livres, conflitos, ocupação
     ├── avaliacao.js      # avaliação física: IMC, dobras, % de gordura
     ├── fotos-store.js    # fotos guardadas no navegador (IndexedDB)

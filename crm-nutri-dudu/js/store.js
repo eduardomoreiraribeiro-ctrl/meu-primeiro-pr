@@ -59,9 +59,11 @@ NutriDudu.store = (function () {
     }
   }
 
-  function salvarEAvisar(colecao) {
+  // opcoes.silencioso: grava sem avisar as telas (para ajustes feitos
+  // logo antes de desenhar a página, como os movimentos automáticos do Kanban).
+  function salvarEAvisar(colecao, opcoes = {}) {
     gravar(db);
-    ouvintes.forEach((fn) => fn(colecao));
+    if (!opcoes.silencioso) ouvintes.forEach((fn) => fn(colecao));
   }
 
   function validarColecao(colecao) {
@@ -83,22 +85,22 @@ NutriDudu.store = (function () {
     return item ? copia(item) : null;
   }
 
-  async function create(colecao, dados) {
+  async function create(colecao, dados, opcoes) {
     validarColecao(colecao);
     const agora = new Date().toISOString();
     const item = { ...dados, id: uid(COLECOES[colecao]), criadoEm: agora, atualizadoEm: agora };
     db[colecao].push(item);
-    salvarEAvisar(colecao);
+    salvarEAvisar(colecao, opcoes);
     return copia(item);
   }
 
-  async function update(colecao, id, alteracoes) {
+  async function update(colecao, id, alteracoes, opcoes) {
     validarColecao(colecao);
     const indice = db[colecao].findIndex((x) => x.id === id);
     if (indice === -1) throw new Error(`Registro não encontrado: ${colecao}/${id}`);
     const { id: _id, criadoEm: _criadoEm, ...resto } = alteracoes;
     db[colecao][indice] = { ...db[colecao][indice], ...resto, atualizadoEm: new Date().toISOString() };
-    salvarEAvisar(colecao);
+    salvarEAvisar(colecao, opcoes);
     return copia(db[colecao][indice]);
   }
 
