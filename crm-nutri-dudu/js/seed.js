@@ -5,12 +5,13 @@ window.NutriDudu = window.NutriDudu || {};
 NutriDudu.seed = (function () {
   const { isoDia } = NutriDudu.utils;
 
-  // Data local deslocada em dias; domingo (clínica fechada) vira segunda.
+  // Data local deslocada em dias. Domingo (clínica fechada) vira segunda — ou sábado,
+  // se a data é do passado, para uma consulta já realizada não cair no futuro.
   function diaUtil(deslocamento) {
     const d = new Date();
     d.setHours(0, 0, 0, 0);
     d.setDate(d.getDate() + deslocamento);
-    if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+    if (d.getDay() === 0) d.setDate(d.getDate() + (deslocamento < 0 ? -1 : 1));
     return d;
   }
 
@@ -21,8 +22,37 @@ NutriDudu.seed = (function () {
   function diaHora(deslocamento, hora) {
     const d = diaUtil(deslocamento);
     const [h, m] = hora.split(':').map(Number);
+    // Sábado só tem expediente de manhã: compromissos da tarde vão para segunda
+    // (ou para sexta, se a data é do passado).
+    if (d.getDay() === 6 && h >= 12) d.setDate(d.getDate() + (deslocamento < 0 ? -1 : 2));
     d.setHours(h, m, 0, 0);
     return d.toISOString();
+  }
+
+  function acomodar(consultas, horarios, bloqueios, geral) {
+    const { agenda } = NutriDudu;
+    const colocadas = [];
+    // agora = 1970: aqui não importa se o horário já passou.
+    const ctx = { horarios, bloqueios, consultas: colocadas, geral, agora: new Date(0) };
+    consultas.forEach((c) => {
+      const inicio = new Date(c.inicio);
+      const duracao = (new Date(c.fim) - inicio) / 60000;
+      const pedido = { profissionalId: c.profissionalId, inicio, fim: new Date(c.fim), modalidade: c.tipo === 'online' ? 'online' : 'presencial' };
+      if (agenda.verificar(pedido, ctx).length) {
+        for (let n = 0; n < 14; n++) {
+          const dia = new Date(inicio);
+          dia.setDate(dia.getDate() + n);
+          const livre = agenda.horariosLivres({ profissionalId: c.profissionalId, dia, duracaoMin: duracao, modalidade: pedido.modalidade, passoMin: 10 }, ctx)
+            .find((h) => n > 0 || h >= inicio);
+          if (livre) {
+            c.inicio = livre.toISOString();
+            c.fim = agenda.somarMin(livre, duracao).toISOString();
+            break;
+          }
+        }
+      }
+      colocadas.push(c);
+    });
   }
 
   function criar() {
@@ -201,6 +231,11 @@ NutriDudu.seed = (function () {
       c('con_33', { pessoaId: 'pes_17', dia: 0, hora: '09:00', tipo: 'avaliacao', servicoId: 'srv_6', status: 'agendada' }),
       c('con_34', { pessoaId: 'pes_13', dia: 0, hora: '15:30', tipo: 'retorno', servicoId: 'srv_2', status: 'confirmada', agendadaPor: 'agente' }),
     ];
+
+    // As datas são relativas a hoje (e domingos/sábados à tarde mudam de dia), então
+    // duas consultas podem cair no mesmo horário. Usa as próprias regras da agenda
+    // para acomodar cada uma no primeiro horário válido do mesmo dia (ou dos seguintes).
+    acomodar(consultas, horarios, bloqueios, configuracoes[0]);
 
     const an = (id, pessoaId, consultaId, dados) => ({
       id, pessoaId, consultaId, versao: 1, origem: 'consulta',

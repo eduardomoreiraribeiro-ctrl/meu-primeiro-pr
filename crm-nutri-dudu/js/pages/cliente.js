@@ -72,6 +72,7 @@ NutriDudu.pages.cliente = {
           <div class="ficha-acoes">
             <a class="btn btn-pequeno" href="${whatsapp}" target="_blank" rel="noopener">WhatsApp</a>
             <button type="button" class="btn btn-pequeno" data-editar-cadastro>Editar cadastro</button>
+            <button type="button" class="btn btn-pequeno btn-primary" data-agendar>Agendar</button>
           </div>
         </div>
       </div>
@@ -117,6 +118,9 @@ NutriDudu.pages.cliente = {
       ])}
     `;
 
+    container.querySelector('[data-agendar]').addEventListener('click', () => {
+      NutriDudu.agendamento.abrir({ pessoaId: pessoa.id });
+    });
     container.querySelector('[data-editar-cadastro]').addEventListener('click', () => {
       NutriDudu.cadastroPessoa.abrir({ pessoa });
     });

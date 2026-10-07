@@ -31,6 +31,18 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - **Ficha do cliente:** botão **Editar cadastro**, atalho para o WhatsApp, dados do cadastro, consentimentos e aviso de "sem retorno marcado".
 - Cálculos compartilhados em `js/calculos.js` (saldo de pacote, valores atrasados, sem retorno), usados pela lista, pela ficha e pelas próximas fases.
 
+### Fase 4 — Agenda
+
+- **Visões:** dia (uma coluna por profissional), semana, mês e lista; navegação ‹ Hoje ›; filtro por profissional (quando houver mais de uma). No celular abre na lista.
+- **Grade:** horários fora do expediente hachurados, bloqueios destacados, linha vermelha do "agora", cor de cada profissional, ícones (✓ confirmada, 🤖 agendada pelo agente, ⤵ encaixe, ⚠ faltou) e ocupação de cada profissional no período.
+- **Agendar** clicando num horário livre (já vem com dia e hora), pelo botão **+ Agendar**, pelo **+ Novo › Consulta** ou pela ficha do cliente. O formulário sugere os **horários livres** do dia (inclusive logo depois de cada consulta), mostra o término, sugere o tipo (primeira consulta, retorno, avaliação, online), escolhe sozinho o **pacote** com saldo e avisa ao vivo sobre conflito, fora do horário, bloqueio ou horário que já passou. Dá para cadastrar um paciente novo sem sair do agendamento.
+- **Regras:** respeita os horários de atendimento, a modalidade do período, os bloqueios e o intervalo entre consultas. Só o administrador pode forçar um **encaixe** (fica marcado).
+- **Detalhes da consulta:** confirmar, remarcar, marcar falta (com opção de não descontar do pacote), cancelar com motivo, WhatsApp e ficha. Tudo fica no histórico do cliente.
+- **Arrastar para remarcar** (com o mouse): pede confirmação; se o novo horário tiver problema, avisa e não muda nada.
+- **Lead que agenda** avança sozinho para "Consulta agendada" no funil comercial.
+- **Perfis:** o profissional abre na própria agenda e vê a agenda dos colegas só como "Ocupado".
+- Regras em `js/agenda.js` (períodos, conflitos, horários livres, ocupação); telas em `js/pages/agenda.js` e `js/components/agendamento.js`.
+
 ### Adiantado da fase 7
 
 **Dashboard**: filtro de período (hoje, 7 dias, 30 dias, este mês, mês passado, personalizado), clientes novos, atendimentos, faturamento estimado, conversão de leads, agendamentos do dia, leads por etapa do Kanban, serviços/planos mais realizados, origem dos leads e dias mais movimentados. Os cálculos ficam em `js/indicadores.js`.
@@ -57,10 +69,11 @@ crm-nutri-dudu/
     ├── permissoes.js     # o que cada perfil pode ver e fazer
     ├── indicadores.js    # cálculos do Dashboard
     ├── calculos.js       # regras: saldo de pacote, atrasos, sem retorno
+    ├── agenda.js         # regras da agenda: horários livres, conflitos, ocupação
     ├── seed.js           # dados de exemplo fictícios
     ├── store.js          # camada de dados
     ├── app.js            # navegação, busca, "+ Novo", seletor de perfil
     ├── components/       # ui.js (peças de tela), form.js (campos), modal.js (janelas),
-    │                     # cadastro-pessoa.js (cadastro de lead/cliente)
+    │                     # cadastro-pessoa.js (cadastro de lead/cliente), agendamento.js
     └── pages/            # uma página por arquivo
 ```

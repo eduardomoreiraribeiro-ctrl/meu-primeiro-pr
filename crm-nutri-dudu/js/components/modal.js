@@ -97,6 +97,31 @@ NutriDudu.modal = (function () {
     return dialog;
   }
 
+  /**
+   * Painel de informações com botões de ação (ex.: detalhes de uma consulta).
+   * acoes: [{ texto, classe?, aoClicar }] — o painel fecha antes de executar a ação.
+   */
+  function painel({ titulo, corpo, acoes = [] }) {
+    const dialog = criarDialog('');
+    dialog.innerHTML = `
+      <div class="modal-topo">
+        <h2>${escapeHtml(titulo)}</h2>
+        <button type="button" class="modal-fechar" data-fechar aria-label="Fechar">×</button>
+      </div>
+      <div class="modal-corpo">${corpo}</div>
+      ${acoes.length ? `
+        <div class="modal-rodape modal-acoes">
+          ${acoes.map((a, i) => `<button type="button" class="btn btn-pequeno ${a.classe || ''}" data-acao="${i}">${escapeHtml(a.texto)}</button>`).join('')}
+        </div>` : ''}`;
+    dialog.querySelector('[data-fechar]').addEventListener('click', () => dialog.close());
+    dialog.querySelectorAll('[data-acao]').forEach((b) => b.addEventListener('click', () => {
+      dialog.close();
+      acoes[Number(b.dataset.acao)].aoClicar();
+    }));
+    dialog.showModal();
+    return dialog;
+  }
+
   /** Pergunta sim/não. Devolve uma Promise<boolean>. */
   function confirmar({ titulo, mensagem, textoConfirmar = 'Confirmar', perigo = false }) {
     return new Promise((resolve) => {
@@ -120,5 +145,5 @@ NutriDudu.modal = (function () {
     });
   }
 
-  return { formulario, confirmar };
+  return { formulario, painel, confirmar };
 })();

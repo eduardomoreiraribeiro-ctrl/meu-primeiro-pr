@@ -68,10 +68,24 @@ NutriDudu.permissoes = (function () {
     return perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO;
   }
 
+  /** Id do profissional "logado" (no protótipo, simulado); null para admin e recepção. */
+  function idProfissionalAtual() {
+    return perfil === 'profissional' ? PROFISSIONAL_SIMULADO : null;
+  }
+
+  // Agendar, remarcar, confirmar, cancelar: admin e recepção em qualquer agenda;
+  // profissional, só na sua.
+  function podeAgendarPara(profissionalId) {
+    if (perfil === 'admin' || perfil === 'recepcao') return true;
+    return perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO;
+  }
+
   function aoMudar(fn) {
     ouvintes.add(fn);
     return () => ouvintes.delete(fn);
   }
 
-  return { atual, definir, pode, podeEditarHorarios, podeEditarBloqueios, aoMudar };
+  return {
+    atual, definir, pode, podeEditarHorarios, podeEditarBloqueios, idProfissionalAtual, podeAgendarPara, aoMudar,
+  };
 })();

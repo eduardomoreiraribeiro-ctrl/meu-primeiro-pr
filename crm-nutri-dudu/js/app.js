@@ -17,7 +17,6 @@
 
   // Em que fase cada item do "+ Novo" fica pronto (seção 16 do planejamento).
   const FASE_DO_NOVO = {
-    consulta: ['Agendamento de consulta', 4],
     pagamento: ['Lançamento de pagamento', '5b'],
     pacote: ['Contratação de pacote', '5b'],
   };
@@ -160,6 +159,10 @@
         tipo,
         aoSalvar: (p) => { location.hash = `#/clientes/${encodeURIComponent(p.id)}`; },
       });
+      return;
+    }
+    if (tipo === 'consulta') {
+      NutriDudu.agendamento.abrir();
       return;
     }
     const [nome, fase] = FASE_DO_NOVO[tipo];
