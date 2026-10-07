@@ -66,11 +66,17 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - **Filtros:** nome/telefone, origem, objetivo, serviço e profissional (no celular ficam no botão "Filtros").
 - Regras em `js/funil.js`; tela em `js/pages/kanban.js`.
 
-### Adiantado da fase 7
+### Fase 7 — Retornos e Dashboard
 
-**Dashboard**: filtro de período (hoje, 7 dias, 30 dias, este mês, mês passado, personalizado), clientes novos, atendimentos, faturamento estimado, conversão de leads, agendamentos do dia, leads por etapa do Kanban, serviços/planos mais realizados, origem dos leads e dias mais movimentados. Os cálculos ficam em `js/indicadores.js`.
+- **Alertas de retorno e recorrência** (`js/alertas.js`): sem retorno marcado, retorno vencido, pacote atrasado no ritmo, faltou e não remarcou, cliente sumido (sugere marcar como inativo). Aparecem na ficha do cliente (com **Dispensar** por um período e motivo, que vai para o histórico), na lista de Clientes (etiqueta e filtro "Com alerta de retorno") e no Dashboard. Os prazos ficam em **Configurações › Regras gerais**.
+- **Dashboard** com filtro de período (e de profissional, quando houver mais de uma):
+  - **No período:** clientes novos, atendimentos, faturamento estimado, conversão de leads, ticket médio, taxa de faltas, ocupação da agenda e taxa de retorno.
+  - **Hoje:** clientes ativos, a receber (e atrasado), pacotes ativos e taxa de renovação, agendamentos do dia.
+  - **Precisa de atenção:** retornos pendentes, consultas a confirmar (hoje e amanhã), pagamentos atrasados, pacotes para renovar, leads parados e aniversariantes da semana — cada item com o botão da ação (Agendar, Confirmar, Receber, Renovar, Dispensar, WhatsApp).
+  - **Gráficos:** faturamento mês a mês (12 meses), leads por etapa, serviços mais realizados, origem dos leads com conversão, clientes que mais indicaram e dias mais movimentados.
+- Cálculos em `js/indicadores.js`; tela em `js/pages/dashboard.js`.
 
-As demais páginas mostram os dados só para leitura. O que cada uma ganha nas próximas fases aparece no aviso "Esta página ainda está em construção".
+As páginas de Conversas (fase 10) ainda mostram os dados só para leitura.
 
 ## Como abrir
 
@@ -93,6 +99,7 @@ crm-nutri-dudu/
     ├── indicadores.js    # cálculos do Dashboard
     ├── calculos.js       # regras: saldo de pacote, atrasos, sem retorno
     ├── funil.js          # regras do Kanban: movimentos automáticos, fechar, perder, encerrar
+    ├── alertas.js        # alertas de retorno e recorrência
     ├── agenda.js         # regras da agenda: horários livres, conflitos, ocupação
     ├── avaliacao.js      # avaliação física: IMC, dobras, % de gordura
     ├── fotos-store.js    # fotos guardadas no navegador (IndexedDB)

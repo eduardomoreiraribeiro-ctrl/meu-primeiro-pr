@@ -120,6 +120,12 @@ NutriDudu.utils = (function () {
   /** "hoje" ou "há N dia(s)". */
   const haDias = (n) => (n === 0 ? 'hoje' : `há ${dias(n)}`);
 
+  /** R$ compacto para gráficos: R$ 950, R$ 1,8 mil. */
+  function moedaCurta(v) {
+    if (Math.abs(v) < 1000) return `R$ ${Math.round(v)}`;
+    return `R$ ${(v / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} mil`;
+  }
+
   function dias(n) {
     return `${n} ${Math.abs(n) === 1 ? 'dia' : 'dias'}`;
   }
@@ -154,7 +160,7 @@ NutriDudu.utils = (function () {
   }
 
   return {
-    haDias,
+    haDias, moedaCurta,
     dias, formatarTelefone, telefoneValido, formatarCpf, cpfValido, emailValido,
     uid, moeda, paraData, data, hora, diaPorExtenso, isoDia, inicioDoDia, diasEntre,
     idade, imc, iniciais, escapeHtml, normalizar, soDigitos,

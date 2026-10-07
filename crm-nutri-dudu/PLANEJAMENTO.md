@@ -1,6 +1,6 @@
 # CRM Nutri Dudu — Planejamento
 
-Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fases 1 a 6 (Base, Serviços e profissionais, Clientes, Agenda, Prontuário + Pacotes e financeiro, Kanban) concluídas, e **primeira parte do Dashboard** adiantada (seção 7.1) — ver [`README.md`](README.md). Próxima: fase 7 (Retornos e Dashboard).
+Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fases 1 a 7 (Base, Serviços e profissionais, Clientes, Agenda, Prontuário + Pacotes e financeiro, Kanban, Retornos e Dashboard) concluídas — ver [`README.md`](README.md). Próxima: fase 8 (Acabamento).
 
 **Versão 7** — inclui agenda por profissional, origens de leads, anamnese (com **pré-anamnese enviada pelo WhatsApp**), fotos de antes e depois, pacotes longos e controle de retorno. Todas as decisões estão na seção 17; nenhuma em aberto.
 
@@ -403,7 +403,7 @@ Filtro de período: **Hoje · Últimos 7 dias · Últimos 30 dias · Este mês �
 
 Os gráficos usam uma só cor (o verde da clínica) e sempre mostram o número escrito ao lado da barra; passando o mouse aparece o valor e o percentual.
 
-### 7.2 Planejado (fase 7)
+### 7.2 Concluído na fase 7
 
 **Filtros** no topo: período (Hoje · 7 dias · Este mês · Mês passado · Personalizado) e **profissional**.
 

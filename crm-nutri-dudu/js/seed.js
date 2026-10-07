@@ -61,6 +61,8 @@ NutriDudu.seed = (function () {
       nomeClinica: 'Nutri Dudu',
       diasRetornoPadrao: 60,
       diasClienteSumido: 120,
+      diasFaltaRemarcar: 7,
+      diasLeadParado: 7,
       intervaloEntreConsultasMin: 10,
       chavePix: 'pix@nutridudu.exemplo',
     }];

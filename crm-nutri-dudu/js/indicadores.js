@@ -107,7 +107,22 @@ NutriDudu.indicadores = (function () {
     const contagemEtapa = contarPor(pessoas.filter((p) => p.funil === 'comercial'), (p) => p.etapa);
     const porEtapa = FUNIS.comercial.etapas.map((e) => ({ id: e.id, nome: e.nome, qtd: contagemEtapa[e.id] || 0 }));
 
+    // Faltas: das consultas que já aconteceram no período, quantas foram falta.
+    const faltou = doPeriodo.filter((c) => c.status === 'faltou').length;
+    const baseFaltas = realizadas.length + faltou;
+
+    // Ticket médio: valor médio de cada pagamento recebido (vencimento no período).
+    const pagos = lancPeriodo.filter((l) => l.status === 'pago');
+
+    // Conversão por origem.
+    const convertidosOrigem = contarPor(leadsPeriodo.filter((p) => p.clienteDesde), (p) => p.origem);
+    porOrigem.forEach((o) => { o.convertidos = convertidosOrigem[o.id] || 0; });
+
     return {
+      faltas: { faltou, base: baseFaltas, taxa: baseFaltas ? faltou / baseFaltas : null },
+      ticketMedio: pagos.length ? recebido / pagos.length : null,
+      pagamentos: pagos.length,
+      retorno: taxaRetorno(dados, periodo),
       clientesNovos,
       atendimentos: realizadas.length,
       atendimentosPrevistos: previstas.length,
@@ -125,5 +140,86 @@ NutriDudu.indicadores = (function () {
     };
   }
 
-  return { PERIODOS, intervalo, dentro, calcular };
+  /**
+   * Taxa de retorno: de cada consulta realizada cujo retorno "vencia" no período
+   * (data de próximo retorno, ou a consulta + prazo do cliente), o cliente voltou
+   * a tempo? Voltar = ter outra consulta (feita ou marcada) até 7 dias depois do prazo.
+   */
+  function taxaRetorno(dados, periodo, agora = new Date()) {
+    const { pessoas, consultas, geral = {} } = dados;
+    const TOLERANCIA = 7;
+    const pessoa = Object.fromEntries(pessoas.map((p) => [p.id, p]));
+    const validas = consultas.filter((c) => !['cancelada', 'faltou'].includes(c.status));
+    let devidos = 0;
+    let voltaram = 0;
+    validas.filter((c) => c.status === 'realizada').forEach((c) => {
+      const p = pessoa[c.pessoaId];
+      if (!p) return;
+      let prazo = paraData(c.proximoRetorno);
+      if (!prazo) {
+        prazo = inicioDoDia(c.inicio);
+        prazo.setDate(prazo.getDate() + (p.retornoDias || geral.diasRetornoPadrao || 60));
+      }
+      if (prazo < periodo.inicio || prazo >= periodo.fim || prazo > agora) return;
+      // Cliente que encerrou antes do prazo não conta.
+      if (p.status === 'inativo' && p.etapaDesde && new Date(p.etapaDesde) < prazo) return;
+      devidos += 1;
+      const limite = somarDias(prazo, TOLERANCIA + 1);
+      if (validas.some((o) => o.pessoaId === c.pessoaId && o.inicio > c.inicio && new Date(o.inicio) < limite)) voltaram += 1;
+    });
+    return { devidos, voltaram, taxa: devidos ? voltaram / devidos : null };
+  }
+
+  /** Retrato de agora (não depende do período): carteira de clientes, valores a receber e pacotes. */
+  function carteira(dados, agora = new Date()) {
+    const { calculos } = NutriDudu;
+    const { pessoas, lancamentos, pacotes } = dados;
+    const pendentes = lancamentos.filter((l) => l.status === 'pendente');
+    const aReceber = pendentes.reduce((t, l) => t + valorLiquido(l), 0);
+    const atrasado = pendentes.filter((l) => calculos.lancamentoAtrasado(l, agora)).reduce((t, l) => t + valorLiquido(l), 0);
+    const pacotesAtivos = pacotes.filter((p) => calculos.statusPacote(p, agora) === 'ativo').length;
+    // Renovação: dos pacotes que terminaram (concluídos ou vencidos), quantos tiveram um pacote seguinte.
+    const terminados = pacotes.filter((p) => ['concluido', 'vencido'].includes(calculos.statusPacote(p, agora)));
+    const renovados = terminados.filter((p) => pacotes.some((o) => o.pessoaId === p.pessoaId && o.id !== p.id && o.inicio >= p.inicio)).length;
+    return {
+      clientesAtivos: pessoas.filter((p) => p.status === 'ativo').length,
+      leadsNoFunil: pessoas.filter((p) => p.funil === 'comercial' && !['perdido', 'fechado'].includes(p.etapa)).length,
+      aReceber,
+      atrasado,
+      pacotesAtivos,
+      renovacao: { terminados: terminados.length, renovados, taxa: terminados.length ? renovados / terminados.length : null },
+    };
+  }
+
+  /** Faturamento (lançamentos não cancelados, pelo vencimento) dos últimos N meses, terminando no mês atual. */
+  function faturamentoMensal(lancamentos, meses = 12, agora = new Date()) {
+    const lista = [];
+    for (let i = meses - 1; i >= 0; i--) {
+      const inicio = new Date(agora.getFullYear(), agora.getMonth() - i, 1);
+      const fim = new Date(agora.getFullYear(), agora.getMonth() - i + 1, 1);
+      const doMes = lancamentos.filter((l) => l.status !== 'cancelado' && dentro(l.vencimento, { inicio, fim }));
+      const nomeMes = inicio.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+      lista.push({
+        nome: inicio.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' }),
+        curto: inicio.getMonth() === 0 || i === meses - 1 ? `${nomeMes}/${String(inicio.getFullYear()).slice(2)}` : nomeMes,
+        qtd: doMes.reduce((t, l) => t + valorLiquido(l), 0),
+        recebido: doMes.filter((l) => l.status === 'pago').reduce((t, l) => t + valorLiquido(l), 0),
+        atual: i === 0,
+      });
+    }
+    return lista;
+  }
+
+  /** Clientes que mais indicaram (desde sempre). */
+  function quemMaisIndicou(pessoas, limite = 5) {
+    const nome = Object.fromEntries(pessoas.map((p) => [p.id, p.nome]));
+    const indicadas = pessoas.filter((p) => p.indicadoPorId && nome[p.indicadoPorId]);
+    const fecharam = contarPor(indicadas.filter((p) => p.clienteDesde), (p) => p.indicadoPorId);
+    return Object.entries(contarPor(indicadas, (p) => p.indicadoPorId))
+      .map(([id, qtd]) => ({ id, nome: nome[id], qtd, fecharam: fecharam[id] || 0 }))
+      .sort((a, b) => b.qtd - a.qtd || b.fecharam - a.fecharam || a.nome.localeCompare(b.nome, 'pt-BR'))
+      .slice(0, limite);
+  }
+
+  return { PERIODOS, intervalo, dentro, calcular, taxaRetorno, carteira, faturamentoMensal, quemMaisIndicou };
 })();

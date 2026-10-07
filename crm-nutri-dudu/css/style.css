@@ -395,6 +395,10 @@ h1 { font-size: 1.5rem; font-weight: 700; }
   font-size: 0.92rem;
 }
 .alerta-perigo { background: var(--perigo-soft); color: var(--perigo); }
+.alerta-com-acoes { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; flex-wrap: wrap; }
+.aviso-dispensado { margin: 0; }
+.link-botao { padding: 0; border: 0; background: none; color: var(--primary); font: inherit; font-weight: 600; cursor: pointer; }
+.link-botao:hover { text-decoration: underline; }
 
 .vazio { margin: 0; }
 
@@ -626,6 +630,29 @@ h1 { font-size: 1.5rem; font-weight: 700; }
   gap: 1rem;
 }
 .dash-largo { grid-column: 1 / -1; }
+.dashboard .kpi-grid { margin-bottom: 1.25rem; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.dashboard .dash-grid { margin-bottom: 1.25rem; }
+.titulo-secao { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin: 0.5rem 0 0.6rem; }
+.grid-acoes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.25rem; }
+.acao .secao-cabecalho { margin-bottom: 0.15rem; }
+.contador { min-width: 1.7rem; padding: 0 0.45rem; border-radius: 999px; background: var(--surface-2); color: var(--text-muted); font-size: 0.8rem; font-weight: 600; text-align: center; line-height: 1.6rem; }
+.contador.tem { background: var(--alerta-soft); color: var(--alerta); }
+.lista-acao { list-style: none; margin: 0.5rem 0 0; padding: 0; }
+.lista-acao li { display: flex; align-items: center; justify-content: space-between; gap: 0.4rem 0.75rem; padding: 0.6rem 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+.lista-acao li:first-child { border-top: 0; }
+.item-acao-texto { min-width: 0; flex: 1 1 220px; font-size: 0.92rem; }
+.item-acao-texto .badge { margin-left: 0.25rem; }
+.item-acao-botoes { display: flex; gap: 0.35rem; flex-wrap: wrap; }
+.tudo-certo { margin: 0.6rem 0 0; color: var(--primary-hover); font-size: 0.9rem; }
+.ver-todos { display: inline-block; margin-top: 0.5rem; font-weight: 600; }
+.rolagem-x { overflow-x: auto; }
+.dash-grid > *, .grid-acoes > * { min-width: 0; }
+.colunas-muitas { min-width: 720px; }
+.colunas-muitas .coluna-numero { font-size: 0.72rem; white-space: nowrap; }
+.tabela-mini { width: 100%; border-collapse: collapse; margin-top: 0.9rem; font-size: 0.85rem; }
+.tabela-mini th { text-align: left; font-weight: 600; color: var(--text-muted); font-size: 0.78rem; padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--border); }
+.tabela-mini td { padding: 0.35rem 0.4rem; border-bottom: 1px solid var(--border); }
+.tabela-mini .num { text-align: right; font-variant-numeric: tabular-nums; }
 .card-sub { margin: -0.6rem 0 0.9rem; }
 
 /* Gráficos: uma cor só (verde da clínica); valores sempre escritos ao lado. */
@@ -870,6 +897,7 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 }
 .filtros-clientes select,
 .filtros-clientes input {
+  max-width: 100%;
   padding: 0.5rem 0.65rem;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1302,6 +1330,8 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
   .view { padding: 1.25rem 1rem 6rem; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
   .dash-grid { grid-template-columns: 1fr; }
+  .grid-acoes { grid-template-columns: 1fr; }
+  .dashboard .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grade-2, .grade-3 { grid-template-columns: 1fr; }
   .so-desktop { display: none; }
   .so-celular { display: block; }

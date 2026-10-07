@@ -97,17 +97,20 @@ NutriDudu.ui = (function () {
       </ul>`;
   }
 
-  /** Colunas verticais (ex.: dias da semana). itens: [{ nome, curto, qtd }]. */
-  function colunas(itens, { unidade = ['item', 'itens'], vazio: msgVazio = 'Sem dados no período.' } = {}) {
+  /**
+   * Colunas verticais (ex.: dias da semana). itens: [{ nome, curto, qtd, detalhe? }].
+   * formatar(v): texto do número; descrever(i): texto da dica (padrão: "nome: qtd unidade").
+   */
+  function colunas(itens, { unidade = ['item', 'itens'], vazio: msgVazio = 'Sem dados no período.', formatar = String, descrever = null, destacarMaior = true } = {}) {
     const maior = Math.max(0, ...itens.map((i) => i.qtd));
     if (!maior) return vazio(msgVazio);
     return `
-      <div class="colunas">
+      <div class="colunas${itens.length > 8 ? ' colunas-muitas' : ''}">
         ${itens.map((i) => {
-          const texto = `${i.nome}: ${i.qtd} ${i.qtd === 1 ? unidade[0] : unidade[1]}`;
+          const texto = descrever ? descrever(i) : `${i.nome}: ${i.qtd} ${i.qtd === 1 ? unidade[0] : unidade[1]}`;
           return `
-            <div class="coluna${i.qtd === maior ? ' destaque' : ''}" title="${escapeHtml(texto)}">
-              <span class="coluna-numero">${i.qtd}</span>
+            <div class="coluna${(destacarMaior && i.qtd === maior) || i.destaque ? ' destaque' : ''}" title="${escapeHtml(texto)}">
+              <span class="coluna-numero">${escapeHtml(i.qtd ? formatar(i.qtd) : '')}</span>
               <span class="coluna-trilho"><span class="coluna-valor" style="height:${(i.qtd / maior) * 100}%"></span></span>
               <span class="coluna-rotulo">${escapeHtml(i.curto || i.nome)}</span>
             </div>`;

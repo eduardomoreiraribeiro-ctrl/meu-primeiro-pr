@@ -328,11 +328,19 @@ NutriDudu.pages.configuracoes = (function () {
     const corpo = `
       ${f.texto('diasRetornoPadrao', 'Alerta de retorno após (dias)', geral.diasRetornoPadrao, {
         tipo: 'number', obrigatorio: true, atributos: 'min="7" max="365" step="1"',
-        ajuda: 'Cliente ativo sem consulta há mais que isso e sem retorno marcado gera alerta (fase 7).',
+        ajuda: 'Cliente ativo sem consulta há mais que isso e sem retorno marcado gera alerta. Cada cliente pode ter uma periodicidade própria no cadastro.',
       })}
       ${f.texto('diasClienteSumido', 'Cliente sumido após (dias)', geral.diasClienteSumido, {
         tipo: 'number', obrigatorio: true, atributos: 'min="8" max="730" step="1"',
         ajuda: 'Depois disso, o sistema sugere marcar como inativo e enviar reativação.',
+      })}
+      ${f.texto('diasFaltaRemarcar', 'Alerta de falta sem remarcação após (dias)', geral.diasFaltaRemarcar ?? 7, {
+        tipo: 'number', obrigatorio: true, atributos: 'min="1" max="60" step="1"',
+        ajuda: 'Paciente que faltou e não marcou outra consulta nesse prazo gera alerta.',
+      })}
+      ${f.texto('diasLeadParado', 'Lead parado após (dias na mesma etapa)', geral.diasLeadParado ?? 7, {
+        tipo: 'number', obrigatorio: true, atributos: 'min="1" max="90" step="1"',
+        ajuda: 'Aparece na lista "Leads parados" do Dashboard.',
       })}
       ${f.texto('intervaloEntreConsultasMin', 'Intervalo entre consultas (min)', geral.intervaloEntreConsultasMin, {
         tipo: 'number', obrigatorio: true, atributos: 'min="0" max="60" step="5"',
@@ -347,6 +355,8 @@ NutriDudu.pages.configuracoes = (function () {
       ler: (form) => ({
         diasRetornoPadrao: f.numero(form, 'diasRetornoPadrao'),
         diasClienteSumido: f.numero(form, 'diasClienteSumido'),
+        diasFaltaRemarcar: f.numero(form, 'diasFaltaRemarcar'),
+        diasLeadParado: f.numero(form, 'diasLeadParado'),
         intervaloEntreConsultasMin: f.numero(form, 'intervaloEntreConsultasMin'),
         chavePix: f.valor(form, 'chavePix'),
       }),
@@ -358,6 +368,8 @@ NutriDudu.pages.configuracoes = (function () {
         else if (!erros.diasRetornoPadrao && d.diasClienteSumido <= d.diasRetornoPadrao) {
           erros.diasClienteSumido = 'Precisa ser maior que o prazo do alerta de retorno.';
         }
+        if (!faixa(d.diasFaltaRemarcar, 1, 60)) erros.diasFaltaRemarcar = 'Use um número inteiro entre 1 e 60.';
+        if (!faixa(d.diasLeadParado, 1, 90)) erros.diasLeadParado = 'Use um número inteiro entre 1 e 90.';
         if (!faixa(d.intervaloEntreConsultasMin, 0, 60)) erros.intervaloEntreConsultasMin = 'Use um número inteiro entre 0 e 60.';
         return erros;
       },
@@ -464,6 +476,8 @@ NutriDudu.pages.configuracoes = (function () {
         <table class="tabela-simples">
           <tr><th scope="row">Alerta de retorno após</th><td>${geral?.diasRetornoPadrao ?? '—'} dias sem consulta e sem retorno marcado</td></tr>
           <tr><th scope="row">Cliente sumido após</th><td>${geral?.diasClienteSumido ?? '—'} dias</td></tr>
+          <tr><th scope="row">Falta sem remarcação</th><td>alerta após ${geral?.diasFaltaRemarcar ?? 7} dias</td></tr>
+          <tr><th scope="row">Lead parado</th><td>após ${geral?.diasLeadParado ?? 7} dias na mesma etapa</td></tr>
           <tr><th scope="row">Intervalo entre consultas</th><td>${geral?.intervaloEntreConsultasMin ?? '—'} min</td></tr>
           <tr><th scope="row">Chave Pix</th><td>${utils.escapeHtml(geral?.chavePix || '—')}</td></tr>
         </table>

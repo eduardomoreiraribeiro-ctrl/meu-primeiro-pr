@@ -6,6 +6,7 @@ NutriDudu.pages.clientes = (function () {
     busca: '', status: 'clientes', profissionalId: '', origem: '', objetivo: '', tag: '', situacao: '', clinico: '',
   };
   const SITUACOES = {
+    com_alerta: 'Com alerta de retorno',
     sem_retorno: 'Sem retorno marcado',
     pendente: 'Com pagamento em aberto',
     atrasado: 'Com pagamento atrasado',
@@ -54,6 +55,7 @@ NutriDudu.pages.clientes = (function () {
       return {
         pessoa: p,
         resumo: r,
+        alertas: NutriDudu.alertas.daPessoa(p, { consultas: consultasDe(p.id), pacotes: pacotesDe(p.id) }, geral),
         profissional: prof[p.profissionalId] || null,
         pacoteNome: r.pacote ? nomeServico[r.pacote.servicoId] || 'Pacote' : '',
         origem: config.ORIGENS[p.origem] || '',
@@ -70,7 +72,7 @@ NutriDudu.pages.clientes = (function () {
     const digitos = utils.soDigitos(filtros.busca);
     const clinico = utils.normalizar(filtros.clinico.trim());
 
-    return linhas.filter(({ pessoa: p, resumo: r, textoBusca, digitos: tel, textoClinico }) => {
+    return linhas.filter(({ pessoa: p, resumo: r, alertas, textoBusca, digitos: tel, textoClinico }) => {
       if (filtros.status === 'clientes' && p.status === 'lead') return false;
       if (['ativo', 'inativo', 'lead'].includes(filtros.status) && p.status !== filtros.status) return false;
       if (termo && !textoBusca.includes(termo) && !(digitos.length >= 3 && tel.includes(digitos))) return false;
@@ -79,6 +81,7 @@ NutriDudu.pages.clientes = (function () {
       if (filtros.objetivo && p.objetivo !== filtros.objetivo) return false;
       if (filtros.tag && !(p.tags || []).some((t) => t.toLowerCase() === filtros.tag.toLowerCase())) return false;
       if (filtros.situacao === 'sem_retorno' && !r.semRetorno) return false;
+      if (filtros.situacao === 'com_alerta' && !alertas.length) return false;
       if (filtros.situacao === 'pendente' && !(r.emAberto > 0)) return false;
       if (filtros.situacao === 'atrasado' && !(r.atrasado > 0)) return false;
       if (filtros.situacao === 'pacote_acabando' && !r.pacote?.acabando) return false;
@@ -109,13 +112,23 @@ NutriDudu.pages.clientes = (function () {
 
   // ---------- Pedaços da tabela ----------
 
-  function celulaUltima(r) {
+  /** Etiqueta do alerta mais urgente (retorno, falta, sumido, pacote atrasado). */
+  function etiquetaAlerta(l) {
+    const a = l.alertas[0];
+    if (!a) return '';
     const { utils } = NutriDudu;
-    if (!r.ultima) return '<span class="muted">—</span>';
+    const mais = l.alertas.length > 1 ? ` +${l.alertas.length - 1}` : '';
+    return `<span class="badge badge-${a.variante}" title="${utils.escapeHtml(l.alertas.map((x) => `${x.nome}: ${x.texto}`).join(' · '))}">⚠ ${utils.escapeHtml(a.nome.toLowerCase())}${mais}</span>`;
+  }
+
+  function celulaUltima(l) {
+    const { utils } = NutriDudu;
+    const r = l.resumo;
+    if (!r.ultima) return `<span class="muted">—</span> ${etiquetaAlerta(l)}`;
     return `
       ${utils.data(r.ultima.inicio)}
       <span class="muted small bloco">${utils.haDias(r.diasSemConsulta)}</span>
-      ${r.semRetorno ? '<span class="badge badge-alerta" title="Sem consulta há mais que o prazo de retorno e sem nada agendado">⚠ sem retorno</span>' : ''}`;
+      ${etiquetaAlerta(l)}`;
   }
 
   function celulaProxima(r) {
@@ -167,7 +180,7 @@ NutriDudu.pages.clientes = (function () {
           ${mostrarProfissional ? `<td>${l.profissional ? `<span class="com-ponto"><span class="ponto" style="background:${utils.escapeHtml(l.profissional.cor)}"></span>${utils.escapeHtml(l.profissional.nome)}</span>` : '<span class="muted">—</span>'}</td>` : ''}
           <td class="small">${utils.escapeHtml(l.origem)}</td>
           <td>${celulaPacote(l)}</td>
-          <td>${celulaUltima(l.resumo)}</td>
+          <td>${celulaUltima(l)}</td>
           <td>${celulaProxima(l.resumo)}</td>
           <td class="num">${celulaAberto(l.resumo)}</td>
         </tr>`;
@@ -197,7 +210,7 @@ NutriDudu.pages.clientes = (function () {
           const p = l.pessoa;
           const r = l.resumo;
           const avisos = [
-            r.semRetorno ? '<span class="badge badge-alerta">⚠ sem retorno</span>' : '',
+            etiquetaAlerta(l),
             r.atrasado ? `<span class="badge badge-perigo">${utils.moeda(r.atrasado)} atrasado</span>` : '',
             r.pacote?.acabando ? '<span class="badge badge-info">pacote acabando</span>' : '',
           ].join('');

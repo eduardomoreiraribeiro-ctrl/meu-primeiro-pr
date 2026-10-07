@@ -459,6 +459,7 @@ NutriDudu.pages.cliente = (function () {
 
     const porId = (lista) => Object.fromEntries(lista.map((x) => [x.id, x]));
     const resumo = calculos.resumoPessoa(pessoa, { consultas, pacotes, lancamentos }, geral || {});
+    const avisosRetorno = NutriDudu.alertas.daPessoa(pessoa, { consultas, pacotes }, geral || {}, new Date(), { incluirDispensados: true });
     const dadosFormula = { sexo: pessoa.sexo, idade: utils.idade(pessoa.dataNascimento) };
     const avaliacoesOrdenadas = avaliacoes
       .map((av) => ({ av, data: consultas.find((x) => x.id === av.consultaId)?.inicio || av.criadoEm, r: NutriDudu.avaliacao.calcular(av, dadosFormula) }))
@@ -514,7 +515,16 @@ NutriDudu.pages.cliente = (function () {
       </div>
 
       ${verClinico && alertas.length ? `<div class="alerta alerta-perigo" role="note"><strong>Atenção:</strong> ${alertas.map(utils.escapeHtml).join(' · ')}</div>` : ''}
-      ${resumo.semRetorno ? `<div class="alerta alerta-aviso" role="note"><strong>Sem retorno marcado:</strong> última consulta há ${utils.dias(resumo.diasSemConsulta)} (${utils.data(resumo.ultima.inicio)}) e nada agendado. O prazo de retorno é de ${resumo.prazoRetorno} dias.</div>` : ''}
+      ${avisosRetorno.filter((a) => !a.dispensado).map((a) => `
+        <div class="alerta alerta-${a.variante === 'perigo' ? 'perigo' : 'aviso'} alerta-com-acoes" role="note" data-alerta="${a.tipo}">
+          <span><strong>${utils.escapeHtml(a.nome)}:</strong> ${utils.escapeHtml(a.texto)}.</span>
+          <span class="acoes-linha sem-margem">
+            ${a.tipo === 'sumido' && pessoa.status === 'ativo' ? '<button type="button" class="btn btn-pequeno" data-marcar-inativo>Marcar inativo</button>' : ''}
+            <button type="button" class="btn btn-pequeno" data-dispensar="${a.tipo}">Dispensar</button>
+          </span>
+        </div>`).join('')}
+      ${avisosRetorno.filter((a) => a.dispensado).map((a) => `
+        <p class="muted small aviso-dispensado">Alerta "${utils.escapeHtml(a.nome)}" dispensado até ${utils.data(a.dispensa.ate)}${a.dispensa.motivo ? ` (${utils.escapeHtml(a.dispensa.motivo)})` : ''}. <button type="button" class="link-botao" data-reativar-alerta="${a.tipo}">Mostrar de novo</button></p>`).join('')}
 
       <section class="kpi-grid">
         ${ui.kpi('Última consulta', resumo.ultima ? utils.data(resumo.ultima.inicio) : '—', resumo.ultima ? utils.haDias(resumo.diasSemConsulta) : '')}
@@ -542,6 +552,9 @@ NutriDudu.pages.cliente = (function () {
       else if (alvo('[data-atender]')) NutriDudu.atendimento.abrir(alvo('[data-atender]').dataset.atender);
       else if (alvo('[data-detalhes]')) NutriDudu.agendamento.detalhes(alvo('[data-detalhes]').dataset.detalhes);
       else if (alvo('[data-revisar-anamnese]')) NutriDudu.anamnese.abrir(pessoa);
+      else if (alvo('[data-dispensar]')) NutriDudu.alertas.dispensar(pessoa, alvo('[data-dispensar]').dataset.dispensar);
+      else if (alvo('[data-reativar-alerta]')) NutriDudu.alertas.reativar(pessoa, alvo('[data-reativar-alerta]').dataset.reativarAlerta);
+      else if (alvo('[data-marcar-inativo]')) NutriDudu.funil.encerrar(pessoa);
       else if (alvo('[data-contratar]')) NutriDudu.financeiro.contratarPacote({ pessoa });
       else if (alvo('[data-renovar]')) NutriDudu.financeiro.contratarPacote({ pessoa, renovarDe: achar(pacotes, alvo('[data-renovar]').dataset.renovar) });
       else if (alvo('[data-prorrogar]')) {
