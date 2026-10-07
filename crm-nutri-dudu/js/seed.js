@@ -41,7 +41,6 @@ NutriDudu.seed = (function () {
       registro: 'Nutricionista — CRN-3 00000 (fictício)',
       cor: '#16a34a',
       perfil: 'admin',
-      servicoIds: ['srv_1', 'srv_2', 'srv_3', 'srv_4', 'srv_5', 'srv_6', 'srv_7'],
       ativo: true,
     }];
 

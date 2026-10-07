@@ -109,6 +109,19 @@ NutriDudu.store = (function () {
     if (db[colecao].length !== antes) salvarEAvisar(colecao);
   }
 
+  // Troca de uma vez todos os itens que passam no filtro pelos `novos`
+  // (ex.: os horários de um profissional). Avisa a tela uma vez só.
+  async function substituir(colecao, filtro, novos) {
+    validarColecao(colecao);
+    const agora = new Date().toISOString();
+    const criados = novos.map((dados) => ({
+      ...dados, id: uid(COLECOES[colecao]), criadoEm: agora, atualizadoEm: agora,
+    }));
+    db[colecao] = [...db[colecao].filter((x) => !filtro(x)), ...criados];
+    salvarEAvisar(colecao);
+    return copia(criados);
+  }
+
   async function resetarParaExemplo() {
     db = { ...bancoVazio(), ...NutriDudu.seed.criar() };
     salvarEAvisar('*');
@@ -120,5 +133,5 @@ NutriDudu.store = (function () {
     return () => ouvintes.delete(fn);
   }
 
-  return { list, get, create, update, remove, resetarParaExemplo, subscribe };
+  return { list, get, create, update, remove, substituir, resetarParaExemplo, subscribe };
 })();

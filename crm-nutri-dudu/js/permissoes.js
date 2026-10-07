@@ -7,12 +7,17 @@ NutriDudu.permissoes = (function () {
   const STORAGE_KEY = 'nutridudu:perfil';
   const PERFIL_PADRAO = 'admin';
 
+  // No protótipo, o perfil "Profissional" simula a Dra. Ana Lima (prof_1).
+  // Na fase 9 isso vem do login.
+  const PROFISSIONAL_SIMULADO = 'prof_1';
+
   const REGRAS = {
     verClinico: ['admin', 'profissional'],
     registrarAtendimento: ['admin', 'profissional'],
     darBaixaPagamento: ['admin', 'recepcao'],
     editarServicos: ['admin'],
     editarProfissionais: ['admin'],
+    editarRegras: ['admin'],
     configurarAgente: ['admin'],
     gerenciarDados: ['admin'],
   };
@@ -51,10 +56,22 @@ NutriDudu.permissoes = (function () {
     return permitidos.includes(perfil);
   }
 
+  // Horários de atendimento: admin edita todos; profissional, só os seus.
+  function podeEditarHorarios(profissionalId) {
+    return perfil === 'admin' || (perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO);
+  }
+
+  // Bloqueios: admin e recepção em qualquer agenda; profissional, só na sua.
+  // profissionalId null = bloqueio da clínica toda (só admin e recepção).
+  function podeEditarBloqueios(profissionalId) {
+    if (perfil === 'admin' || perfil === 'recepcao') return true;
+    return perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO;
+  }
+
   function aoMudar(fn) {
     ouvintes.add(fn);
     return () => ouvintes.delete(fn);
   }
 
-  return { atual, definir, pode, aoMudar };
+  return { atual, definir, pode, podeEditarHorarios, podeEditarBloqueios, aoMudar };
 })();

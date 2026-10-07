@@ -41,6 +41,9 @@
 
 * { box-sizing: border-box; }
 
+/* Garante que o atributo hidden sempre esconda, mesmo com display definido. */
+[hidden] { display: none !important; }
+
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
@@ -432,6 +435,8 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 .tabela-simples th { width: 40%; font-weight: 500; color: var(--text-muted); }
 
 .prof-topo { display: flex; align-items: center; gap: 0.75rem; }
+.sem-quebra { white-space: nowrap; }
+.grid-largo .tabela-simples th { width: 6.5rem; }
 .prof-topo .card-title { margin: 0; }
 .prof-topo p { margin: 0; }
 
@@ -624,6 +629,175 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 .coluna-rotulo { font-size: 0.8rem; color: var(--text-muted); }
 .coluna.destaque .coluna-rotulo { color: var(--text); font-weight: 600; }
 
+/* Botões extras */
+.btn-pequeno { padding: 0.35rem 0.75rem; font-size: 0.85rem; }
+.btn-perigo { background: var(--perigo); border-color: var(--perigo); color: #fff; }
+.btn-perigo:hover { background: #991b1b; }
+.btn-texto-perigo { color: var(--perigo); }
+.btn:disabled { opacity: 0.6; cursor: wait; }
+.btn-icone {
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.btn-icone:hover { color: var(--perigo); border-color: var(--perigo); }
+
+/* Seções e listas das páginas de cadastro */
+.secao-cabecalho {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.secao-cabecalho .card-title { margin: 0; }
+.card > .secao-cabecalho { margin-bottom: 0.75rem; }
+.secao-titulo { font-size: 1.05rem; font-weight: 600; margin-top: 0.5rem; }
+.grid-largo { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; }
+.card.inativo { opacity: 0.65; }
+.acoes-linha, .servico-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.85rem; }
+.servico-acoes { margin-top: auto; padding-top: 0.6rem; }
+.servico-uso { color: var(--text); font-weight: 500; }
+.prof-nome { flex: 1; min-width: 0; }
+.prof-badges { display: flex; gap: 0.35rem; }
+.aviso-perfil {
+  margin: 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--radius-sm);
+  background: var(--info-soft);
+  color: var(--info);
+}
+.anteriores { margin-top: 0.75rem; }
+.anteriores summary { cursor: pointer; color: var(--text-muted); }
+.alerta-aviso { background: var(--alerta-soft); color: var(--alerta); margin: 0; }
+
+/* Janela (modal) */
+.modal {
+  width: min(560px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 20px 60px rgba(16, 24, 20, 0.25);
+}
+.modal-largo { width: min(760px, calc(100vw - 2rem)); }
+.modal-pequeno { width: min(440px, calc(100vw - 2rem)); }
+.modal::backdrop { background: rgba(16, 24, 20, 0.45); }
+.modal form { display: flex; flex-direction: column; max-height: calc(100vh - 2rem); }
+.modal-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.modal-topo h2 { font-size: 1.1rem; }
+.modal-fechar {
+  border: 0;
+  background: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.modal-corpo {
+  padding: 1.1rem 1.25rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.modal-corpo > p { margin: 0; }
+.modal-rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+/* Campos de formulário */
+.campo { display: flex; flex-direction: column; gap: 0.3rem; min-width: 0; margin: 0; padding: 0; border: 0; }
+.campo label, .campo legend { font-size: 0.88rem; font-weight: 600; padding: 0; }
+.campo input:not([type="checkbox"]):not([type="color"]),
+.campo select,
+.campo textarea,
+.periodo input,
+.periodo select {
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+  color: var(--text);
+}
+.campo textarea { resize: vertical; }
+.campo input:focus, .campo select:focus, .campo textarea:focus,
+.periodo input:focus, .periodo select:focus { outline: 2px solid var(--primary); outline-offset: -1px; border-color: var(--primary); }
+.campo [aria-invalid="true"] { border-color: var(--perigo) !important; }
+.obrigatorio { color: var(--perigo); }
+.campo-ajuda { margin: 0; font-size: 0.8rem; color: var(--text-muted); }
+.campo-erro { margin: 0; font-size: 0.8rem; color: var(--perigo); }
+.campo-erro:empty { display: none; }
+.form-erro-geral {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: var(--perigo-soft);
+  color: var(--perigo);
+  font-size: 0.88rem;
+}
+.grade-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.9rem; }
+.grade-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.9rem; }
+.bloco-pacote {
+  margin: 0;
+  padding: 0.9rem;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.bloco-pacote legend { font-size: 0.85rem; font-weight: 600; padding: 0 0.3rem; color: var(--text-muted); }
+.marcadores { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; }
+.marcador { display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 400 !important; cursor: pointer; }
+.marcador input { width: 1.05rem; height: 1.05rem; accent-color: var(--primary); }
+.cores { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.cores input[type="color"] { width: 2.4rem; height: 2.2rem; padding: 0.15rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); }
+.cor-amostra { width: 1.5rem; height: 1.5rem; border: 2px solid var(--surface); border-radius: 50%; box-shadow: 0 0 0 1px var(--border); cursor: pointer; }
+
+/* Editor de horários */
+.horarios-editor { display: flex; flex-direction: column; }
+.dia-horario {
+  display: grid;
+  grid-template-columns: 6rem 1fr auto;
+  align-items: start;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-top: 1px solid var(--border);
+}
+.dia-horario:first-child { border-top: 0; }
+.dia-nome { font-weight: 600; padding-top: 0.45rem; }
+.periodos { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
+.periodos:empty::before { content: 'Fechado'; color: var(--text-muted); font-size: 0.9rem; padding-top: 0.45rem; }
+.periodo { display: flex; align-items: center; gap: 0.4rem; }
+.periodo input { width: 7rem; padding: 0.4rem 0.5rem; }
+.periodo select { width: auto; padding: 0.4rem 0.5rem; }
+.dia-horario .btn-link { padding-top: 0.45rem; white-space: nowrap; }
+
 /* Avisos */
 .toast-area {
   position: fixed;
@@ -699,6 +873,12 @@ h1 { font-size: 1.5rem; font-weight: 700; }
   .view { padding: 1.25rem 1rem 6rem; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
   .dash-grid { grid-template-columns: 1fr; }
+  .grade-2, .grade-3 { grid-template-columns: 1fr; }
+  .grid-largo { grid-template-columns: 1fr; }
+  .dia-horario { grid-template-columns: 1fr; gap: 0.35rem; }
+  .periodo { flex-wrap: wrap; }
+  .periodo input { width: 7.5rem; }
+  .modal { max-height: calc(100vh - 1rem); }
   .barra { grid-template-columns: minmax(6rem, 42%) 1fr 2rem; }
   .kpi { padding: 1rem; }
   .kpi-value { font-size: 1.15rem; }
