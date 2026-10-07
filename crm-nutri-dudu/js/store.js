@@ -8,7 +8,7 @@ NutriDudu.store = (function () {
 
   // Versão dos dados de exemplo: ao mudar a estrutura, troque o número e o
   // navegador recomeça com os novos dados de exemplo.
-  const STORAGE_KEY = 'nutridudu:v2';
+  const STORAGE_KEY = 'nutridudu:v3';
 
   // Coleção → prefixo dos ids gerados.
   const COLECOES = {
@@ -123,6 +123,7 @@ NutriDudu.store = (function () {
   }
 
   async function resetarParaExemplo() {
+    await NutriDudu.fotosStore?.limpar();
     db = { ...bancoVazio(), ...NutriDudu.seed.criar() };
     salvarEAvisar('*');
   }

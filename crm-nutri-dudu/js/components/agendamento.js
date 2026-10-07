@@ -419,6 +419,7 @@ NutriDudu.agendamento = (function () {
     const ativa = ATIVAS.includes(c.status);
     const podeMexer = permissoes.podeAgendarPara(c.profissionalId);
     const comecou = new Date(c.inicio) <= new Date();
+    const diaChegou = utils.isoDia(c.inicio) <= utils.isoDia(new Date());
 
     const corpo = `
       <div class="detalhe-consulta">
@@ -440,8 +441,8 @@ NutriDudu.agendamento = (function () {
     if (ativa && podeMexer && c.status === 'agendada') acoes.push({ texto: 'Confirmar', classe: 'btn-primary', aoClicar: () => confirmar(c) });
     if (ativa && podeMexer) acoes.push({ texto: 'Remarcar', aoClicar: () => abrir({ consulta: c }) });
     if (ativa && podeMexer && comecou) acoes.push({ texto: 'Marcar falta', aoClicar: () => marcarFalta(c) });
-    if (ativa && permissoes.pode('registrarAtendimento') && comecou) {
-      acoes.push({ texto: 'Registrar atendimento', aoClicar: () => ui.toast('O registro do atendimento chega na fase 5.', 'info') });
+    if (ativa && permissoes.pode('registrarAtendimento') && diaChegou) {
+      acoes.unshift({ texto: 'Registrar atendimento', classe: 'btn-primary', aoClicar: () => NutriDudu.atendimento.abrir(c.id) });
     }
     if (pessoa) acoes.push({ texto: 'WhatsApp', aoClicar: () => window.open(`https://wa.me/55${utils.soDigitos(pessoa.telefone)}`, '_blank', 'noopener') });
     if (ativa && podeMexer) acoes.push({ texto: 'Cancelar consulta', classe: 'btn-texto-perigo', aoClicar: () => cancelar(c) });

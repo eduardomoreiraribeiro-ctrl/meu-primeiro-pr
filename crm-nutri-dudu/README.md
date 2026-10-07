@@ -43,6 +43,19 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - **Perfis:** o profissional abre na própria agenda e vê a agenda dos colegas só como "Ocupado".
 - Regras em `js/agenda.js` (períodos, conflitos, horários livres, ocupação); telas em `js/pages/agenda.js` e `js/components/agendamento.js`.
 
+### Fase 5 — Prontuário, pacotes e financeiro
+
+- **Ficha do cliente em abas** (`#/clientes/<id>/<aba>`): Visão geral, Anamnese, Consultas, Avaliação física, Fotos, Pacotes, Financeiro e Histórico. Alergias graves e contraindicações aparecem em destaque no topo.
+- **Registrar atendimento** (na ficha, na agenda ou nos detalhes da consulta) em 6 etapas: anamnese → avaliação física → fotos → evolução e condutas → próximo retorno → fechamento. Ao concluir, a consulta vira "realizada", o pacote desconta, a cobrança é lançada (ou a já existente é recebida), o lead vira cliente e a agenda abre para marcar o retorno.
+- **Anamnese com versões:** cada revisão cria uma nova versão e mostra o que mudou; a **pré-anamnese** enviada pelo paciente aparece para revisão.
+- **Avaliação física:** peso, altura, circunferências, bioimpedância/manual ou **dobras cutâneas** com fórmula escolhida (Jackson & Pollock 7 ou 3, Durnin & Womersley; densidade → Siri). IMC, cintura/quadril, % de gordura, massa gorda e magra calculados na hora; gráficos de evolução e tabela comparativa.
+- **Fotos antes/depois** por ângulo, com comparador por data (só com consentimento do cliente). Ficam guardadas no próprio navegador (IndexedDB).
+- **Pacotes:** contratar (validade sugerida pelo serviço, parcelas mensais), renovar (o botão aparece quando o pacote está acabando), prorrogar e cancelar (cancela as parcelas em aberto); barra de uso e aviso de consultas atrasadas no ritmo previsto.
+- **Financeiro:** total pago, a receber e atrasado; nova cobrança, receber (baixa) e cancelar. Também em **+ Novo › Pagamento / Pacote**.
+- **Histórico:** tudo o que acontece gera registro automático; filtro por tipo e notas manuais.
+- **Perfis:** recepção não vê as abas clínicas nem registra atendimento; quem dá baixa em pagamento é administrador ou recepção.
+- Cálculos em `js/avaliacao.js` e `js/calculos.js`; telas em `js/pages/cliente.js` e `js/components/` (`anamnese.js`, `atendimento.js`, `financeiro.js`).
+
 ### Adiantado da fase 7
 
 **Dashboard**: filtro de período (hoje, 7 dias, 30 dias, este mês, mês passado, personalizado), clientes novos, atendimentos, faturamento estimado, conversão de leads, agendamentos do dia, leads por etapa do Kanban, serviços/planos mais realizados, origem dos leads e dias mais movimentados. Os cálculos ficam em `js/indicadores.js`.
@@ -70,10 +83,13 @@ crm-nutri-dudu/
     ├── indicadores.js    # cálculos do Dashboard
     ├── calculos.js       # regras: saldo de pacote, atrasos, sem retorno
     ├── agenda.js         # regras da agenda: horários livres, conflitos, ocupação
+    ├── avaliacao.js      # avaliação física: IMC, dobras, % de gordura
+    ├── fotos-store.js    # fotos guardadas no navegador (IndexedDB)
     ├── seed.js           # dados de exemplo fictícios
     ├── store.js          # camada de dados
     ├── app.js            # navegação, busca, "+ Novo", seletor de perfil
     ├── components/       # ui.js (peças de tela), form.js (campos), modal.js (janelas),
-    │                     # cadastro-pessoa.js (cadastro de lead/cliente), agendamento.js
+    │                     # cadastro-pessoa.js (cadastro de lead/cliente), agendamento.js,
+    │                     # anamnese.js, atendimento.js, financeiro.js
     └── pages/            # uma página por arquivo
 ```

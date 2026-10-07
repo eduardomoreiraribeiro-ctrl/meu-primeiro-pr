@@ -40,7 +40,7 @@ NutriDudu.calculos = (function () {
     const diasSemConsulta = ultima ? diasEntre(ultima.inicio, agora) : null;
 
     const ativo = pacotes
-      .filter((p) => p.status === 'ativo')
+      .filter((p) => statusPacote(p, agora) === 'ativo')
       .sort((a, b) => b.inicio.localeCompare(a.inicio))[0] || null;
     let pacote = null;
     if (ativo) {
@@ -73,5 +73,28 @@ NutriDudu.calculos = (function () {
     return (pessoaId) => mapa.get(pessoaId) || [];
   }
 
-  return { valorLiquido, lancamentoAtrasado, usoDoPacote, resumoPessoa, agruparPorPessoa };
+  const DIAS_FREQUENCIA = { semanal: 7, quinzenal: 15, mensal: 30 };
+
+  /** Status de verdade do pacote: um "ativo" com validade vencida é "vencido". */
+  function statusPacote(pacote, hoje = new Date()) {
+    if (pacote.status === 'ativo' && paraData(pacote.validade) < inicioDoDia(hoje)) return 'vencido';
+    return pacote.status;
+  }
+
+  /**
+   * Ritmo do pacote com frequência prevista: quantas consultas já deveriam ter sido
+   * feitas até hoje (a primeira no início) e quantas estão atrasadas.
+   */
+  function ritmoPacote(pacote, uso, hoje = new Date()) {
+    const passo = DIAS_FREQUENCIA[pacote.frequencia];
+    if (!passo) return null;
+    const dias = diasEntre(pacote.inicio, hoje);
+    if (dias < 0) return { esperadas: 0, atrasadas: 0 };
+    const esperadas = Math.min(pacote.qtdConsultas, Math.floor(dias / passo) + 1);
+    return { esperadas, atrasadas: Math.max(0, esperadas - uso.usadas - uso.reservadas) };
+  }
+
+  return {
+    valorLiquido, lancamentoAtrasado, usoDoPacote, resumoPessoa, agruparPorPessoa, statusPacote, ritmoPacote, DIAS_FREQUENCIA,
+  };
 })();

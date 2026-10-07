@@ -117,6 +117,9 @@ NutriDudu.utils = (function () {
   }
 
   // "1 dia", "3 dias".
+  /** "hoje" ou "há N dia(s)". */
+  const haDias = (n) => (n === 0 ? 'hoje' : `há ${dias(n)}`);
+
   function dias(n) {
     return `${n} ${Math.abs(n) === 1 ? 'dia' : 'dias'}`;
   }
@@ -151,6 +154,7 @@ NutriDudu.utils = (function () {
   }
 
   return {
+    haDias,
     dias, formatarTelefone, telefoneValido, formatarCpf, cpfValido, emailValido,
     uid, moeda, paraData, data, hora, diaPorExtenso, isoDia, inicioDoDia, diasEntre,
     idade, imc, iniciais, escapeHtml, normalizar, soDigitos,

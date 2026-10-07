@@ -9,17 +9,11 @@
     { padrao: /^\/kanban$/, redirecionar: '/kanban/comercial' },
     { padrao: /^\/kanban\/(comercial|acompanhamento)$/, pagina: 'kanban', menu: 'kanban', params: ['funil'] },
     { padrao: /^\/clientes$/, pagina: 'clientes', menu: 'clientes' },
-    { padrao: /^\/clientes\/([^/]+)$/, pagina: 'cliente', menu: 'clientes', params: ['id'] },
+    { padrao: /^\/clientes\/([^/]+)(?:\/([a-z]+))?$/, pagina: 'cliente', menu: 'clientes', params: ['id', 'aba'] },
     { padrao: /^\/conversas$/, pagina: 'conversas', menu: 'conversas' },
     { padrao: /^\/servicos$/, pagina: 'servicos', menu: 'servicos' },
     { padrao: /^\/configuracoes$/, pagina: 'configuracoes', menu: 'configuracoes' },
   ];
-
-  // Em que fase cada item do "+ Novo" fica pronto (seção 16 do planejamento).
-  const FASE_DO_NOVO = {
-    pagamento: ['Lançamento de pagamento', '5b'],
-    pacote: ['Contratação de pacote', '5b'],
-  };
 
   const view = document.getElementById('view');
   let renderAtual = 0;
@@ -165,8 +159,11 @@
       NutriDudu.agendamento.abrir();
       return;
     }
-    const [nome, fase] = FASE_DO_NOVO[tipo];
-    ui.toast(`${nome} chega na fase ${fase}.`, 'info');
+    if (tipo === 'pagamento') {
+      NutriDudu.financeiro.novoLancamento();
+      return;
+    }
+    if (tipo === 'pacote') NutriDudu.financeiro.contratarPacote();
   });
 
   document.addEventListener('click', (e) => {

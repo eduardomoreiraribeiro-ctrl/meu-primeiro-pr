@@ -42,7 +42,8 @@ NutriDudu.pages.clientes = (function () {
         consultas: consultasDe(p.id), pacotes: pacotesDe(p.id), lancamentos: lancamentosDe(p.id),
       }, geral);
       // Texto clínico pesquisável (só usado quando o perfil pode ver dados clínicos).
-      const anamnese = anamnesesDe(p.id).sort((a, b) => b.versao - a.versao)[0];
+      const sit = NutriDudu.anamnese.situacao(anamnesesDe(p.id));
+      const anamnese = sit.atual || sit.pre;
       const textoClinico = anamnese ? utils.normalizar([
         ...anamnese.alergias.map((a) => a.substancia),
         ...anamnese.medicamentos.map((m) => m.nome),
@@ -113,7 +114,7 @@ NutriDudu.pages.clientes = (function () {
     if (!r.ultima) return '<span class="muted">—</span>';
     return `
       ${utils.data(r.ultima.inicio)}
-      <span class="muted small bloco">há ${utils.dias(r.diasSemConsulta)}</span>
+      <span class="muted small bloco">${utils.haDias(r.diasSemConsulta)}</span>
       ${r.semRetorno ? '<span class="badge badge-alerta" title="Sem consulta há mais que o prazo de retorno e sem nada agendado">⚠ sem retorno</span>' : ''}`;
   }
 
@@ -206,7 +207,7 @@ NutriDudu.pages.clientes = (function () {
                 ${ui.avatar(utils.iniciais(p.nome))}
                 <span class="lista-item-info">
                   <strong>${utils.escapeHtml(p.nome)}</strong>
-                  <span class="muted small">${utils.escapeHtml(p.telefone)}${r.ultima ? ` · última consulta há ${utils.dias(r.diasSemConsulta)}` : ''}</span>
+                  <span class="muted small">${utils.escapeHtml(p.telefone)}${r.ultima ? ` · última consulta ${utils.haDias(r.diasSemConsulta)}` : ''}</span>
                   ${r.proxima ? `<span class="small">Próximo: ${utils.data(r.proxima.inicio)} ${utils.hora(r.proxima.inicio)}</span>` : ''}
                   ${avisos ? `<span class="avisos">${avisos}</span>` : ''}
                 </span>

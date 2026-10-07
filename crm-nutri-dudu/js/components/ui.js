@@ -115,7 +115,46 @@ NutriDudu.ui = (function () {
       </div>`;
   }
 
+  /**
+   * Gráfico de linha de uma medida ao longo do tempo (uma série só).
+   * pontos: [{ data, valor, nota? }] — `nota` marca o ponto com um círculo vazado
+   * (ex.: mudou o método de medida). formatar(v) → texto do valor.
+   */
+  function grafLinha(pontos, { formatar = (v) => String(v), rotulo = 'valor' } = {}) {
+    const validos = pontos.filter((p) => p.valor !== null && p.valor !== undefined).sort((a, b) => new Date(a.data) - new Date(b.data));
+    if (!validos.length) return vazio('Sem medidas ainda.');
+    const W = 320, H = 168, mL = 44, mR = 56, mT = 18, mB = 30;
+    const t = validos.map((p) => new Date(p.data).getTime());
+    const v = validos.map((p) => p.valor);
+    let vMin = Math.min(...v), vMax = Math.max(...v);
+    const folga = (vMax - vMin) * 0.15 || Math.max(1, Math.abs(vMax) * 0.05);
+    vMin -= folga; vMax += folga;
+    const tMin = Math.min(...t), tMax = Math.max(...t);
+    const X = (ms) => (tMax === tMin ? mL + (W - mL - mR) / 2 : mL + ((ms - tMin) / (tMax - tMin)) * (W - mL - mR));
+    const Y = (val) => mT + (1 - (val - vMin) / (vMax - vMin)) * (H - mT - mB);
+    const ticks = [vMin + folga, (vMin + vMax) / 2, vMax - folga];
+    const dataCurta = (ms) => NutriDudu.utils.data(new Date(ms)).replace(/\/(\d{2})(\d{2})$/, '/$2');
+    const caminho = validos.map((p, i) => `${i ? 'L' : 'M'}${X(t[i]).toFixed(1)} ${Y(p.valor).toFixed(1)}`).join('');
+    const ultimo = validos[validos.length - 1];
+    return `
+      <svg class="graf-linha" viewBox="0 0 ${W} ${H}" role="img" aria-label="${escapeHtml(`${rotulo}: de ${formatar(validos[0].valor)} para ${formatar(ultimo.valor)}`)}">
+        ${ticks.map((tk) => `
+          <line x1="${mL}" x2="${W - mR}" y1="${Y(tk).toFixed(1)}" y2="${Y(tk).toFixed(1)}" class="graf-grade"/>
+          <text x="${mL - 6}" y="${(Y(tk) + 4).toFixed(1)}" text-anchor="end" class="graf-eixo">${escapeHtml(formatar(Math.round(tk * 10) / 10))}</text>`).join('')}
+        <text x="${mL}" y="${H - 8}" class="graf-eixo">${dataCurta(tMin)}</text>
+        ${tMax !== tMin ? `<text x="${W - mR}" y="${H - 8}" text-anchor="end" class="graf-eixo">${dataCurta(tMax)}</text>` : ''}
+        <path d="${caminho}" class="graf-traco"/>
+        ${validos.map((p, i) => `
+          <g class="graf-ponto${p.nota ? ' vazado' : ''}">
+            <title>${escapeHtml(`${NutriDudu.utils.data(p.data)}: ${formatar(p.valor)}${p.nota ? ` — ${p.nota}` : ''}`)}</title>
+            <circle cx="${X(t[i]).toFixed(1)}" cy="${Y(p.valor).toFixed(1)}" r="10" class="graf-alvo"/>
+            <circle cx="${X(t[i]).toFixed(1)}" cy="${Y(p.valor).toFixed(1)}" r="4" class="graf-marca"/>
+          </g>`).join('')}
+        <text x="${(X(t[t.length - 1]) + 8).toFixed(1)}" y="${(Y(ultimo.valor) + 4).toFixed(1)}" class="graf-valor">${escapeHtml(formatar(ultimo.valor))}</text>
+      </svg>`;
+  }
+
   return {
-    toast, cabecalho, kpi, emBreve, badge, avatar, vazio, statusPessoa, statusConsulta, barras, colunas,
+    toast, cabecalho, kpi, emBreve, badge, avatar, vazio, statusPessoa, statusConsulta, barras, colunas, grafLinha,
   };
 })();

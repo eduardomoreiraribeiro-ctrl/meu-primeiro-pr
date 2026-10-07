@@ -237,33 +237,39 @@ NutriDudu.seed = (function () {
     // para acomodar cada uma no primeiro horário válido do mesmo dia (ou dos seguintes).
     acomodar(consultas, horarios, bloqueios, configuracoes[0]);
 
+    // A anamnese "nasce" no dia da consulta em que foi feita (a pré-anamnese, 2 dias atrás).
     const an = (id, pessoaId, consultaId, dados) => ({
-      id, pessoaId, consultaId, versao: 1, origem: 'consulta',
+      id, pessoaId, consultaId, versao: 1, origem: 'consulta', status: 'confirmada', autor: 'profissional',
+      criadoEm: consultaId ? consultas.find((c) => c.id === consultaId).inicio : diaHora(-2, '19:40'),
       queixa: '', historicoSaude: '', alergias: [], contraindicacoes: [], medicamentos: [],
       habitosVida: '', habitosAlimentares: '', exames: [], ...dados,
     });
     const anamneses = [
-      an('ana_1', 'pes_1', 'con_1', { queixa: 'Quer perder 8 kg até o fim do ano.', historicoSaude: 'Sem doenças diagnosticadas.', alergias: [{ substancia: 'Lactose', tipo: 'intolerancia', gravidade: 'leve' }], habitosVida: 'Treina 3x por semana; dorme 6 h.' }),
+      an('ana_1', 'pes_1', 'con_1', { queixa: 'Quer perder 8 kg até o fim do ano.', historicoSaude: 'Sem doenças diagnosticadas. Mãe com diabetes tipo 2.', alergias: [{ substancia: 'Lactose', tipo: 'intolerancia', gravidade: 'leve' }], habitosVida: 'Treina 3x por semana; dorme 6 h; bebe 1,5 L de água.', habitosAlimentares: 'Pula o café da manhã; almoça fora; belisca à tarde.', exames: [{ nome: 'Glicemia de jejum', data: dia(-75), resultado: '92 mg/dL' }] }),
+      // Pré-anamnese preenchida pela paciente, aguardando revisão da nutricionista.
+      an('ana_5', 'pes_5', null, { origem: 'pre', status: 'a_revisar', autor: 'paciente', queixa: 'Quero melhorar a disposição e controlar o colesterol.', historicoSaude: 'Colesterol alto (exame de agosto).', medicamentos: [{ nome: 'Sinvastatina', dose: '20 mg', frequencia: 'à noite', desde: '2026' }], habitosAlimentares: 'Come muito pão e doce à noite.' }),
       an('ana_2', 'pes_2', 'con_4', { queixa: 'Ganho de massa muscular.', historicoSaude: 'Sem doenças diagnosticadas.', medicamentos: [{ nome: 'Creatina', dose: '5 g', frequencia: 'diária', desde: '2025' }], habitosVida: 'Musculação 5x por semana.' }),
       an('ana_3', 'pes_7', 'con_12', { queixa: 'Compulsão por doces à noite.', historicoSaude: 'Hipotireoidismo.', medicamentos: [{ nome: 'Levotiroxina', dose: '50 mcg', frequencia: 'em jejum', desde: '2022' }] }),
       an('ana_4', 'pes_12', 'con_17', { queixa: 'Perder peso por recomendação médica.', historicoSaude: 'Pré-diabetes.', alergias: [{ substancia: 'Amendoim', tipo: 'alergia', gravidade: 'grave' }], contraindicacoes: [{ descricao: 'Evitar suplemento termogênico', observacao: 'Hipertensão leve' }], medicamentos: [{ nome: 'Metformina', dose: '500 mg', frequencia: '2x ao dia', desde: '2026' }] }),
     ];
 
-    const av = (id, pessoaId, consultaId, pesoKg, alturaCm, percentualGordura) => ({
+    const av = (id, pessoaId, consultaId, pesoKg, alturaCm, percentualGordura, extra = {}) => ({
       id, pessoaId, consultaId, pesoKg, alturaCm, percentualGordura,
-      metodo: 'bioimpedancia', formula: null, circunferencias: {}, dobras: {},
+      metodo: 'bioimpedancia', formula: null, circunferencias: {}, dobras: {}, ...extra,
     });
+    // Diego: dobras cutâneas (Jackson & Pollock 7) — o % de gordura é calculado.
+    const dobrasDiego = (k) => ({ peitoral: 22 - k, axilarMedia: 26 - k, tricipital: 18 - k, subescapular: 30 - k, abdominal: 38 - k, suprailiaca: 32 - k, coxa: 24 - k });
     const avaliacoes = [
-      av('ava_1', 'pes_1', 'con_1', 82.4, 165, 34),
-      av('ava_2', 'pes_1', 'con_2', 79.8, 165, 32.5),
+      av('ava_1', 'pes_1', 'con_1', 82.4, 165, 34, { circunferencias: { cintura: 92, quadril: 112, abdome: 98 } }),
+      av('ava_2', 'pes_1', 'con_2', 79.8, 165, 32.5, { circunferencias: { cintura: 88, quadril: 110, abdome: 94 } }),
       av('ava_3', 'pes_2', 'con_4', 74.0, 180, 16),
       av('ava_4', 'pes_2', 'con_5', 75.1, 180, 15.6),
       av('ava_5', 'pes_2', 'con_7', 76.2, 180, 15.3),
       av('ava_6', 'pes_2', 'con_8', 77.5, 180, 15.1),
       av('ava_7', 'pes_7', 'con_12', 71.3, 162, 33),
       av('ava_8', 'pes_7', 'con_13', 69.9, 162, 31.8),
-      av('ava_9', 'pes_12', 'con_17', 98.3, 178, 30),
-      av('ava_10', 'pes_12', 'con_18', 95.0, 178, 28.6),
+      av('ava_9', 'pes_12', 'con_17', 98.3, 178, null, { metodo: 'dobras', formula: 'jp7', dobras: dobrasDiego(0), circunferencias: { cintura: 104, quadril: 108 } }),
+      av('ava_10', 'pes_12', 'con_18', 95.0, 178, null, { metodo: 'dobras', formula: 'jp7', dobras: dobrasDiego(3), circunferencias: { cintura: 100, quadril: 106 } }),
     ];
 
     // status "atrasado" não é salvo: é calculado (pendente com vencimento já passado).
