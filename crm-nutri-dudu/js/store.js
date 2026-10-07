@@ -6,7 +6,9 @@ window.NutriDudu = window.NutriDudu || {};
 NutriDudu.store = (function () {
   const { uid } = NutriDudu.utils;
 
-  const STORAGE_KEY = 'nutridudu:v1';
+  // Versão dos dados de exemplo: ao mudar a estrutura, troque o número e o
+  // navegador recomeça com os novos dados de exemplo.
+  const STORAGE_KEY = 'nutridudu:v2';
 
   // Coleção → prefixo dos ids gerados.
   const COLECOES = {

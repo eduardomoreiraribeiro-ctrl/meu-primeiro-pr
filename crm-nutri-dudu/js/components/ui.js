@@ -73,5 +73,49 @@ NutriDudu.ui = (function () {
     return badge(NutriDudu.config.STATUS_CONSULTA[status] || status, VARIANTE_STATUS_CONSULTA[status]);
   }
 
-  return { toast, cabecalho, kpi, emBreve, badge, avatar, vazio, statusPessoa, statusConsulta };
+  const porcento = (parte, total) => (total ? Math.round((parte / total) * 100) : 0);
+
+  /**
+   * Barras horizontais com rótulo e valor visíveis (a cor nunca é a única pista).
+   * itens: [{ nome, qtd, apagado? }]; opcoes.unidade: ['lead', 'leads'].
+   */
+  function barras(itens, { unidade = ['item', 'itens'], vazio: msgVazio = 'Sem dados no período.' } = {}) {
+    const total = itens.reduce((t, i) => t + i.qtd, 0);
+    if (!total) return vazio(msgVazio);
+    const maior = Math.max(...itens.map((i) => i.qtd));
+    return `
+      <ul class="barras">
+        ${itens.map((i) => {
+          const texto = `${i.nome}: ${i.qtd} ${i.qtd === 1 ? unidade[0] : unidade[1]} (${porcento(i.qtd, total)}%)`;
+          return `
+            <li class="barra${i.apagado ? ' apagado' : ''}" title="${escapeHtml(texto)}">
+              <span class="barra-rotulo">${escapeHtml(i.nome)}</span>
+              <span class="barra-trilho"><span class="barra-valor" style="width:${(i.qtd / maior) * 100}%"></span></span>
+              <span class="barra-numero">${i.qtd}</span>
+            </li>`;
+        }).join('')}
+      </ul>`;
+  }
+
+  /** Colunas verticais (ex.: dias da semana). itens: [{ nome, curto, qtd }]. */
+  function colunas(itens, { unidade = ['item', 'itens'], vazio: msgVazio = 'Sem dados no período.' } = {}) {
+    const maior = Math.max(0, ...itens.map((i) => i.qtd));
+    if (!maior) return vazio(msgVazio);
+    return `
+      <div class="colunas">
+        ${itens.map((i) => {
+          const texto = `${i.nome}: ${i.qtd} ${i.qtd === 1 ? unidade[0] : unidade[1]}`;
+          return `
+            <div class="coluna${i.qtd === maior ? ' destaque' : ''}" title="${escapeHtml(texto)}">
+              <span class="coluna-numero">${i.qtd}</span>
+              <span class="coluna-trilho"><span class="coluna-valor" style="height:${(i.qtd / maior) * 100}%"></span></span>
+              <span class="coluna-rotulo">${escapeHtml(i.curto || i.nome)}</span>
+            </div>`;
+        }).join('')}
+      </div>`;
+  }
+
+  return {
+    toast, cabecalho, kpi, emBreve, badge, avatar, vazio, statusPessoa, statusConsulta, barras, colunas,
+  };
 })();

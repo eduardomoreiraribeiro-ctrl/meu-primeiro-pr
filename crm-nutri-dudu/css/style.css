@@ -17,6 +17,11 @@
   --primary-hover: var(--verde-700);
   --primary-soft: var(--verde-50);
 
+  --grafico: var(--verde-600);
+  --grafico-suave: #86d6a2;
+  --grafico-apagado: #c3c9c5;
+  --eixo: #c9d0cc;
+
   --info: #2563eb;
   --info-soft: #eff6ff;
   --sucesso: #15803d;
@@ -515,6 +520,110 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 .ficha-identidade p { margin: 0.2rem 0 0; }
 .ficha-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
 
+/* Dashboard */
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+.segmentos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.segmento {
+  padding: 0.35rem 0.75rem;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.segmento:hover { background: var(--surface-2); color: var(--text); }
+.segmento.ativo { background: var(--primary); color: #fff; }
+.datas { display: flex; gap: 0.5rem; font-size: 0.85rem; color: var(--text-muted); }
+.datas input {
+  margin-left: 0.25rem;
+  padding: 0.3rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface);
+}
+
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.dash-largo { grid-column: 1 / -1; }
+.card-sub { margin: -0.6rem 0 0.9rem; }
+
+/* Gráficos: uma cor só (verde da clínica); valores sempre escritos ao lado. */
+.barras { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.55rem; }
+.barra {
+  display: grid;
+  grid-template-columns: minmax(7rem, 40%) 1fr 2.5rem;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.88rem;
+}
+.barra-rotulo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barra-trilho { height: 12px; }
+.barra-valor {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: 0 4px 4px 0;
+  background: var(--grafico);
+}
+.barra-numero { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.barra.apagado { color: var(--text-muted); }
+.barra.apagado .barra-valor { background: var(--grafico-apagado); }
+
+.colunas {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  height: 190px;
+}
+.coluna {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+.coluna-numero { font-size: 0.85rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.coluna-trilho {
+  flex: 1;
+  width: 100%;
+  max-width: 44px;
+  display: flex;
+  align-items: flex-end;
+  border-bottom: 1px solid var(--eixo);
+}
+.coluna-valor {
+  display: block;
+  width: 100%;
+  min-height: 2px;
+  border-radius: 4px 4px 0 0;
+  background: var(--grafico-suave);
+}
+.coluna.destaque .coluna-valor { background: var(--grafico); }
+.coluna-rotulo { font-size: 0.8rem; color: var(--text-muted); }
+.coluna.destaque .coluna-rotulo { color: var(--text); font-weight: 600; }
+
 /* Avisos */
 .toast-area {
   position: fixed;
@@ -589,6 +698,8 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 
   .view { padding: 1.25rem 1rem 6rem; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+  .dash-grid { grid-template-columns: 1fr; }
+  .barra { grid-template-columns: minmax(6rem, 42%) 1fr 2rem; }
   .kpi { padding: 1rem; }
   .kpi-value { font-size: 1.15rem; }
   .toast-area { left: 1rem; right: 1rem; bottom: 5.5rem; }

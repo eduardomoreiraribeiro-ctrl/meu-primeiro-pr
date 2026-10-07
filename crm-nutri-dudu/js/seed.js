@@ -89,24 +89,54 @@ NutriDudu.seed = (function () {
       tags: [],
       consentimentos: { saude: false, whatsapp: false, fotos: false, divulgacao: false },
       agentePausado: false,
+      clienteDesde: null, // data em que fechou (virou cliente); null = ainda é lead
       ...dados,
     });
     const todosConsentimentos = { saude: true, whatsapp: true, fotos: true, divulgacao: false };
 
     const pessoas = [
-      p('pes_1', { nome: 'Mariana Alves', telefone: '(11) 98123-4501', email: 'mariana.alves@exemplo.com', dataNascimento: '1991-03-14', sexo: 'F', origem: 'instagram', objetivo: 'emagrecimento', funil: 'acompanhamento', etapa: 'tratamento', status: 'ativo', servicoInteresseId: 'srv_3', tags: ['pacote trimestral'], consentimentos: todosConsentimentos, criadoEm: diaHora(-80, '10:00'), etapaDesde: diaHora(-70, '10:00') }),
-      p('pes_2', { nome: 'Rafael Costa', telefone: '(11) 97234-5602', email: 'rafael.costa@exemplo.com', dataNascimento: '1987-07-22', sexo: 'M', origem: 'indicacao', indicadoPorId: 'pes_1', objetivo: 'hipertrofia', funil: 'acompanhamento', etapa: 'tratamento', status: 'ativo', servicoInteresseId: 'srv_5', retornoDias: 30, tags: ['VIP'], consentimentos: todosConsentimentos, criadoEm: diaHora(-155, '09:00'), etapaDesde: diaHora(-150, '09:00') }),
-      p('pes_3', { nome: 'Juliana Ferreira', telefone: '(11) 96345-6703', email: 'ju.ferreira@exemplo.com', dataNascimento: '1995-11-02', sexo: 'F', origem: 'whatsapp', objetivo: 'gestante', funil: 'acompanhamento', etapa: 'inicio', status: 'ativo', servicoInteresseId: 'srv_3', tags: ['gestante'], consentimentos: todosConsentimentos, criadoEm: diaHora(-12, '14:00'), etapaDesde: diaHora(-3, '16:00') }),
+      p('pes_1', { clienteDesde: dia(-70), nome: 'Mariana Alves', telefone: '(11) 98123-4501', email: 'mariana.alves@exemplo.com', dataNascimento: '1991-03-14', sexo: 'F', origem: 'instagram', objetivo: 'emagrecimento', funil: 'acompanhamento', etapa: 'tratamento', status: 'ativo', servicoInteresseId: 'srv_3', tags: ['pacote trimestral'], consentimentos: todosConsentimentos, criadoEm: diaHora(-80, '10:00'), etapaDesde: diaHora(-70, '10:00') }),
+      p('pes_2', { clienteDesde: dia(-150), nome: 'Rafael Costa', telefone: '(11) 97234-5602', email: 'rafael.costa@exemplo.com', dataNascimento: '1987-07-22', sexo: 'M', origem: 'indicacao', indicadoPorId: 'pes_1', objetivo: 'hipertrofia', funil: 'acompanhamento', etapa: 'tratamento', status: 'ativo', servicoInteresseId: 'srv_5', retornoDias: 30, tags: ['VIP'], consentimentos: todosConsentimentos, criadoEm: diaHora(-155, '09:00'), etapaDesde: diaHora(-150, '09:00') }),
+      p('pes_3', { clienteDesde: dia(-3), nome: 'Juliana Ferreira', telefone: '(11) 96345-6703', email: 'ju.ferreira@exemplo.com', dataNascimento: '1995-11-02', sexo: 'F', origem: 'whatsapp', objetivo: 'gestante', funil: 'acompanhamento', etapa: 'inicio', status: 'ativo', servicoInteresseId: 'srv_3', tags: ['gestante'], consentimentos: todosConsentimentos, criadoEm: diaHora(-12, '14:00'), etapaDesde: diaHora(-3, '16:00') }),
       p('pes_4', { nome: 'Bruno Martins', telefone: '(11) 95456-7804', dataNascimento: '1999-01-30', sexo: 'M', origem: 'instagram', objetivo: 'esportiva', funil: 'comercial', etapa: 'proposta', status: 'lead', servicoInteresseId: 'srv_5', criadoEm: diaHora(-9, '11:30'), etapaDesde: diaHora(-2, '11:30') }),
       p('pes_5', { nome: 'Camila Rocha', telefone: '(11) 94567-8905', email: 'camila.rocha@exemplo.com', dataNascimento: '1983-05-18', sexo: 'F', origem: 'presencial', objetivo: 'saude', funil: 'comercial', etapa: 'agendada', status: 'lead', servicoInteresseId: 'srv_1', consentimentos: { saude: false, whatsapp: true, fotos: false, divulgacao: false }, criadoEm: diaHora(-6, '08:45'), etapaDesde: diaHora(-4, '08:45') }),
       p('pes_6', { nome: 'Lucas Pereira', telefone: '(11) 93678-9006', dataNascimento: '2001-09-09', sexo: 'M', origem: 'instagram', objetivo: 'hipertrofia', funil: 'comercial', etapa: 'contato', status: 'lead', servicoInteresseId: 'srv_1', criadoEm: diaHora(-5, '19:10'), etapaDesde: diaHora(-5, '19:10') }),
-      p('pes_7', { nome: 'Fernanda Lima', telefone: '(11) 92789-0107', email: 'fernanda.lima@exemplo.com', dataNascimento: '1993-12-25', sexo: 'F', origem: 'indicacao', indicadoPorId: 'pes_2', objetivo: 'emagrecimento', funil: 'acompanhamento', etapa: 'retorno', status: 'ativo', consentimentos: todosConsentimentos, criadoEm: diaHora(-100, '15:20'), etapaDesde: diaHora(-2, '08:00') }),
+      p('pes_7', { clienteDesde: dia(-95), nome: 'Fernanda Lima', telefone: '(11) 92789-0107', email: 'fernanda.lima@exemplo.com', dataNascimento: '1993-12-25', sexo: 'F', origem: 'indicacao', indicadoPorId: 'pes_2', objetivo: 'emagrecimento', funil: 'acompanhamento', etapa: 'retorno', status: 'ativo', consentimentos: todosConsentimentos, criadoEm: diaHora(-100, '15:20'), etapaDesde: diaHora(-2, '08:00') }),
       p('pes_8', { nome: 'Gustavo Ribeiro', telefone: '(11) 91890-1208', dataNascimento: '1979-04-07', sexo: 'M', origem: 'whatsapp', objetivo: 'saude', funil: 'comercial', etapa: 'novo', status: 'lead', consentimentos: { saude: false, whatsapp: true, fotos: false, divulgacao: false }, criadoEm: diaHora(0, '09:05'), etapaDesde: diaHora(0, '09:05') }),
       p('pes_9', { nome: 'Patrícia Gomes', telefone: '(11) 90901-2309', dataNascimento: '1988-08-16', sexo: 'F', origem: 'instagram', objetivo: 'emagrecimento', funil: 'comercial', etapa: 'perdido', status: 'lead', motivoPerda: 'Preço', criadoEm: diaHora(-30, '10:00'), etapaDesde: diaHora(-20, '10:00') }),
-      p('pes_10', { nome: 'Thiago Souza', telefone: '(11) 98012-3410', email: 'thiago.souza@exemplo.com', dataNascimento: '1990-02-11', sexo: 'M', origem: 'indicacao', indicadoPorId: 'pes_1', objetivo: 'esportiva', funil: 'acompanhamento', etapa: 'encerrado', status: 'inativo', observacoes: 'Concluiu o pacote; oferecer renovação.', consentimentos: todosConsentimentos, criadoEm: diaHora(-200, '10:00'), etapaDesde: diaHora(-100, '10:00') }),
+      p('pes_10', { clienteDesde: dia(-190), nome: 'Thiago Souza', telefone: '(11) 98012-3410', email: 'thiago.souza@exemplo.com', dataNascimento: '1990-02-11', sexo: 'M', origem: 'indicacao', indicadoPorId: 'pes_1', objetivo: 'esportiva', funil: 'acompanhamento', etapa: 'encerrado', status: 'inativo', observacoes: 'Concluiu o pacote; oferecer renovação.', consentimentos: todosConsentimentos, criadoEm: diaHora(-200, '10:00'), etapaDesde: diaHora(-100, '10:00') }),
       p('pes_11', { nome: 'Aline Barbosa', telefone: '(11) 97123-4511', dataNascimento: '1997-06-03', sexo: 'F', origem: 'presencial', objetivo: 'hipertrofia', funil: 'comercial', etapa: 'novo', status: 'lead', servicoInteresseId: 'srv_3', criadoEm: diaHora(-1, '17:40'), etapaDesde: diaHora(-1, '17:40') }),
-      p('pes_12', { nome: 'Diego Carvalho', telefone: '(11) 96234-5612', email: 'diego.c@exemplo.com', dataNascimento: '1985-10-28', sexo: 'M', origem: 'whatsapp', objetivo: 'emagrecimento', funil: 'acompanhamento', etapa: 'renovacao', status: 'ativo', servicoInteresseId: 'srv_3', consentimentos: todosConsentimentos, criadoEm: diaHora(-65, '10:00'), etapaDesde: diaHora(-1, '10:00') }),
+      p('pes_12', { clienteDesde: dia(-60), nome: 'Diego Carvalho', telefone: '(11) 96234-5612', email: 'diego.c@exemplo.com', dataNascimento: '1985-10-28', sexo: 'M', origem: 'whatsapp', objetivo: 'emagrecimento', funil: 'acompanhamento', etapa: 'renovacao', status: 'ativo', servicoInteresseId: 'srv_3', consentimentos: todosConsentimentos, criadoEm: diaHora(-65, '10:00'), etapaDesde: diaHora(-1, '10:00') }),
     ];
+
+    // Mais clientes e leads recentes, para o Dashboard ter movimento.
+    // [id, nome, sexo, origem, indicadoPor, criado há N dias, cliente há N dias (null = lead), etapa]
+    const extras = [
+      ['pes_13', 'Larissa Mendes', 'F', 'instagram', null, -25, -20, 'tratamento'],
+      ['pes_14', 'Pedro Henrique Dias', 'M', 'indicacao', 'pes_7', -40, -35, 'tratamento'],
+      ['pes_15', 'Beatriz Nogueira', 'F', 'whatsapp', null, -18, -15, 'tratamento'],
+      ['pes_16', 'Marcos Vinícius Teles', 'M', 'presencial', null, -50, -48, 'tratamento'],
+      ['pes_17', 'Renata Cardoso', 'F', 'instagram', null, -10, -8, 'tratamento'],
+      ['pes_18', 'Felipe Andrade', 'M', 'whatsapp', null, -33, -28, 'tratamento'],
+      ['pes_19', 'Sofia Martins', 'F', 'indicacao', 'pes_13', -4, null, 'contato'],
+      ['pes_20', 'André Lopes', 'M', 'whatsapp', null, -14, null, 'perdido'],
+    ];
+    extras.forEach(([id, nome, sexo, origem, indicadoPorId, criado, cliente, etapa], n) => {
+      const ehCliente = cliente !== null;
+      pessoas.push(p(id, {
+        nome, sexo, origem, indicadoPorId,
+        telefone: `(11) 9${8100 + n * 37}-${String(4100 + n * 113).padStart(4, '0')}`,
+        dataNascimento: `${1980 + n * 2}-0${(n % 9) + 1}-1${n % 9}`,
+        objetivo: ['emagrecimento', 'hipertrofia', 'saude', 'esportiva'][n % 4],
+        funil: ehCliente ? 'acompanhamento' : 'comercial',
+        etapa, status: ehCliente ? 'ativo' : 'lead',
+        motivoPerda: etapa === 'perdido' ? 'Sem resposta' : null,
+        clienteDesde: ehCliente ? dia(cliente) : null,
+        consentimentos: ehCliente ? todosConsentimentos : { saude: false, whatsapp: true, fotos: false, divulgacao: false },
+        criadoEm: diaHora(criado, '10:00'),
+        etapaDesde: diaHora(ehCliente ? cliente : criado, '10:00'),
+      }));
+    });
 
     const pacotes = [
       { id: 'pac_1', pessoaId: 'pes_1', servicoId: 'srv_3', inicio: dia(-70), validade: dia(20), qtdConsultas: 3, frequencia: 'mensal', valorNegociado: 600, parcelas: 1, status: 'ativo' },
@@ -156,6 +186,21 @@ NutriDudu.seed = (function () {
       c('con_19', { pessoaId: 'pes_12', dia: 1, hora: '16:00', tipo: 'retorno', servicoId: 'srv_3', pacoteId: 'pac_4', status: 'confirmada' }),
       // Mariana — bioimpedância avulsa
       c('con_20', { pessoaId: 'pes_1', dia: -40, hora: '11:10', tipo: 'avaliacao', servicoId: 'srv_6', status: 'realizada' }),
+      // Clientes extras: consulta inicial + retornos avulsos
+      c('con_21', { pessoaId: 'pes_13', dia: -20, hora: '08:00', tipo: 'primeira', servicoId: 'srv_1', status: 'realizada' }),
+      c('con_22', { pessoaId: 'pes_13', dia: -9, hora: '11:00', tipo: 'retorno', servicoId: 'srv_2', status: 'realizada' }),
+      c('con_23', { pessoaId: 'pes_14', dia: -35, hora: '08:00', tipo: 'primeira', servicoId: 'srv_1', status: 'realizada' }),
+      c('con_24', { pessoaId: 'pes_14', dia: -16, hora: '11:00', tipo: 'retorno', servicoId: 'srv_2', status: 'realizada' }),
+      c('con_25', { pessoaId: 'pes_15', dia: -15, hora: '08:00', tipo: 'primeira', servicoId: 'srv_1', status: 'realizada' }),
+      c('con_26', { pessoaId: 'pes_15', dia: -1, hora: '11:00', tipo: 'avaliacao', servicoId: 'srv_6', status: 'realizada' }),
+      c('con_27', { pessoaId: 'pes_16', dia: -48, hora: '08:00', tipo: 'primeira', servicoId: 'srv_1', status: 'realizada' }),
+      c('con_28', { pessoaId: 'pes_16', dia: -19, hora: '11:00', tipo: 'retorno', servicoId: 'srv_2', status: 'faltou' }),
+      c('con_29', { pessoaId: 'pes_17', dia: -8, hora: '08:00', tipo: 'primeira', servicoId: 'srv_1', status: 'realizada' }),
+      c('con_30', { pessoaId: 'pes_18', dia: -28, hora: '08:00', tipo: 'primeira', servicoId: 'srv_1', status: 'realizada' }),
+      c('con_31', { pessoaId: 'pes_18', dia: -11, hora: '11:00', tipo: 'retorno', servicoId: 'srv_2', status: 'realizada' }),
+      c('con_32', { pessoaId: 'pes_18', dia: 4, hora: '11:00', tipo: 'retorno', servicoId: 'srv_2', status: 'agendada', agendadaPor: 'agente' }),
+      c('con_33', { pessoaId: 'pes_17', dia: 0, hora: '09:00', tipo: 'avaliacao', servicoId: 'srv_6', status: 'agendada' }),
+      c('con_34', { pessoaId: 'pes_13', dia: 0, hora: '15:30', tipo: 'retorno', servicoId: 'srv_2', status: 'confirmada', agendadaPor: 'agente' }),
     ];
 
     const an = (id, pessoaId, consultaId, dados) => ({
@@ -202,6 +247,18 @@ NutriDudu.seed = (function () {
       l('lan_7', { pessoaId: 'pes_12', servicoId: 'srv_3', pacoteId: 'pac_4', descricao: 'Pacote trimestral — parcela 1/2', valor: 300, vencimento: dia(-60), dataPagamento: dia(-60), formaPagamento: 'pix', status: 'pago' }),
       l('lan_8', { pessoaId: 'pes_12', servicoId: 'srv_3', pacoteId: 'pac_4', descricao: 'Pacote trimestral — parcela 2/2', valor: 300, vencimento: dia(-30), status: 'pendente' }),
     ];
+    // Consultas avulsas dos clientes extras: pagas no dia; futuras ficam pendentes.
+    const valorServico = Object.fromEntries(servicos.map((x) => [x.id, [x.nome, x.valor]]));
+    consultas.filter((x) => Number(x.id.split('_')[1]) >= 21 && x.status !== 'faltou').forEach((x) => {
+      const [nomeServico, valor] = valorServico[x.servicoId];
+      const venc = isoDia(new Date(x.inicio));
+      const paga = x.status === 'realizada';
+      lancamentos.push(l(`lan_${x.id}`, {
+        pessoaId: x.pessoaId, servicoId: x.servicoId, consultaId: x.id, descricao: nomeServico, valor, vencimento: venc,
+        ...(paga ? { dataPagamento: venc, formaPagamento: 'pix', status: 'pago' } : { status: 'pendente' }),
+      }));
+    });
+
     // Plano anual do Rafael: 12 parcelas mensais, as já vencidas estão pagas.
     for (let n = 0; n < 12; n++) {
       const venc = -150 + n * 30;

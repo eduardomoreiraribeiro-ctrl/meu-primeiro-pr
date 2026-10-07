@@ -10,7 +10,9 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - Dados de exemplo **fictícios**: uma nutricionista, horários, serviços e pacotes (inclusive o plano anual), leads, clientes, consultas, anamneses, avaliações e conversas.
 - Seletor **"Ver como"** para simular os perfis Administrador, Profissional e Recepção. Exemplo: a faixa vermelha de alergia na ficha do Diego Carvalho some quando o perfil é Recepção.
 
-As páginas mostram os dados só para leitura. O que cada uma ganha nas próximas fases aparece no aviso "Esta página ainda está em construção".
+**Dashboard** (adiantado): filtro de período (hoje, 7 dias, 30 dias, este mês, mês passado, personalizado), clientes novos, atendimentos, faturamento estimado, conversão de leads, agendamentos do dia, leads por etapa do Kanban, serviços/planos mais realizados, origem dos leads e dias mais movimentados. Os cálculos ficam em `js/indicadores.js`.
+
+As demais páginas mostram os dados só para leitura. O que cada uma ganha nas próximas fases aparece no aviso "Esta página ainda está em construção".
 
 ## Como abrir
 
@@ -30,6 +32,7 @@ crm-nutri-dudu/
     ├── config.js         # listas fixas: perfis, funis, origens, status…
     ├── utils.js          # formatação de datas, R$, idade, IMC…
     ├── permissoes.js     # o que cada perfil pode ver e fazer
+    ├── indicadores.js    # cálculos do Dashboard
     ├── seed.js           # dados de exemplo fictícios
     ├── store.js          # camada de dados
     ├── app.js            # navegação, busca, "+ Novo", seletor de perfil

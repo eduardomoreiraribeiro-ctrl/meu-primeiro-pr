@@ -202,6 +202,9 @@
     ui.toast('Dados de exemplo restaurados.');
   });
 
+  // Para páginas que mudam um filtro e precisam se redesenhar.
+  NutriDudu.recarregarPagina = renderizar;
+
   store.subscribe(() => renderizar());
 
   window.addEventListener('hashchange', navegar);

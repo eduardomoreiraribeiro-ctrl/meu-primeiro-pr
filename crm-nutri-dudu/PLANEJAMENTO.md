@@ -1,6 +1,6 @@
 # CRM Nutri Dudu — Planejamento
 
-Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fase 1 (Base) concluída — ver [`README.md`](README.md). Próxima: fase 2 (Serviços e profissionais).
+Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fase 1 (Base) concluída e **primeira parte do Dashboard** adiantada (seção 7.1) — ver [`README.md`](README.md). Próxima: fase 2 (Serviços e profissionais).
 
 **Versão 7** — inclui agenda por profissional, origens de leads, anamnese (com **pré-anamnese enviada pelo WhatsApp**), fotos de antes e depois, pacotes longos e controle de retorno. Todas as decisões estão na seção 17; nenhuma em aberto.
 
@@ -112,6 +112,7 @@ O mesmo cadastro (**Pessoa**) serve para lead e cliente. O que muda é **em qual
 | funil / etapa | opção | funil `comercial` ou `acompanhamento` e a etapa (seção 8) |
 | etapa desde | data-hora | para calcular "dias na etapa" |
 | motivo da perda | opção + texto | quando vai para "Perdido" |
+| **cliente desde** | data | quando fechou (virou cliente); base de "clientes novos" e da conversão |
 | status | opção | lead, cliente ativo, cliente inativo |
 | serviço de interesse | referência → Serviço | |
 | **retorno a cada (dias)** | número | periodicidade esperada; padrão vem das Configurações (60 dias), pode ser ajustada por cliente (seção 6) |
@@ -383,6 +384,26 @@ Objetivo: **nenhum cliente ativo fica sem próximo passo**. Exemplo do alerta:
 ---
 
 ## 7. Página: Dashboard
+
+### 7.1 Já implementado (pedido da clínica, adiantado da fase 7)
+
+Filtro de período: **Hoje · Últimos 7 dias · Últimos 30 dias · Este mês · Mês passado · Personalizado** (datas de/até). O período escolhido fica lembrado no navegador.
+
+| Indicador | Como é calculado |
+|---|---|
+| **Clientes novos** | pessoas cuja data "cliente desde" (quando fecharam) está no período |
+| **Total de atendimentos** | consultas **realizadas** no período; as agendadas/confirmadas do período aparecem à parte ("+ N agendados") |
+| **Faturamento estimado** | soma de todos os lançamentos (pagos e a receber, sem cancelados) com vencimento no período, já com desconto; mostra também quanto já foi recebido |
+| **Taxa de conversão** | dos leads que chegaram no período, quantos já viraram clientes ("4 de 11 leads") |
+| **Agendamentos do dia** | consultas de hoje (sempre hoje, independente do filtro), com horário, cliente, serviço, status e se foi o agente que agendou |
+| **Leads por etapa do Kanban** | quantidade em cada etapa do funil comercial, **situação atual** (não depende do período); "Perdido" em cinza |
+| **Serviços e planos mais realizados** | atendimentos realizados no período agrupados por serviço/plano, do mais para o menos realizado |
+| **Origem dos leads** | leads que chegaram no período por origem (Instagram, WhatsApp direto, Indicação, Presencial) |
+| **Dias mais movimentados** | atendimentos realizados e agendados no período por dia da semana; o dia mais cheio fica destacado |
+
+Os gráficos usam uma só cor (o verde da clínica) e sempre mostram o número escrito ao lado da barra; passando o mouse aparece o valor e o percentual.
+
+### 7.2 Planejado (fase 7)
 
 **Filtros** no topo: período (Hoje · 7 dias · Este mês · Mês passado · Personalizado) e **profissional**.
 
