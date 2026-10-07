@@ -100,14 +100,58 @@ NutriDudu.utils = (function () {
 
   // Busca sem diferenciar maiúsculas nem acentos.
   function normalizar(texto) {
-    return String(texto || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    return String(texto || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   }
 
   function soDigitos(texto) {
     return String(texto || '').replace(/\D/g, '');
   }
 
+  // (11) 91234-5678 / (11) 1234-5678, formatando enquanto a pessoa digita.
+  function formatarTelefone(valor) {
+    const d = soDigitos(valor).slice(0, 11);
+    if (d.length <= 2) return d ? `(${d}` : '';
+    if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  }
+
+  // "1 dia", "3 dias".
+  function dias(n) {
+    return `${n} ${Math.abs(n) === 1 ? 'dia' : 'dias'}`;
+  }
+
+  function telefoneValido(valor) {
+    const d = soDigitos(valor);
+    return d.length === 10 || d.length === 11;
+  }
+
+  function formatarCpf(valor) {
+    const d = soDigitos(valor).slice(0, 11);
+    return d
+      .replace(/^(\d{3})(\d)/, '$1.$2')
+      .replace(/^(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+  }
+
+  // Confere os dois dígitos verificadores do CPF.
+  function cpfValido(valor) {
+    const d = soDigitos(valor);
+    if (d.length !== 11 || /^(\d)\1{10}$/.test(d)) return false;
+    const digito = (base) => {
+      const soma = [...base].reduce((t, n, i) => t + Number(n) * (base.length + 1 - i), 0);
+      const resto = (soma * 10) % 11;
+      return resto === 10 ? 0 : resto;
+    };
+    return digito(d.slice(0, 9)) === Number(d[9]) && digito(d.slice(0, 10)) === Number(d[10]);
+  }
+
+  function emailValido(valor) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(String(valor || '').trim());
+  }
+
   return {
+    dias, formatarTelefone, telefoneValido, formatarCpf, cpfValido, emailValido,
     uid, moeda, paraData, data, hora, diaPorExtenso, isoDia, inicioDoDia, diasEntre,
     idade, imc, iniciais, escapeHtml, normalizar, soDigitos,
   };

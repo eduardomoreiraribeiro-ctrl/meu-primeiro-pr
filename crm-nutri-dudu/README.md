@@ -21,6 +21,16 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - **Regras gerais:** prazos de alerta de retorno e de cliente sumido, intervalo entre consultas e chave Pix.
 - **Permissões:** só o administrador mexe em serviços, preços, profissionais e regras; o profissional edita os próprios horários e bloqueios; a recepção cria bloqueios.
 
+### Fase 3 — Clientes
+
+- **Lista de clientes** com status, origem, pacote (barra de uso, "acabando"), última consulta (há quantos dias, aviso **⚠ sem retorno**), próximo agendamento e valores em aberto/atrasados. A coluna de profissional aparece quando houver mais de uma nutricionista.
+- **Busca** por nome, telefone, e-mail ou etiqueta, sem perder o que já foi digitado.
+- **Filtros:** status (clientes, ativos, inativos, leads, todos), situação (sem retorno marcado, pagamento em aberto ou atrasado, pacote acabando, sem próximo agendamento), origem, objetivo, etiqueta e — só para nutricionista/administrador — alergia, medicamento ou condição.
+- **Ordenação** clicando no título das colunas; **Exportar CSV** (administrador), pronto para abrir no Excel.
+- **Cadastro de lead ou cliente** (também pelo **+ Novo**): telefone e CPF com máscara e conferência, aviso de telefone/CPF já cadastrado (dizendo de quem), "indicado por" obrigatório quando a origem é indicação, etiquetas, retorno personalizado e consentimentos da LGPD. O cadastro e a indicação ficam registrados no histórico.
+- **Ficha do cliente:** botão **Editar cadastro**, atalho para o WhatsApp, dados do cadastro, consentimentos e aviso de "sem retorno marcado".
+- Cálculos compartilhados em `js/calculos.js` (saldo de pacote, valores atrasados, sem retorno), usados pela lista, pela ficha e pelas próximas fases.
+
 ### Adiantado da fase 7
 
 **Dashboard**: filtro de período (hoje, 7 dias, 30 dias, este mês, mês passado, personalizado), clientes novos, atendimentos, faturamento estimado, conversão de leads, agendamentos do dia, leads por etapa do Kanban, serviços/planos mais realizados, origem dos leads e dias mais movimentados. Os cálculos ficam em `js/indicadores.js`.
@@ -46,9 +56,11 @@ crm-nutri-dudu/
     ├── utils.js          # formatação de datas, R$, idade, IMC…
     ├── permissoes.js     # o que cada perfil pode ver e fazer
     ├── indicadores.js    # cálculos do Dashboard
+    ├── calculos.js       # regras: saldo de pacote, atrasos, sem retorno
     ├── seed.js           # dados de exemplo fictícios
     ├── store.js          # camada de dados
     ├── app.js            # navegação, busca, "+ Novo", seletor de perfil
-    ├── components/       # ui.js (peças de tela), form.js (campos), modal.js (janelas)
+    ├── components/       # ui.js (peças de tela), form.js (campos), modal.js (janelas),
+    │                     # cadastro-pessoa.js (cadastro de lead/cliente)
     └── pages/            # uma página por arquivo
 ```

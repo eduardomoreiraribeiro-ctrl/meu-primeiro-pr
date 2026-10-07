@@ -17,8 +17,6 @@
 
   // Em que fase cada item do "+ Novo" fica pronto (seção 16 do planejamento).
   const FASE_DO_NOVO = {
-    lead: ['Cadastro de lead', 3],
-    cliente: ['Cadastro de cliente', 3],
     consulta: ['Agendamento de consulta', 4],
     pagamento: ['Lançamento de pagamento', '5b'],
     pacote: ['Contratação de pacote', '5b'],
@@ -155,8 +153,16 @@
   menuNovo.addEventListener('click', (e) => {
     const item = e.target.closest('[data-novo]');
     if (!item) return;
-    const [nome, fase] = FASE_DO_NOVO[item.dataset.novo];
     fecharMenus();
+    const tipo = item.dataset.novo;
+    if (tipo === 'lead' || tipo === 'cliente') {
+      NutriDudu.cadastroPessoa.abrir({
+        tipo,
+        aoSalvar: (p) => { location.hash = `#/clientes/${encodeURIComponent(p.id)}`; },
+      });
+      return;
+    }
+    const [nome, fase] = FASE_DO_NOVO[tipo];
     ui.toast(`${nome} chega na fase ${fase}.`, 'info');
   });
 

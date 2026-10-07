@@ -348,6 +348,8 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 .badge-sucesso { background: var(--sucesso-soft); color: var(--sucesso); border-color: transparent; }
 .badge-alerta { background: var(--alerta-soft); color: var(--alerta); border-color: transparent; }
 .badge-perigo { background: var(--perigo-soft); color: var(--perigo); border-color: transparent; }
+.badge-etiqueta { background: var(--surface); color: var(--primary-hover); border-color: var(--verde-100); }
+.badge-etiqueta::before { content: '#'; opacity: 0.6; margin-right: 1px; }
 
 .avatar {
   display: grid;
@@ -798,6 +800,115 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 .periodo select { width: auto; padding: 0.4rem 0.5rem; }
 .dia-horario .btn-link { padding-top: 0.45rem; white-space: nowrap; }
 
+/* Clientes */
+.so-celular { display: none; }
+.bloco { display: block; }
+.texto-alerta { color: var(--alerta); font-weight: 600; }
+.texto-perigo { color: var(--perigo); font-weight: 600; }
+.com-ponto { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; white-space: nowrap; }
+.contagem { margin: 0; }
+
+.filtros-clientes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.9rem 1rem;
+}
+.filtros-clientes select,
+.filtros-clientes input {
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font: inherit;
+  font-size: 0.88rem;
+  color: var(--text);
+}
+.filtro-busca { flex: 1 1 260px; }
+.filtro-busca input { width: 100%; }
+.filtro-clinico { flex: 0 1 230px; border-color: var(--perigo-soft) !important; }
+
+.card-tabela { padding: 0; overflow: hidden; }
+.tabela-rolagem { overflow-x: auto; }
+.tabela-clientes { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.tabela-clientes th,
+.tabela-clientes td { padding: 0.7rem 0.9rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--border); }
+.tabela-clientes thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.tabela-clientes tbody tr { cursor: pointer; }
+.tabela-clientes tbody tr:hover { background: var(--surface-2); }
+.tabela-clientes tbody tr:last-child td { border-bottom: 0; }
+.tabela-clientes .num { text-align: right; white-space: nowrap; }
+.tabela-clientes .badge { margin-top: 0.2rem; }
+.ordenar {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.ordenar:hover { color: var(--text); }
+th[aria-sort="ascending"] .ordenar, th[aria-sort="descending"] .ordenar { color: var(--primary-hover); }
+.cliente-celula { display: flex; align-items: center; gap: 0.65rem; min-width: 190px; }
+.cliente-celula .avatar { width: 34px; height: 34px; font-size: 0.75rem; }
+.cliente-nome { font-weight: 600; color: var(--text); }
+.mini-barra { display: block; width: 72px; height: 6px; margin: 0.25rem 0; border-radius: 3px; background: var(--border); overflow: hidden; }
+.mini-barra span { display: block; height: 100%; background: var(--grafico); }
+
+.cartoes-clientes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.6rem; }
+.cartao-cliente {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+}
+.cartao-cliente:hover { text-decoration: none; border-color: var(--primary); }
+.avisos { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.3rem; }
+
+/* Cadastro de pessoa */
+.rotulo-grupo { font-size: 0.88rem; font-weight: 600; }
+.segmentos-form { align-self: flex-start; }
+.segmento-radio { position: relative; }
+.segmento-radio input { position: absolute; opacity: 0; }
+.segmento-radio span {
+  display: block;
+  padding: 0.4rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.segmento-radio input:checked + span { background: var(--primary); color: #fff; }
+.segmento-radio input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+.mais-dados { border-top: 1px solid var(--border); padding-top: 0.75rem; }
+.mais-dados > summary { cursor: pointer; font-weight: 600; font-size: 0.9rem; color: var(--primary-hover); margin-bottom: 0.75rem; }
+.mais-dados[open] > summary { margin-bottom: 0.9rem; }
+.mais-dados > .grade-2 { margin-bottom: 0.9rem; }
+.marcadores-coluna { flex-direction: column; gap: 0.35rem; }
+.marcadores-coluna .campo-chave { gap: 0; }
+
+/* Ficha */
+.ficha-nome { flex: 1; min-width: 0; }
+.ficha-acoes { display: flex; flex-wrap: wrap; gap: 0.5rem; align-self: flex-start; }
+.tabela-cadastro th { width: 12rem; }
+.consentimentos { display: flex; flex-wrap: wrap; gap: 0.35rem 0.9rem; }
+.consentimento { color: var(--text-muted); font-size: 0.88rem; }
+.consentimento.sim { color: var(--sucesso); }
+
 /* Avisos */
 .toast-area {
   position: fixed;
@@ -874,6 +985,12 @@ h1 { font-size: 1.5rem; font-weight: 700; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
   .dash-grid { grid-template-columns: 1fr; }
   .grade-2, .grade-3 { grid-template-columns: 1fr; }
+  .so-desktop { display: none; }
+  .so-celular { display: block; }
+  .filtros-clientes select, .filtro-clinico { flex: 1 1 45%; }
+  .ficha-identidade { flex-wrap: wrap; }
+  .ficha-acoes { width: 100%; }
+  .tabela-cadastro th { width: 40%; }
   .grid-largo { grid-template-columns: 1fr; }
   .dia-horario { grid-template-columns: 1fr; gap: 0.35rem; }
   .periodo { flex-wrap: wrap; }

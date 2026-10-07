@@ -26,7 +26,7 @@ NutriDudu.pages.kanban = {
             <a class="kanban-card" href="#/clientes/${encodeURIComponent(p.id)}">
               <strong>${utils.escapeHtml(p.nome)}</strong>
               <span class="muted small">${utils.escapeHtml(config.OBJETIVOS[p.objetivo] || '')} · ${utils.escapeHtml(config.ORIGENS[p.origem] || '')}</span>
-              <span class="muted small">${utils.diasEntre(p.etapaDesde, new Date())} dias na etapa</span>
+              <span class="muted small">${utils.dias(utils.diasEntre(p.etapaDesde, new Date()))} na etapa</span>
             </a>`).join('')}
         </div>`;
     }).join('');
