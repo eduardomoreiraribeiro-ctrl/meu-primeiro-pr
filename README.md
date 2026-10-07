@@ -12,3 +12,8 @@ Este é um repositório de teste criado para aprender o workflow de contribuiç�
 2. Faça uma pequena melhoria
 3. Abra um Pull Request
 4. Revise e faça o merge
+
+## Projetos
+
+- [`nutricao-esportiva`](nutricao-esportiva/) — site de nutrição esportiva com calculadora de macros.
+- [`crm-nutri-dudu`](crm-nutri-dudu/) — CRM da clínica Nutri Dudu (protótipo em construção).
