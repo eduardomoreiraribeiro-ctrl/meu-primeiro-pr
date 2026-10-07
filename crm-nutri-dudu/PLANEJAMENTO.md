@@ -2,7 +2,7 @@
 
 Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. Nada aqui foi implementado ainda: a ideia é revisar e ajustar este plano antes de começar a construir.
 
-**Versão 2** — inclui as decisões já tomadas (seção 14): protótipo primeiro, dois funis no Kanban, avaliação física completa, perfis de nutricionista e recepção e controle de saldo de pacotes.
+**Versão 3** — todas as decisões estão tomadas (seção 14). O plano está pronto para começar a construção pela fase 1.
 
 ---
 
@@ -125,7 +125,14 @@ Fica separada da consulta para facilitar os gráficos de evolução e para permi
 | Dobras cutâneas (mm) | tricipital, bicipital, subescapular, peitoral, axilar média, suprailíaca, abdominal, coxa, panturrilha; **soma das dobras** (calculada) |
 
 - Todos os campos são opcionais: a nutricionista preenche só o que mediu.
-- Quando o método é **dobras cutâneas**, o sistema calcula o % de gordura pela fórmula escolhida (decisão em aberto, seção 14), usando idade e sexo do cliente. Também é possível digitar o valor manualmente.
+- Quando o método é **dobras cutâneas**, o sistema calcula o % de gordura usando idade e sexo do cliente. A nutricionista escolhe a fórmula em cada avaliação:
+  - **Jackson & Pollock 7 dobras** (padrão): peitoral, axilar média, tricipital, subescapular, abdominal, suprailíaca e coxa;
+  - **Jackson & Pollock 3 dobras**: homens: peitoral, abdominal e coxa; mulheres: tricipital, suprailíaca e coxa;
+  - **Durnin & Womersley**: bicipital, tricipital, subescapular e suprailíaca.
+
+  As três estimam a densidade corporal, convertida em % de gordura pela equação de Siri. A fórmula usada fica salva junto com a avaliação.
+- Também é possível digitar o % de gordura manualmente (ex.: resultado da bioimpedância).
+- Comparar avaliações feitas com métodos ou fórmulas diferentes distorce a evolução. Por isso, o gráfico marca os pontos em que o método mudou e avisa quando isso acontece.
 
 ### 4.4 Pacote contratado (nova)
 
@@ -136,7 +143,7 @@ Liga um cliente a um serviço do tipo pacote e controla o saldo.
 | id, pessoa | referência | |
 | serviço | referência → Serviço (categoria pacote) | |
 | data de início | data | |
-| validade | data | ex.: 3 meses para o trimestral (decisão em aberto) |
+| validade | data | sugerida pelo serviço: trimestral = 3 meses, semestral = 6 meses; pode ser **prorrogada** pela nutricionista |
 | consultas incluídas | número | copiado do serviço na contratação |
 | consultas usadas | número | **calculado**: consultas *realizadas* ligadas ao pacote |
 | saldo | número | **calculado**: incluídas − usadas |
@@ -145,7 +152,8 @@ Liga um cliente a um serviço do tipo pacote e controla o saldo.
 
 **Regras de saldo**
 - Só desconta quando a consulta fica **realizada**. Uma consulta agendada aparece como "reservada" (ex.: "3 de 6 usadas · 1 agendada").
-- Falta: por padrão **desconta** do saldo, mas a nutricionista pode marcar "não descontar" (decisão em aberto).
+- Falta: por padrão **desconta** do saldo, mas a nutricionista pode marcar "não descontar" (ex.: falta avisada com antecedência). A escolha fica registrada no histórico.
+- Vencimento: quando a validade termina com saldo sobrando, as consultas restantes **expiram** e o pacote fica "vencido". O sistema avisa 15 dias antes, para dar tempo de agendar. A nutricionista pode prorrogar a validade, e a prorrogação fica registrada no histórico.
 - Ao agendar uma consulta para quem tem pacote ativo, o pacote já vem selecionado.
 - Avisos: saldo de 1 consulta, pacote vencendo em 15 dias e pacote concluído. Esses avisos alimentam a etapa "Renovação" do funil de acompanhamento.
 
@@ -347,7 +355,7 @@ Para a recepção, as abas e campos marcados com 🔒 não aparecem.
 ## 10. Design / interface
 
 - **Visual:** limpo, bastante espaço em branco, cantos arredondados, sombras suaves.
-- **Paleta sugerida:** verde (saúde/nutrição) como cor principal, neutros claros e cores de status (verde = pago, amarelo = pendente, vermelho = atrasado). Modo escuro opcional. Será ajustada se a clínica tiver identidade visual.
+- **Paleta sugerida:** verde (saúde/nutrição) como cor principal, neutros claros e cores de status (verde = pago, amarelo = pendente, vermelho = atrasado). Modo escuro opcional. Como a clínica ainda não tem identidade visual, o protótipo usa essa paleta e um logo provisório com as iniciais "ND". Tudo fica concentrado em variáveis de cor, então trocar depois é simples.
 - **Tipografia:** uma fonte sem serifa moderna (ex.: Inter).
 - **Responsivo:** funciona bem no computador e no celular (a recepção provavelmente usa mais o celular para WhatsApp).
 - **Facilidade:** formulários curtos, máscaras de telefone, CPF e moeda, valores em R$, datas em dd/mm/aaaa e mensagens de confirmação ("Consulta salva ✓").
@@ -434,11 +442,10 @@ Cada fase vira uma branch e um Pull Request, para revisar aos poucos. A fase 4 �
 | 3 | Medidas | Peso e altura (IMC), % de gordura, circunferências e dobras cutâneas |
 | 4 | Usuários | Nutricionista + recepção, com permissões diferentes |
 | 5 | Pacotes | Controlar saldo de consultas |
+| 6 | Fórmula do % de gordura | Nutricionista escolhe em cada avaliação; padrão Jackson & Pollock 7 dobras; opções J&P 3 dobras e Durnin & Womersley (todas com a equação de Siri) |
+| 7 | Falta em pacote | Desconta por padrão, com opção de não descontar caso a caso |
+| 8 | Validade dos pacotes | Trimestral = 3 meses, semestral = 6 meses; saldo que sobra expira no vencimento; aviso 15 dias antes; nutricionista pode prorrogar |
+| 9 | Funil de acompanhamento | Manter as 6 etapas da seção 6.2 |
+| 10 | Identidade visual | Paleta verde sugerida e logo provisório "ND" até a clínica definir a sua |
 
-### Em aberto
-
-1. **Fórmula do % de gordura por dobras cutâneas:** Jackson & Pollock 7 dobras, Jackson & Pollock 3 dobras, Durnin & Womersley (4 dobras) ou deixar a nutricionista escolher em cada avaliação?
-2. **Falta em consulta de pacote:** desconta do saldo sempre, nunca, ou a nutricionista decide caso a caso (sugestão: desconta por padrão, com opção de não descontar)?
-3. **Validade dos pacotes:** o trimestral vale 3 meses e o semestral 6? O que acontece com o saldo que sobra quando o pacote vence?
-4. **Etapas do funil de acompanhamento:** as 6 etapas propostas (seção 6.2) fazem sentido?
-5. **Identidade visual:** a Nutri Dudu já tem logo e cores definidas?
+Nenhuma decisão em aberto. Próximo passo: **fase 1 (Base)**.
