@@ -76,7 +76,16 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
   - **Gráficos:** faturamento mês a mês (12 meses), leads por etapa, serviços mais realizados, origem dos leads com conversão, clientes que mais indicaram e dias mais movimentados.
 - Cálculos em `js/indicadores.js`; tela em `js/pages/dashboard.js`.
 
-As páginas de Conversas (fase 10) ainda mostram os dados só para leitura.
+### Fase 8 — Acabamento
+
+- **Modo escuro:** botão de lua/sol na barra superior e opção em **Configurações › Aparência** (Automático, Claro, Escuro). O automático segue o sistema do aparelho. A escolha fica no navegador e é aplicada antes de a página aparecer.
+- **Backup:** em **Configurações › Dados e backup** (só administrador): **Exportar backup** baixa um arquivo `.json` com todos os dados e fotos; **Importar backup** confere o arquivo, mostra um resumo e, antes de substituir tudo, baixa uma cópia dos dados atuais. O arquivo contém dados de saúde: guarde em local seguro.
+- **Permissões revisadas** (seção 2 do planejamento): o profissional vê só os seus números no Dashboard e só visualiza o financeiro (sem lançar cobrança, receber, cancelar ou marcar parcela como paga); recepção sem acesso clínico; as ações também conferem o perfil por dentro, não só escondendo botões.
+- **Validações:** medidas da avaliação física com faixas (circunferências, dobras), retorno com mais de um ano, valores absurdos. Ao fechar um formulário com algo digitado, o sistema pergunta antes de descartar.
+- **Responsividade:** todas as páginas conferidas em 360, 390, 768, 1024 e 1366 px, nos dois temas, sem rolagem lateral.
+- Arquivos novos: `js/tema.js` e `js/backup.js`.
+
+A página de Conversas (fase 10) ainda mostra os dados só para leitura.
 
 ## Como abrir
 
@@ -96,6 +105,8 @@ crm-nutri-dudu/
     ├── config.js         # listas fixas: perfis, funis, origens, status…
     ├── utils.js          # formatação de datas, R$, idade, IMC…
     ├── permissoes.js     # o que cada perfil pode ver e fazer
+    ├── tema.js           # modo claro / escuro / automático
+    ├── backup.js         # exportar e importar backup (com fotos)
     ├── indicadores.js    # cálculos do Dashboard
     ├── calculos.js       # regras: saldo de pacote, atrasos, sem retorno
     ├── funil.js          # regras do Kanban: movimentos automáticos, fechar, perder, encerrar

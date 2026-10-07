@@ -10,9 +10,16 @@ NutriDudu.modal = (function () {
     dialog.className = `modal ${classe || ''}`;
     document.body.appendChild(dialog);
     dialog.addEventListener('close', () => dialog.remove());
+    // Todo pedido de fechar (×, Cancelar, Esc, clique no fundo) passa por aqui,
+    // para o formulário poder perguntar antes de descartar o que foi digitado.
+    dialog.pedirFechar = () => dialog.close();
+    dialog.addEventListener('cancel', (e) => {
+      e.preventDefault();
+      dialog.pedirFechar();
+    });
     // Clique no fundo escuro fecha.
     dialog.addEventListener('click', (e) => {
-      if (e.target === dialog) dialog.close();
+      if (e.target === dialog) dialog.pedirFechar();
     });
     return dialog;
   }
@@ -68,7 +75,26 @@ NutriDudu.modal = (function () {
       </form>`;
 
     const form = dialog.querySelector('form');
-    dialog.querySelectorAll('[data-fechar]').forEach((b) => b.addEventListener('click', () => dialog.close()));
+    // Alterações não salvas: só conta o que a pessoa digitou ou escolheu.
+    let alterado = false;
+    let perguntando = false;
+    form.addEventListener('input', () => { alterado = true; });
+    form.addEventListener('change', () => { alterado = true; });
+    dialog.pedirFechar = async () => {
+      if (!alterado) { dialog.close(); return; }
+      if (perguntando) return;
+      perguntando = true;
+      const descartar = await confirmar({
+        titulo: 'Descartar alterações?',
+        mensagem: 'O que você preencheu nesta janela ainda não foi salvo.',
+        textoConfirmar: 'Descartar',
+        textoCancelar: 'Continuar editando',
+        perigo: true,
+      });
+      perguntando = false;
+      if (descartar) dialog.close();
+    };
+    dialog.querySelectorAll('[data-fechar]').forEach((b) => b.addEventListener('click', () => dialog.pedirFechar()));
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -123,7 +149,7 @@ NutriDudu.modal = (function () {
   }
 
   /** Pergunta sim/não. Devolve uma Promise<boolean>. */
-  function confirmar({ titulo, mensagem, textoConfirmar = 'Confirmar', perigo = false }) {
+  function confirmar({ titulo, mensagem, textoConfirmar = 'Confirmar', textoCancelar = 'Cancelar', perigo = false }) {
     return new Promise((resolve) => {
       const dialog = criarDialog('modal-pequeno');
       let resposta = false;
@@ -131,7 +157,7 @@ NutriDudu.modal = (function () {
         <div class="modal-topo"><h2>${escapeHtml(titulo)}</h2></div>
         <div class="modal-corpo"><p>${escapeHtml(mensagem)}</p></div>
         <div class="modal-rodape">
-          <button type="button" class="btn" data-nao>Cancelar</button>
+          <button type="button" class="btn" data-nao>${escapeHtml(textoCancelar)}</button>
           <button type="button" class="btn ${perigo ? 'btn-perigo' : 'btn-primary'}" data-sim>${escapeHtml(textoConfirmar)}</button>
         </div>`;
       dialog.querySelector('[data-nao]').addEventListener('click', () => dialog.close());

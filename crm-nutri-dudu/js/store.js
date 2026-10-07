@@ -130,11 +130,24 @@ NutriDudu.store = (function () {
     salvarEAvisar('*');
   }
 
+  /** Cópia de todas as coleções (para o backup). */
+  async function exportarTudo() {
+    return copia(db);
+  }
+
+  /** Troca todos os dados pelos de um backup (já validado). Coleções ausentes ficam vazias. */
+  async function importarTudo(colecoes) {
+    const novo = bancoVazio();
+    Object.keys(COLECOES).forEach((c) => { if (Array.isArray(colecoes[c])) novo[c] = copia(colecoes[c]); });
+    db = novo;
+    salvarEAvisar('*');
+  }
+
   // Avisa quando algum dado muda. Retorna uma função para cancelar o aviso.
   function subscribe(fn) {
     ouvintes.add(fn);
     return () => ouvintes.delete(fn);
   }
 
-  return { list, get, create, update, remove, substituir, resetarParaExemplo, subscribe };
+  return { list, get, create, update, remove, substituir, resetarParaExemplo, subscribe, exportarTudo, importarTudo, COLECOES: Object.keys(COLECOES) };
 })();

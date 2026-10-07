@@ -190,9 +190,25 @@
 
   const btnReset = document.getElementById('btn-reset');
 
+  // ---------- Tema (claro/escuro) ----------
+  const btnTema = document.getElementById('btn-tema');
+  function mostrarTema(efetivo) {
+    const escuro = efetivo === 'escuro';
+    btnTema.dataset.efetivo = efetivo;
+    const texto = escuro ? 'Usar modo claro' : 'Usar modo escuro';
+    btnTema.setAttribute('aria-label', texto);
+    btnTema.title = texto;
+    // Mantém a escolha de Configurações › Aparência em dia, se estiver na tela.
+    document.querySelectorAll('#view [name="tema"]').forEach((r) => { r.checked = r.value === NutriDudu.tema.atual(); });
+  }
+  btnTema.addEventListener('click', () => NutriDudu.tema.alternar());
+  NutriDudu.tema.aoMudar(mostrarTema);
+  mostrarTema(NutriDudu.tema.efetivo());
+
   function aplicarPerfil() {
     document.body.dataset.perfil = permissoes.atual();
     btnReset.hidden = !permissoes.pode('gerenciarDados');
+    menuNovo.querySelector('[data-novo="pagamento"]').hidden = !permissoes.pode('lancarCobranca');
   }
 
   permissoes.aoMudar(() => {

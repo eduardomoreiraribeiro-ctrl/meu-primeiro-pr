@@ -261,7 +261,9 @@ NutriDudu.pages.dashboard = (function () {
     ]);
 
     // Filtro por profissional: pessoas (responsável), consultas e lançamentos dela.
-    const profId = profissionais.some((p) => p.id === filtro.profissionalId) ? filtro.profissionalId : '';
+    // O perfil Profissional vê sempre só os seus números (seção 2 do planejamento).
+    const proprio = NutriDudu.permissoes.idProfissionalAtual();
+    const profId = proprio || (profissionais.some((p) => p.id === filtro.profissionalId) ? filtro.profissionalId : '');
     const pessoas = profId ? todasPessoas.filter((p) => p.profissionalId === profId) : todasPessoas;
     const consultas = profId ? todasConsultas.filter((c) => c.profissionalId === profId) : todasConsultas;
     const lancamentos = profId ? todosLancamentos.filter((l) => l.profissionalId === profId || (!l.profissionalId && pessoas.some((p) => p.id === l.pessoaId))) : todosLancamentos;
@@ -299,7 +301,8 @@ NutriDudu.pages.dashboard = (function () {
     container.innerHTML = `
       <div class="dashboard">
         ${ui.cabecalho('Dashboard', 'Visão geral da operação da clínica')}
-        ${filtrosHtml({ ...filtro, profissionalId: profId }, periodo, profissionais)}
+        ${filtrosHtml({ ...filtro, profissionalId: profId }, periodo, proprio ? [] : profissionais)}
+        ${proprio ? `<p class="muted small aviso-perfil">Mostrando só os seus números (${utils.escapeHtml(profissionais.find((p) => p.id === proprio)?.nome || 'você')}).</p>` : ''}
 
         <h2 class="titulo-secao">No período</h2>
         <section class="kpi-grid">

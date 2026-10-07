@@ -232,10 +232,15 @@ NutriDudu.atendimento = (function () {
     if (!faixa(av.alturaCm, 80, 250)) erros.av_altura = 'Altura entre 80 e 250 cm.';
     if (av.percentualGordura !== null && !faixa(av.percentualGordura, 2, 70)) erros.av_pg = '% de gordura entre 2 e 70.';
     if (av.metodo && av.metodo !== 'dobras' && av.percentualGordura === null) erros.av_pg = 'Informe o % de gordura medido.';
+    Object.entries(av.circunferencias).forEach(([k, v]) => { if (!faixa(v, 10, 250)) erros[`circ_${k}`] = 'Entre 10 e 250 cm.'; });
+    Object.entries(av.dobras).forEach(([k, v]) => { if (!faixa(v, 1, 80)) erros[`dob_${k}`] = 'Entre 1 e 80 mm.'; });
     if (dados.proximoRetorno && dados.proximoRetorno <= NutriDudu.utils.isoDia(d.consulta.inicio)) {
       erros.proximoRetorno = 'O retorno precisa ser depois desta consulta.';
+    } else if (dados.proximoRetorno && NutriDudu.utils.diasEntre(d.consulta.inicio, dados.proximoRetorno) > 400) {
+      erros.proximoRetorno = 'O retorno ficou para mais de um ano — confira a data.';
     }
     if (dados.gerarCobranca && (dados.valor === null || dados.valor < 0)) erros.valor = 'Informe o valor (0 se for cortesia).';
+    else if (dados.gerarCobranca && dados.valor > 100000) erros.valor = 'Valor alto demais — confira.';
     return erros;
   }
 

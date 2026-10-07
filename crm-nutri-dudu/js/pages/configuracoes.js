@@ -483,9 +483,28 @@ NutriDudu.pages.configuracoes = (function () {
         </table>
       </section>
 
-      ${ui.emBreve('7 e 10', [
-        'Regras de retorno e recorrência aplicadas no Dashboard, na lista de clientes e no Kanban (fase 7)',
-        'Textos do agente de IA e das mensagens automáticas do WhatsApp (fase 10)',
+      <section class="card">
+        <h2 class="card-title">Aparência</h2>
+        <p class="muted small card-sub">Vale só para este navegador. O botão de lua/sol no topo troca rápido entre claro e escuro.</p>
+        <div class="segmentos segmentos-form" role="radiogroup" aria-label="Tema">
+          ${Object.entries(NutriDudu.tema.OPCOES).map(([v, r]) => `
+            <label class="segmento-radio"><input type="radio" name="tema" value="${v}"${v === NutriDudu.tema.atual() ? ' checked' : ''}><span>${utils.escapeHtml(r)}</span></label>`).join('')}
+        </div>
+      </section>
+
+      ${permissoes.pode('gerenciarDados') ? `
+        <section class="card">
+          <h2 class="card-title">Dados e backup</h2>
+          <p class="muted small card-sub">No protótipo, os dados ficam só neste navegador. Faça backups regulares e guarde o arquivo em local seguro.</p>
+          <p class="alerta alerta-aviso small">O arquivo de backup contém dados de saúde e fotos. Não envie por WhatsApp ou e-mail; guarde em uma pasta protegida.</p>
+          <div class="acoes-linha">
+            <button type="button" class="btn btn-pequeno btn-primary" data-exportar-backup>Exportar backup</button>
+            <button type="button" class="btn btn-pequeno" data-importar-backup>Importar backup</button>
+          </div>
+        </section>` : ''}
+
+      ${ui.emBreve(10, [
+        'Textos do agente de IA e das mensagens automáticas do WhatsApp',
       ])}
     `;
 
@@ -497,6 +516,12 @@ NutriDudu.pages.configuracoes = (function () {
     container.querySelector('[data-novo-bloqueio]')?.addEventListener('click', () => abrirBloqueio(profissionais, consultas));
     container.querySelectorAll('[data-remover-bloqueio]').forEach((b) => b.addEventListener('click', () => excluirBloqueio(porId(bloqueios, b.dataset.removerBloqueio))));
     container.querySelector('[data-editar-regras]')?.addEventListener('click', () => abrirRegras(geral));
+    container.querySelectorAll('[name="tema"]').forEach((r) => r.addEventListener('change', () => NutriDudu.tema.definir(r.value)));
+    container.querySelector('[data-exportar-backup]')?.addEventListener('click', async () => {
+      const r = await NutriDudu.backup.exportar();
+      ui.toast(`Backup exportado: ${r.pessoas} cadastro(s), ${r.consultas} consulta(s), ${r.fotos} foto(s).`);
+    });
+    container.querySelector('[data-importar-backup]')?.addEventListener('click', () => NutriDudu.backup.abrirImportacao());
   }
 
   return { titulo: 'Configurações', render, validarHorarios, validarProfissional, validarBloqueio };

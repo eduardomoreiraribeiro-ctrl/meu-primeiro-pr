@@ -15,6 +15,7 @@ NutriDudu.permissoes = (function () {
     verClinico: ['admin', 'profissional'],
     registrarAtendimento: ['admin', 'profissional'],
     darBaixaPagamento: ['admin', 'recepcao'],
+    lancarCobranca: ['admin', 'recepcao'],
     editarServicos: ['admin'],
     editarProfissionais: ['admin'],
     editarRegras: ['admin'],
@@ -56,6 +57,21 @@ NutriDudu.permissoes = (function () {
     return permitidos.includes(perfil);
   }
 
+  const MENSAGENS = {
+    verClinico: 'Seu perfil não tem acesso aos dados clínicos.',
+    registrarAtendimento: 'Só nutricionistas registram atendimentos.',
+    darBaixaPagamento: 'Seu perfil só visualiza o financeiro.',
+    lancarCobranca: 'Seu perfil só visualiza o financeiro.',
+    gerenciarDados: 'Só o administrador gerencia os dados.',
+  };
+
+  /** Confere a permissão dentro da própria ação (defesa extra além de esconder o botão). */
+  function exigir(acao) {
+    if (pode(acao)) return true;
+    NutriDudu.ui?.toast(MENSAGENS[acao] || 'Seu perfil não pode fazer isso.', 'info');
+    return false;
+  }
+
   // Horários de atendimento: admin edita todos; profissional, só os seus.
   function podeEditarHorarios(profissionalId) {
     return perfil === 'admin' || (perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO);
@@ -86,6 +102,6 @@ NutriDudu.permissoes = (function () {
   }
 
   return {
-    atual, definir, pode, podeEditarHorarios, podeEditarBloqueios, idProfissionalAtual, podeAgendarPara, aoMudar,
+    atual, definir, pode, exigir, podeEditarHorarios, podeEditarBloqueios, idProfissionalAtual, podeAgendarPara, aoMudar,
   };
 })();

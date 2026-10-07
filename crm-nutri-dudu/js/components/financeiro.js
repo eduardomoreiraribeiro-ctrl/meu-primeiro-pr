@@ -49,6 +49,7 @@ NutriDudu.financeiro = (function () {
       return;
     }
     const hoje = utils.isoDia(new Date());
+    const podeReceber = NutriDudu.permissoes.pode('darBaixaPagamento');
     const inicial = servicos.find((s) => s.id === (servicoId || renovarDe?.servicoId)) || servicos[0];
 
     const corpo = `
@@ -62,7 +63,7 @@ NutriDudu.financeiro = (function () {
         ${f.texto('primeiroVencimento', '1º vencimento', hoje, { tipo: 'date', obrigatorio: true, ajuda: 'As demais vencem no mesmo dia dos meses seguintes.' })}
         ${f.selecao('formaPagamento', 'Forma de pagamento', config.FORMAS_PAGAMENTO, 'pix')}
       </div>
-      ${f.chave('primeiraPaga', '1ª parcela paga agora', true)}
+      ${podeReceber ? f.chave('primeiraPaga', '1ª parcela paga agora', true) : '<p class="campo-ajuda">As parcelas ficam pendentes; a recepção registra os pagamentos.</p>'}
       <p class="campo-ajuda" data-resumo-parcelas></p>`;
 
     modal.formulario({
@@ -87,6 +88,7 @@ NutriDudu.financeiro = (function () {
         if (!d.validade) erros.validade = 'Informe a validade.';
         else if (d.inicio && d.validade <= d.inicio) erros.validade = 'A validade precisa ser depois do início.';
         if (d.valor === null || d.valor < 0) erros.valor = 'Informe o valor.';
+        else if (d.valor > 100000) erros.valor = 'Valor alto demais — confira.';
         if (!Number.isInteger(d.parcelas) || d.parcelas < 1 || d.parcelas > 24) erros.parcelas = 'De 1 a 24 parcelas.';
         if (!d.primeiroVencimento) erros.primeiroVencimento = 'Informe o vencimento.';
         if (d.primeiraPaga && d.primeiroVencimento > hoje) erros.primeiroVencimento = 'Parcela paga agora não pode vencer no futuro — ajuste a data ou desmarque "paga agora".';
@@ -147,6 +149,7 @@ NutriDudu.financeiro = (function () {
 
   function prorrogar(pacote, nomeServico) {
     const { form: f, modal, store, ui, utils } = NutriDudu;
+    if (!NutriDudu.permissoes.exigir('editarRegras')) return;
     modal.formulario({
       titulo: 'Prorrogar validade',
       corpo: `
@@ -166,6 +169,7 @@ NutriDudu.financeiro = (function () {
 
   function cancelarPacote(pacote, nomeServico) {
     const { form: f, modal, store, ui } = NutriDudu;
+    if (!NutriDudu.permissoes.exigir('darBaixaPagamento')) return;
     modal.formulario({
       titulo: 'Cancelar pacote',
       corpo: `
@@ -191,6 +195,7 @@ NutriDudu.financeiro = (function () {
 
   async function novoLancamento({ pessoa = null, servicoId = null } = {}) {
     const { store, form: f, modal, ui, utils, config } = NutriDudu;
+    if (!NutriDudu.permissoes.exigir('lancarCobranca')) return;
     const servicos = await store.list('servicos', (s) => s.ativo);
     const preServico = servicos.find((s) => s.id === servicoId) || null;
     const hoje = utils.isoDia(new Date());
@@ -227,6 +232,7 @@ NutriDudu.financeiro = (function () {
         if (!d.pessoaId) erros.pessoaId = 'Escolha o paciente.';
         if (!d.descricao) erros.descricao = 'Informe a descrição.';
         if (d.valor === null || d.valor <= 0) erros.valor = 'Informe um valor maior que zero.';
+        else if (d.valor > 100000) erros.valor = 'Valor alto demais — confira.';
         else if (d.desconto < 0 || d.desconto > d.valor) erros.desconto = 'O desconto não pode passar do valor.';
         if (!d.vencimento) erros.vencimento = 'Informe o vencimento.';
         if (d.pago && (!d.dataPagamento || d.dataPagamento > hoje)) erros.dataPagamento = 'Informe uma data de pagamento até hoje.';
@@ -257,6 +263,7 @@ NutriDudu.financeiro = (function () {
 
   function darBaixa(lancamento) {
     const { form: f, modal, store, ui, utils, config, calculos } = NutriDudu;
+    if (!NutriDudu.permissoes.exigir('darBaixaPagamento')) return;
     const hoje = utils.isoDia(new Date());
     modal.formulario({
       titulo: 'Registrar pagamento',
@@ -279,6 +286,7 @@ NutriDudu.financeiro = (function () {
 
   async function cancelarLancamento(lancamento) {
     const { modal, store, ui, utils, calculos } = NutriDudu;
+    if (!NutriDudu.permissoes.exigir('lancarCobranca')) return;
     const ok = await modal.confirmar({
       titulo: 'Cancelar cobrança?',
       mensagem: `${lancamento.descricao} · ${utils.moeda(calculos.valorLiquido(lancamento))}. Ela deixa de contar como valor a receber.`,
