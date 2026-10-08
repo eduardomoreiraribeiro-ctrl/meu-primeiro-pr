@@ -380,6 +380,79 @@ NutriDudu.pages.configuracoes = (function () {
     });
   }
 
+  // ---------------- Equipe (nuvem) ----------------
+
+  const PAPEIS = { admin: 'Administrador', profissional: 'Profissional', recepcao: 'Recepção', pendente: 'Aguardando liberação', desativado: 'Desativado' };
+
+  function blocoEquipe(equipe, profissionais, erro) {
+    const { utils } = NutriDudu;
+    const eu = NutriDudu.nuvem.perfilAtual()?.userId;
+    const opcoes = (lista, valor) => Object.entries(lista).map(([v, r]) => `<option value="${v}"${v === valor ? ' selected' : ''}>${utils.escapeHtml(r)}</option>`).join('');
+    const profs = Object.fromEntries(profissionais.map((p) => [p.id, p.nome]));
+    return `
+      <section class="card">
+        <h2 class="card-title">Equipe e acessos</h2>
+        <p class="muted small card-sub">Quem pode entrar no sistema e o que cada um vê. Para cadastrar alguém: no Supabase, abra <strong>Authentication › Users › Add user</strong>, informe o e-mail e uma senha provisória e marque <em>Auto Confirm User</em>. A pessoa aparece aqui como "Aguardando liberação".</p>
+        ${erro ? `<p class="alerta alerta-perigo">${utils.escapeHtml(erro)}</p>` : ''}
+        ${equipe.length ? `
+          <div class="tabela-rolagem">
+            <table class="tabela-simples tabela-equipe">
+              <thead><tr><th scope="col">Pessoa</th><th scope="col">Perfil</th><th scope="col">Ficha de profissional</th><th scope="col"><span class="visualmente-oculto">Ações</span></th></tr></thead>
+              <tbody>
+                ${equipe.map((p) => `
+                  <tr data-conta="${utils.escapeHtml(p.user_id)}">
+                    <td><strong>${utils.escapeHtml(p.nome || p.email)}</strong>${p.user_id === eu ? ' <span class="muted small">(você)</span>' : ''}<span class="muted small bloco">${utils.escapeHtml(p.email || '')}</span></td>
+                    <td><select data-campo="papel" aria-label="Perfil de ${utils.escapeHtml(p.nome || p.email)}">${opcoes(PAPEIS, p.papel)}</select></td>
+                    <td><select data-campo="profissional_id" aria-label="Ficha de profissional de ${utils.escapeHtml(p.nome || p.email)}"><option value="">—</option>${opcoes(profs, p.profissional_id || '')}</select></td>
+                    <td><button type="button" class="btn btn-pequeno" data-salvar-perfil>Salvar</button></td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+          </div>
+          <p class="muted small">Profissional: liga o acesso à ficha de nutricionista (a agenda dela, os números dela). Recepção não vê dados clínicos. "Desativado" bloqueia o acesso sem apagar o histórico.</p>` : ''}
+      </section>`;
+  }
+
+  async function salvarPerfil(linha) {
+    const { ui } = NutriDudu;
+    const papel = linha.querySelector('[data-campo="papel"]').value;
+    const profissionalId = linha.querySelector('[data-campo="profissional_id"]').value || null;
+    if (papel === 'profissional' && !profissionalId) {
+      ui.toast('Escolha a ficha de profissional desta pessoa.', 'info');
+      return;
+    }
+    try {
+      await NutriDudu.nuvem.atualizarPerfil(linha.dataset.conta, { papel, profissional_id: profissionalId });
+      ui.toast('Acesso atualizado. Vale no próximo login da pessoa.');
+      NutriDudu.recarregarPagina();
+    } catch (erro) {
+      ui.toast(erro.message, 'info');
+    }
+  }
+
+  async function comecarDoZero() {
+    const { modal, form: f, store, ui } = NutriDudu;
+    modal.formulario({
+      titulo: 'Começar do zero',
+      corpo: `
+        <p class="alerta alerta-perigo">Apaga <strong>todos</strong> os pacientes, consultas, prontuários, fotos, pacotes, cobranças e conversas da nuvem. Não dá para desfazer.</p>
+        <p>Ficam: serviços, profissionais, horários e regras gerais.</p>
+        ${f.texto('confirmacao', 'Para confirmar, digite APAGAR', '', { obrigatorio: true, atributos: 'autocomplete="off"' })}
+        ${f.chave('copiaAntes', 'Baixar um backup antes de apagar', true)}`,
+      textoSalvar: 'Apagar e começar do zero',
+      ler: (form) => ({ confirmacao: f.valor(form, 'confirmacao'), copiaAntes: f.marcado(form, 'copiaAntes') }),
+      validar: (d) => (d.confirmacao === 'APAGAR' ? {} : { confirmacao: 'Digite APAGAR (em maiúsculas) para confirmar.' }),
+      salvar: async (d) => {
+        if (d.copiaAntes) await NutriDudu.backup.exportar();
+        const tudo = await store.exportarTudo();
+        await store.importarTudo({
+          configuracoes: tudo.configuracoes, profissionais: tudo.profissionais, horarios: tudo.horarios, servicos: tudo.servicos,
+        }, { limparFotos: true });
+        ui.toast('Pronto: a clínica começa do zero.');
+      },
+    });
+  }
+
   // ---------------- Página ----------------
 
   async function render(container) {
@@ -394,6 +467,16 @@ NutriDudu.pages.configuracoes = (function () {
     ]);
     const podeProf = permissoes.pode('editarProfissionais');
     const nomeProf = Object.fromEntries(profissionais.map((p) => [p.id, p.nome]));
+    const naNuvem = NutriDudu.nuvem.ativa();
+    let equipe = null;
+    let erroEquipe = '';
+    if (naNuvem && permissoes.pode('gerenciarDados')) {
+      try {
+        equipe = await NutriDudu.nuvem.listarPerfis();
+      } catch (erro) {
+        erroEquipe = erro.message;
+      }
+    }
     const agora = new Date();
 
     const blocoProfissional = (prof) => {
@@ -492,6 +575,8 @@ NutriDudu.pages.configuracoes = (function () {
         </div>
       </section>
 
+      ${equipe || erroEquipe ? blocoEquipe(equipe || [], profissionais, erroEquipe) : ''}
+
       ${permissoes.pode('gerenciarDados') ? `
         <section class="card">
           <h2 class="card-title">Dados e backup</h2>
@@ -500,7 +585,9 @@ NutriDudu.pages.configuracoes = (function () {
           <div class="acoes-linha">
             <button type="button" class="btn btn-pequeno btn-primary" data-exportar-backup>Exportar backup</button>
             <button type="button" class="btn btn-pequeno" data-importar-backup>Importar backup</button>
+            ${naNuvem ? '<button type="button" class="btn btn-pequeno btn-texto-perigo" data-comecar-zero>Começar do zero…</button>' : ''}
           </div>
+          ${naNuvem ? '<p class="muted small">"Começar do zero" apaga pacientes, agenda, prontuários e financeiro (por exemplo, depois do treinamento com dados de exemplo) e mantém serviços, profissionais, horários e regras.</p>' : ''}
         </section>` : ''}
 
       ${ui.emBreve(10, [
@@ -522,6 +609,8 @@ NutriDudu.pages.configuracoes = (function () {
       ui.toast(`Backup exportado: ${r.pessoas} cadastro(s), ${r.consultas} consulta(s), ${r.fotos} foto(s).`);
     });
     container.querySelector('[data-importar-backup]')?.addEventListener('click', () => NutriDudu.backup.abrirImportacao());
+    container.querySelector('[data-comecar-zero]')?.addEventListener('click', () => comecarDoZero());
+    container.querySelectorAll('[data-salvar-perfil]').forEach((b) => b.addEventListener('click', () => salvarPerfil(b.closest('[data-conta]'))));
   }
 
   return { titulo: 'Configurações', render, validarHorarios, validarProfissional, validarBloqueio };

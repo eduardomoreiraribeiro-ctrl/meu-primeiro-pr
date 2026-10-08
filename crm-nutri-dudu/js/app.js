@@ -23,7 +23,11 @@
     return hash || '/';
   }
 
+  // Na nuvem, nada é desenhado antes do login terminar.
+  let pronto = false;
+
   async function renderizar() {
+    if (!pronto) return;
     const caminho = caminhoAtual();
     const rota = ROTAS.find((r) => r.padrao.test(caminho));
 
@@ -136,7 +140,35 @@
   function fecharMenus() {
     menuNovo.hidden = true;
     btnNovo.setAttribute('aria-expanded', 'false');
+    menuUsuario.hidden = true;
+    btnUsuario.setAttribute('aria-expanded', 'false');
     resultados.hidden = true;
+  }
+
+  // ---------- Usuário logado (nuvem) ----------
+  const btnUsuario = document.getElementById('btn-usuario');
+  const menuUsuario = document.getElementById('menu-usuario');
+  btnUsuario.addEventListener('click', () => {
+    const abrir = menuUsuario.hidden;
+    menuUsuario.hidden = !abrir;
+    btnUsuario.setAttribute('aria-expanded', String(abrir));
+  });
+  menuUsuario.addEventListener('click', (e) => {
+    const acao = e.target.closest('[data-usuario]')?.dataset.usuario;
+    if (!acao) return;
+    fecharMenus();
+    if (acao === 'senha') NutriDudu.login.trocarSenha();
+    if (acao === 'sair') NutriDudu.login.sair();
+  });
+
+  function mostrarUsuario(perfil) {
+    document.getElementById('perfil-simulado').hidden = true;
+    document.getElementById('usuario-menu').hidden = false;
+    document.getElementById('usuario-iniciais').textContent = utils.iniciais(perfil.nome || perfil.email);
+    document.getElementById('usuario-nome').textContent = (perfil.nome || perfil.email).split(' ').slice(0, 2).join(' ');
+    document.getElementById('usuario-email').textContent = perfil.email;
+    document.getElementById('usuario-papel').textContent = NutriDudu.login.NOMES_PAPEL[perfil.papel] || perfil.papel;
+    document.getElementById('rodape-modo').textContent = 'Conectado à nuvem da clínica';
   }
 
   btnNovo.addEventListener('click', () => {
@@ -173,6 +205,10 @@
       menuNovo.hidden = true;
       btnNovo.setAttribute('aria-expanded', 'false');
     }
+    if (!e.target.closest('.usuario-menu')) {
+      menuUsuario.hidden = true;
+      btnUsuario.setAttribute('aria-expanded', 'false');
+    }
     if (!e.target.closest('.search')) resultados.hidden = true;
   });
 
@@ -207,7 +243,8 @@
 
   function aplicarPerfil() {
     document.body.dataset.perfil = permissoes.atual();
-    btnReset.hidden = !permissoes.pode('gerenciarDados');
+    // Na nuvem, "voltar aos dados de exemplo" apagaria dados reais: fica só em Configurações.
+    btnReset.hidden = !permissoes.pode('gerenciarDados') || NutriDudu.nuvem.ativa();
     menuNovo.querySelector('[data-novo="pagamento"]').hidden = !permissoes.pode('lancarCobranca');
   }
 
@@ -230,8 +267,24 @@
   NutriDudu.recarregarPagina = renderizar;
 
   store.subscribe(() => renderizar());
-
   window.addEventListener('hashchange', navegar);
-  aplicarPerfil();
-  renderizar();
+
+  // ---------- Início ----------
+  // Aviso quando a nuvem existe mas alguém abriu a demonstração.
+  document.getElementById('aviso-demo').hidden = !(NutriDudu.nuvem.configurada() && NutriDudu.nuvem.emDemonstracao());
+
+  if (NutriDudu.nuvem.ativa()) {
+    NutriDudu.login.iniciar({
+      aoPronto: (perfil) => {
+        mostrarUsuario(perfil);
+        aplicarPerfil();
+        pronto = true;
+        renderizar();
+      },
+    });
+  } else {
+    aplicarPerfil();
+    pronto = true;
+    renderizar();
+  }
 })();

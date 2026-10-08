@@ -1,7 +1,7 @@
-// Armazenamento das imagens das fotos de evolução. O localStorage é pequeno
-// demais para imagens, então ficam no IndexedDB do navegador (na fase 9: num
-// armazenamento privado do Supabase). Os dados da foto (ângulo, data, consulta)
-// ficam na coleção "fotos" do store; aqui só a imagem, pela mesma chave.
+// Armazenamento das imagens das fotos de evolução. Na nuvem, ficam no depósito
+// privado "fotos" do Supabase (só admin e profissional acessam). No modo
+// demonstração, ficam no IndexedDB deste navegador. Os dados da foto (ângulo,
+// data, consulta) ficam na coleção "fotos" do store; aqui só a imagem, pela mesma chave.
 window.NutriDudu = window.NutriDudu || {};
 
 NutriDudu.fotosStore = (function () {
@@ -10,6 +10,8 @@ NutriDudu.fotosStore = (function () {
   const LADO_MAXIMO = 1200; // px: fotos são reduzidas antes de guardar
   let conexao = null;
   const memoria = new Map(); // reserva, se o navegador não oferecer IndexedDB
+  const nuvem = () => NutriDudu.nuvem?.ativa();
+  const cacheNuvem = new Map(); // fotos já baixadas nesta sessão
 
   function abrir() {
     if (conexao) return conexao;
@@ -38,18 +40,36 @@ NutriDudu.fotosStore = (function () {
   }
 
   async function salvar(chave, dataUrl) {
+    if (nuvem()) {
+      await NutriDudu.nuvem.fotoSalvar(chave, dataUrl);
+      cacheNuvem.set(chave, dataUrl);
+      return;
+    }
     const db = await abrir();
     if (!db) { memoria.set(chave, dataUrl); return; }
     await operar('readwrite', (t) => t.put(dataUrl, chave));
   }
 
   async function ler(chave) {
+    if (nuvem()) {
+      if (!cacheNuvem.has(chave)) {
+        const dados = await NutriDudu.nuvem.fotoLer(chave);
+        if (dados) cacheNuvem.set(chave, dados);
+        return dados;
+      }
+      return cacheNuvem.get(chave);
+    }
     const db = await abrir();
     if (!db) return memoria.get(chave) || null;
     return (await operar('readonly', (t) => t.get(chave))) || null;
   }
 
   async function remover(chave) {
+    if (nuvem()) {
+      await NutriDudu.nuvem.fotoRemover(chave);
+      cacheNuvem.delete(chave);
+      return;
+    }
     const db = await abrir();
     if (!db) { memoria.delete(chave); return; }
     await operar('readwrite', (t) => t.delete(chave));
@@ -84,9 +104,16 @@ NutriDudu.fotosStore = (function () {
   /** Apaga todas as imagens (usado ao restaurar os dados de exemplo). */
   async function limpar() {
     memoria.clear();
+    cacheNuvem.clear();
+    if (nuvem()) { await NutriDudu.nuvem.fotosLimpar(); return; }
     const db = await abrir();
     if (db) await operar('readwrite', (t) => t.clear());
   }
 
-  return { salvar, ler, remover, reduzir, limpar };
+  /** Ao sair da conta: esquece as fotos baixadas. */
+  function esquecer() {
+    cacheNuvem.clear();
+  }
+
+  return { salvar, ler, remover, reduzir, limpar, esquecer };
 })();

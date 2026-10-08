@@ -85,25 +85,42 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - **Responsividade:** todas as páginas conferidas em 360, 390, 768, 1024 e 1366 px, nos dois temas, sem rolagem lateral.
 - Arquivos novos: `js/tema.js` e `js/backup.js`.
 
+### Fase 9 — Nuvem (Supabase)
+
+- **Login** com e-mail e senha. O perfil (administrador, profissional, recepção) vem da conta, e o seletor "Ver como" sai de cena. Quem acaba de ser cadastrado fica "Aguardando liberação" até o administrador liberar em **Configurações › Equipe e acessos**.
+- **Banco de dados** no Supabase (`supabase/schema.sql`), com **regras de acesso no próprio banco**: a recepção nem recebe anamnese, avaliação, fotos, anotações e condutas; só administrador e recepção dão baixa em pagamento; só o administrador altera serviços, profissionais e regras.
+- **Fotos** num depósito privado (Storage), sem links públicos.
+- **Auditoria (LGPD):** quem criou, alterou ou abriu o prontuário de cada paciente.
+- **Tempo real:** o que um computador grava aparece nos outros.
+- **Primeiro uso:** começar a clínica do zero, importar o backup do protótipo ou treinar com dados de exemplo. Depois do treino, **Começar do zero…** apaga os pacientes e mantém serviços, profissionais e regras.
+- **Modo demonstração** (`index.html?modo=demo`, link na tela de login): o protótipo de sempre, com dados fictícios só no navegador e um aviso no topo.
+- Passo a passo para configurar: [`supabase/COMO-CONFIGURAR.md`](supabase/COMO-CONFIGURAR.md).
+- Arquivos novos: `js/nuvem-config.js` (endereço e chave pública), `js/nuvem.js` (conexão), `js/components/login.js`, `js/vendor/supabase-2.116.0.js` (biblioteca oficial, licença MIT) e `supabase/schema.sql`.
+
 A página de Conversas (fase 10) ainda mostra os dados só para leitura.
 
 ## Como abrir
 
 Não precisa instalar nada: abra o arquivo `index.html` no navegador (dois cliques).
 
-Os dados ficam salvos só naquele navegador. Para voltar ao começo, use **Restaurar dados de exemplo** no rodapé do menu (perfil Administrador).
+- **Com a nuvem configurada** (`js/nuvem-config.js` preenchido): aparece a tela de login. Para configurar pela primeira vez, siga [`supabase/COMO-CONFIGURAR.md`](supabase/COMO-CONFIGURAR.md).
+- **Demonstração** (`index.html?modo=demo`, ou o link na tela de login): os dados ficam só naquele navegador. Para voltar ao começo, use **Restaurar dados de exemplo** no rodapé do menu (perfil Administrador).
 
-> Use apenas dados fictícios no protótipo. Dados reais de pacientes só depois da fase 9 (login e banco de dados seguro).
+> Dados reais de pacientes: só no modo nuvem, depois de rodar o `schema.sql`, fechar o cadastro livre e cadastrar a equipe. Na demonstração, use apenas dados fictícios.
 
 ## Estrutura
 
 ```
 crm-nutri-dudu/
+├── supabase/             # schema.sql (banco e regras de acesso) e o guia de configuração
 ├── index.html            # casca: menu, barra superior e área das páginas
 ├── css/style.css         # visual (cores em variáveis no topo do arquivo)
 └── js/
     ├── config.js         # listas fixas: perfis, funis, origens, status…
     ├── utils.js          # formatação de datas, R$, idade, IMC…
+    ├── nuvem-config.js   # endereço do Supabase e chave pública
+    ├── nuvem.js          # login, perfis, dados, fotos e tempo real no Supabase
+    ├── vendor/           # biblioteca oficial do Supabase (supabase-js)
     ├── permissoes.js     # o que cada perfil pode ver e fazer
     ├── tema.js           # modo claro / escuro / automático
     ├── backup.js         # exportar e importar backup (com fotos)
@@ -119,6 +136,6 @@ crm-nutri-dudu/
     ├── app.js            # navegação, busca, "+ Novo", seletor de perfil
     ├── components/       # ui.js (peças de tela), form.js (campos), modal.js (janelas),
     │                     # cadastro-pessoa.js (cadastro de lead/cliente), agendamento.js,
-    │                     # anamnese.js, atendimento.js, financeiro.js
+    │                     # anamnese.js, atendimento.js, financeiro.js, login.js
     └── pages/            # uma página por arquivo
 ```

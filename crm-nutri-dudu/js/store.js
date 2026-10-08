@@ -1,6 +1,8 @@
-// Camada de dados. Hoje salva no localStorage do navegador; na fase 9 será
-// trocada pelo Supabase. As páginas só falam com este arquivo, e todas as
-// funções retornam Promises — por isso a troca não exige reescrever as telas.
+// Camada de dados. As páginas só falam com este arquivo, e todas as funções
+// retornam Promises. Dois modos, com a mesma interface:
+//  • nuvem (fase 9): os dados ficam no Supabase; aqui fica uma cópia em
+//    memória para as telas lerem rápido, atualizada em tempo real;
+//  • demonstração/protótipo: os dados ficam só no localStorage deste navegador.
 window.NutriDudu = window.NutriDudu || {};
 
 NutriDudu.store = (function () {
@@ -29,8 +31,10 @@ NutriDudu.store = (function () {
     mensagens: 'msg',
   };
 
+  const nuvem = () => NutriDudu.nuvem?.ativa();
   const ouvintes = new Set();
-  let db = carregar();
+  // Na nuvem, começa vazio e é preenchido depois do login (conectarNuvem).
+  let db = nuvem() ? bancoVazio() : carregar();
 
   function bancoVazio() {
     const vazio = {};
@@ -52,6 +56,7 @@ NutriDudu.store = (function () {
   }
 
   function gravar(dados) {
+    if (nuvem()) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(dados));
     } catch (erro) {
@@ -63,7 +68,11 @@ NutriDudu.store = (function () {
   // logo antes de desenhar a página, como os movimentos automáticos do Kanban).
   function salvarEAvisar(colecao, opcoes = {}) {
     gravar(db);
-    if (!opcoes.silencioso) ouvintes.forEach((fn) => fn(colecao));
+    if (!opcoes.silencioso) avisar(colecao);
+  }
+
+  function avisar(colecao) {
+    ouvintes.forEach((fn) => fn(colecao));
   }
 
   function validarColecao(colecao) {
@@ -85,10 +94,13 @@ NutriDudu.store = (function () {
     return item ? copia(item) : null;
   }
 
+  // Na nuvem, grava primeiro no servidor: se falhar (sem internet, sem
+  // permissão), nada muda na tela e o erro sobe para o formulário mostrar.
   async function create(colecao, dados, opcoes) {
     validarColecao(colecao);
     const agora = new Date().toISOString();
     const item = { ...dados, id: uid(COLECOES[colecao]), criadoEm: agora, atualizadoEm: agora };
+    if (nuvem()) await NutriDudu.nuvem.criar(colecao, item);
     db[colecao].push(item);
     salvarEAvisar(colecao, opcoes);
     return copia(item);
@@ -99,16 +111,20 @@ NutriDudu.store = (function () {
     const indice = db[colecao].findIndex((x) => x.id === id);
     if (indice === -1) throw new Error(`Registro não encontrado: ${colecao}/${id}`);
     const { id: _id, criadoEm: _criadoEm, ...resto } = alteracoes;
-    db[colecao][indice] = { ...db[colecao][indice], ...resto, atualizadoEm: new Date().toISOString() };
+    const novo = { ...db[colecao][indice], ...resto, atualizadoEm: new Date().toISOString() };
+    if (nuvem()) await NutriDudu.nuvem.alterar(colecao, novo);
+    const atual = db[colecao].findIndex((x) => x.id === id);
+    if (atual !== -1) db[colecao][atual] = novo;
     salvarEAvisar(colecao, opcoes);
-    return copia(db[colecao][indice]);
+    return copia(novo);
   }
 
   async function remove(colecao, id) {
     validarColecao(colecao);
-    const antes = db[colecao].length;
+    if (!db[colecao].some((x) => x.id === id)) return;
+    if (nuvem()) await NutriDudu.nuvem.apagar(colecao, [id]);
     db[colecao] = db[colecao].filter((x) => x.id !== id);
-    if (db[colecao].length !== antes) salvarEAvisar(colecao);
+    salvarEAvisar(colecao);
   }
 
   // Troca de uma vez todos os itens que passam no filtro pelos `novos`
@@ -119,15 +135,17 @@ NutriDudu.store = (function () {
     const criados = novos.map((dados) => ({
       ...dados, id: uid(COLECOES[colecao]), criadoEm: agora, atualizadoEm: agora,
     }));
+    if (nuvem()) {
+      await NutriDudu.nuvem.apagar(colecao, db[colecao].filter(filtro).map((x) => x.id));
+      if (criados.length) await NutriDudu.nuvem.gravarLote(colecao, criados);
+    }
     db[colecao] = [...db[colecao].filter((x) => !filtro(x)), ...criados];
     salvarEAvisar(colecao);
     return copia(criados);
   }
 
   async function resetarParaExemplo() {
-    await NutriDudu.fotosStore?.limpar();
-    db = { ...bancoVazio(), ...NutriDudu.seed.criar() };
-    salvarEAvisar('*');
+    await importarTudo(NutriDudu.seed.criar(), { limparFotos: true });
   }
 
   /** Cópia de todas as coleções (para o backup). */
@@ -136,12 +154,63 @@ NutriDudu.store = (function () {
   }
 
   /** Troca todos os dados pelos de um backup (já validado). Coleções ausentes ficam vazias. */
-  async function importarTudo(colecoes) {
+  async function importarTudo(colecoes, { limparFotos = false } = {}) {
     const novo = bancoVazio();
     Object.keys(COLECOES).forEach((c) => { if (Array.isArray(colecoes[c])) novo[c] = copia(colecoes[c]); });
-    db = novo;
+    if (limparFotos) await NutriDudu.fotosStore?.limpar();
+    if (nuvem()) {
+      await NutriDudu.nuvem.substituirTudo(novo);
+      // Recarrega do servidor: cada perfil só fica com o que pode ver.
+      db = { ...bancoVazio(), ...(await NutriDudu.nuvem.carregarTudo()) };
+    } else {
+      db = novo;
+    }
     salvarEAvisar('*');
   }
+
+  // ---------------- Nuvem ----------------
+
+  /** Depois do login: carrega tudo do Supabase e passa a ouvir as mudanças. */
+  async function conectarNuvem() {
+    db = { ...bancoVazio(), ...(await NutriDudu.nuvem.carregarTudo()) };
+    NutriDudu.nuvem.ouvir(aplicarMudancaRemota);
+    avisar('*');
+  }
+
+  /** Ao sair: limpa a cópia em memória (nada fica no navegador). */
+  function desconectarNuvem() {
+    NutriDudu.nuvem?.parar();
+    db = bancoVazio();
+  }
+
+  // Mudanças feitas em outros computadores chegam aqui (tempo real).
+  let avisoPendente = null;
+  function aplicarMudancaRemota({ colecao, tipo, item, id, clinico, campos }) {
+    if (!COLECOES[colecao]) return;
+    const lista = db[colecao];
+    const alvoId = item?.id || id;
+    const i = lista.findIndex((x) => x.id === alvoId);
+    if (clinico) {
+      // Só os campos clínicos (anotações, conduta) de uma consulta.
+      if (i === -1) return;
+      const atualizado = { ...lista[i] };
+      campos.forEach((c) => { if (tipo === 'apagar') delete atualizado[c]; else if (item[c] !== undefined) atualizado[c] = item[c]; });
+      lista[i] = atualizado;
+    } else if (tipo === 'apagar') {
+      if (i === -1) return;
+      lista.splice(i, 1);
+    } else if (i === -1) {
+      lista.push(item);
+    } else {
+      // Mantém os campos clínicos que já estavam na cópia local.
+      lista[i] = { ...pick(lista[i], ['anotacoes', 'conduta']), ...item };
+    }
+    // Junta várias mudanças seguidas num único redesenho.
+    clearTimeout(avisoPendente);
+    avisoPendente = setTimeout(() => avisar(colecao), 150);
+  }
+
+  const pick = (obj, campos) => Object.fromEntries(campos.filter((c) => c in obj).map((c) => [c, obj[c]]));
 
   // Avisa quando algum dado muda. Retorna uma função para cancelar o aviso.
   function subscribe(fn) {
@@ -149,5 +218,8 @@ NutriDudu.store = (function () {
     return () => ouvintes.delete(fn);
   }
 
-  return { list, get, create, update, remove, substituir, resetarParaExemplo, subscribe, exportarTudo, importarTudo, COLECOES: Object.keys(COLECOES) };
+  return {
+    list, get, create, update, remove, substituir, resetarParaExemplo, subscribe, exportarTudo, importarTudo,
+    conectarNuvem, desconectarNuvem, COLECOES: Object.keys(COLECOES),
+  };
 })();

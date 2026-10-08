@@ -107,13 +107,13 @@ NutriDudu.backup = (function () {
   }
 
   /** Janela de importação: escolher arquivo → conferir resumo → confirmar. */
-  function abrirImportacao() {
+  function abrirImportacao({ aoConcluir = null } = {}) {
     const { modal, form: f, ui, utils } = NutriDudu;
     let lido = null;
     modal.formulario({
       titulo: 'Importar backup',
       corpo: `
-        <p class="alerta alerta-aviso">Importar <strong>substitui todos os dados</strong> deste navegador (clientes, agenda, prontuários, financeiro e fotos) pelos do arquivo.</p>
+        <p class="alerta alerta-aviso">Importar <strong>substitui todos os dados</strong> ${NutriDudu.nuvem?.ativa() ? 'da clínica na nuvem' : 'deste navegador'} (clientes, agenda, prontuários, financeiro e fotos) pelos do arquivo.</p>
         <div class="campo">
           <label for="arquivo-backup">Arquivo de backup (.json)</label>
           <input type="file" id="arquivo-backup" name="arquivo" accept="application/json,.json">
@@ -128,6 +128,7 @@ NutriDudu.backup = (function () {
         if (d.copiaAntes) await exportar();
         await restaurar(lido);
         ui.toast('Backup importado.');
+        if (aoConcluir) setTimeout(aoConcluir, 0);
       },
       aoAbrir: (form) => {
         const campo = form.querySelector('[name="arquivo"]');

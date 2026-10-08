@@ -1,15 +1,17 @@
 // O que cada perfil pode ver e fazer (seção 2 do PLANEJAMENTO.md).
-// No protótipo o perfil é só simulado por um seletor; na fase 9 vem do login
-// e as mesmas regras passam a valer também no banco de dados.
+// Na nuvem, o perfil vem do login (fixar) e as mesmas regras também valem no
+// banco de dados (supabase/schema.sql). No modo demonstração, o perfil é só
+// simulado pelo seletor "Ver como".
 window.NutriDudu = window.NutriDudu || {};
 
 NutriDudu.permissoes = (function () {
   const STORAGE_KEY = 'nutridudu:perfil';
   const PERFIL_PADRAO = 'admin';
 
-  // No protótipo, o perfil "Profissional" simula a Dra. Ana Lima (prof_1).
-  // Na fase 9 isso vem do login.
-  const PROFISSIONAL_SIMULADO = 'prof_1';
+  // No modo demonstração, o perfil "Profissional" simula a Dra. Ana Lima (prof_1).
+  // Na nuvem, vem do perfil de quem entrou.
+  let profissionalAtual = 'prof_1';
+  let fixo = false;
 
   const REGRAS = {
     verClinico: ['admin', 'profissional'],
@@ -41,7 +43,7 @@ NutriDudu.permissoes = (function () {
   }
 
   function definir(novo) {
-    if (!NutriDudu.config.PERFIS[novo] || novo === perfil) return;
+    if (fixo || !NutriDudu.config.PERFIS[novo] || novo === perfil) return;
     perfil = novo;
     try {
       localStorage.setItem(STORAGE_KEY, novo);
@@ -74,27 +76,36 @@ NutriDudu.permissoes = (function () {
 
   // Horários de atendimento: admin edita todos; profissional, só os seus.
   function podeEditarHorarios(profissionalId) {
-    return perfil === 'admin' || (perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO);
+    return perfil === 'admin' || (perfil === 'profissional' && profissionalId === profissionalAtual);
   }
 
   // Bloqueios: admin e recepção em qualquer agenda; profissional, só na sua.
   // profissionalId null = bloqueio da clínica toda (só admin e recepção).
   function podeEditarBloqueios(profissionalId) {
     if (perfil === 'admin' || perfil === 'recepcao') return true;
-    return perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO;
+    return perfil === 'profissional' && profissionalId === profissionalAtual;
   }
 
   /** Id do profissional "logado" (no protótipo, simulado); null para admin e recepção. */
   function idProfissionalAtual() {
-    return perfil === 'profissional' ? PROFISSIONAL_SIMULADO : null;
+    return perfil === 'profissional' ? profissionalAtual : null;
   }
 
   // Agendar, remarcar, confirmar, cancelar: admin e recepção em qualquer agenda;
   // profissional, só na sua.
   function podeAgendarPara(profissionalId) {
     if (perfil === 'admin' || perfil === 'recepcao') return true;
-    return perfil === 'profissional' && profissionalId === PROFISSIONAL_SIMULADO;
+    return perfil === 'profissional' && profissionalId === profissionalAtual;
   }
+
+  /** Na nuvem: o perfil vem do login e não pode ser trocado na tela. */
+  function fixar({ papel, profissionalId }) {
+    perfil = papel;
+    profissionalAtual = profissionalId || null;
+    fixo = true;
+  }
+
+  const estaFixo = () => fixo;
 
   function aoMudar(fn) {
     ouvintes.add(fn);
@@ -102,6 +113,6 @@ NutriDudu.permissoes = (function () {
   }
 
   return {
-    atual, definir, pode, exigir, podeEditarHorarios, podeEditarBloqueios, idProfissionalAtual, podeAgendarPara, aoMudar,
+    atual, definir, fixar, estaFixo, pode, exigir, podeEditarHorarios, podeEditarBloqueios, idProfissionalAtual, podeAgendarPara, aoMudar,
   };
 })();

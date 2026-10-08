@@ -18,7 +18,23 @@
 </head>
 <body>
 
-<div class="app">
+<!-- Login (só quando o sistema está ligado à nuvem) -->
+<div class="tela-login" id="tela-login" hidden>
+  <div class="login-cartao">
+    <div class="login-marca">
+      <span class="brand-logo">ND</span>
+      <span class="brand-name">Nutri Dudu</span>
+    </div>
+    <div id="login-conteudo"></div>
+  </div>
+</div>
+
+<div class="aviso-demo" id="aviso-demo" hidden>
+  <strong>Modo demonstração:</strong> dados fictícios, salvos só neste navegador — não use com pacientes reais.
+  <a href="index.html">Ir para o sistema</a>
+</div>
+
+<div class="app" id="app">
   <aside class="sidebar">
     <a href="#/" class="brand">
       <span class="brand-logo">ND</span>
@@ -58,7 +74,7 @@
 
     <div class="sidebar-footer">
       <button type="button" class="btn-link" id="btn-reset">Restaurar dados de exemplo</button>
-      <p class="muted small">Protótipo · dados fictícios salvos neste navegador</p>
+      <p class="muted small" id="rodape-modo">Protótipo · dados fictícios salvos neste navegador</p>
     </div>
   </aside>
 
@@ -71,10 +87,22 @@
       </div>
 
       <div class="topbar-actions">
-        <label class="perfil-select">
+        <label class="perfil-select" id="perfil-simulado">
           <span class="muted small">Ver como</span>
           <select id="perfil" aria-label="Perfil simulado"></select>
         </label>
+
+        <div class="usuario-menu" id="usuario-menu" hidden>
+          <button type="button" class="btn usuario-botao" id="btn-usuario" aria-haspopup="true" aria-expanded="false">
+            <span class="avatar" id="usuario-iniciais" aria-hidden="true"></span>
+            <span class="usuario-nome" id="usuario-nome"></span>
+          </button>
+          <div class="dropdown" id="menu-usuario" hidden>
+            <p class="dropdown-info"><span id="usuario-email"></span><br><span class="muted" id="usuario-papel"></span></p>
+            <button type="button" data-usuario="senha">Trocar senha</button>
+            <button type="button" data-usuario="sair">Sair</button>
+          </div>
+        </div>
 
         <button type="button" class="btn btn-tema" id="btn-tema" aria-label="Usar modo escuro" title="Usar modo escuro">
           <svg class="icone-lua" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
@@ -104,6 +132,9 @@
 <script src="js/utils.js"></script>
 <script src="js/permissoes.js"></script>
 <script src="js/tema.js"></script>
+<script src="js/nuvem-config.js"></script>
+<script src="js/vendor/supabase-2.116.0.js"></script>
+<script src="js/nuvem.js"></script>
 <script src="js/indicadores.js"></script>
 <script src="js/calculos.js"></script>
 <script src="js/funil.js"></script>
@@ -122,6 +153,7 @@
 <script src="js/components/anamnese.js"></script>
 <script src="js/components/atendimento.js"></script>
 <script src="js/components/financeiro.js"></script>
+<script src="js/components/login.js"></script>
 <script src="js/pages/dashboard.js"></script>
 <script src="js/pages/agenda.js"></script>
 <script src="js/pages/kanban.js"></script>

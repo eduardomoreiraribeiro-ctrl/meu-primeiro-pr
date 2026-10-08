@@ -4,6 +4,7 @@ NutriDudu.pages = NutriDudu.pages || {};
 // Ficha do cliente (prontuário): cabeçalho, alertas, resumo e abas.
 // Endereço: #/clientes/<id>/<aba> — a aba fica no endereço (dá para voltar e compartilhar).
 NutriDudu.pages.cliente = (function () {
+  const acessosRegistrados = new Set();
   const ABAS = {
     visao: { nome: 'Visão geral' },
     anamnese: { nome: 'Anamnese', clinica: true },
@@ -439,6 +440,14 @@ NutriDudu.pages.cliente = (function () {
     const verClinico = permissoes.pode('verClinico');
     let aba = ABAS[params.aba] ? params.aba : 'visao';
     if (ABAS[aba].clinica && !verClinico) aba = 'visao';
+    // Na nuvem, fica registrado quem abriu o prontuário (uma vez por aba nesta sessão).
+    if (ABAS[aba].clinica && NutriDudu.nuvem.ativa()) {
+      const chave = `${params.id}:${aba}`;
+      if (!acessosRegistrados.has(chave)) {
+        acessosRegistrados.add(chave);
+        NutriDudu.nuvem.registrarAcesso(params.id, `aba ${ABAS[aba].nome}`);
+      }
+    }
 
     const doCliente = (x) => x.pessoaId === pessoa.id;
     const [consultas, pacotes, lancamentos, profissionais, indicadoPor, indicados, anamneses, avaliacoes, fotos, interacoes, servicos, geral] = await Promise.all([
