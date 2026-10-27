@@ -95,6 +95,29 @@ As funções são o "servidor" que recebe as mensagens e chama o assistente. Sã
    - se a função `whatsapp-webhook` está com o **Verify JWT desligado**.
 5. Em **Campos do webhook**, clique em **Gerenciar** e assine (**Subscribe**) o campo **messages**.
 
+> Na versão nova do painel da Meta, essa tela fica em **Casos de uso › Conectar no WhatsApp › Etapa 2. Configuração da produção › Configurar webhooks**.
+
+### Publicar o app
+
+Sem esta parte, a Meta **não entrega** as mensagens de verdade.
+
+1. Em **Configurações do app › Básico**, preencha:
+   - **URL da Política de Privacidade:** `https://eduardomoreiraribeiro-ctrl.github.io/meu-primeiro-pr/crm-nutri-dudu/privacidade.html`
+   - **URL de exclusão de dados:** o mesmo link.
+   - **Categoria:** a que combinar com a clínica.
+2. Toque em **Salvar alterações**.
+3. No menu da esquerda, toque em **Publicar** e depois no botão **Publicar**.
+
+### Ligar a conta do WhatsApp ao app (uma vez só)
+
+1. Abra **developers.facebook.com/tools/explorer** no Safari, em tela cheia.
+2. Em **App da Meta**, escolha o app.
+3. Em **Token de acesso**, cole o `WHATSAPP_TOKEN`.
+4. Mude **GET** para **POST**.
+5. No endereço, escreva `ID-DA-CONTA/subscribed_apps`.
+   - O ID da conta é a "Identificação da conta de mensagens", que aparece junto do número na Etapa 1.
+6. Toque em **Enviar**. A resposta deve ser `{"success": true}`.
+
 ## 7. Primeiro teste (assistente desligado)
 
 1. Do seu celular (o que você cadastrou como destinatário de teste), mande "Oi" para o **número de teste** da Meta.
