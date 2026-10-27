@@ -704,16 +704,33 @@ const NutriDuduServidor = (() => {
   // ---------------------------------------------------------------------
   // WhatsApp Cloud API (oficial da Meta)
   // ---------------------------------------------------------------------
+  /** Celular brasileiro com e sem o 9: "5527996351353" <-> "552796351353". */
+  function outroFormatoBR(numero) {
+    const d = String(numero || '').replace(/\D/g, '');
+    if (/^55\d{2}9\d{8}$/.test(d)) return d.slice(0, 4) + d.slice(5);
+    if (/^55\d{2}[6-9]\d{7}$/.test(d)) return `${d.slice(0, 4)}9${d.slice(4)}`;
+    return null;
+  }
+
   function whatsappCloud({ token, phoneNumberId, versao = 'v23.0', fetch: buscar = fetch }) {
-    async function enviarTexto(para, texto) {
+    async function tentar(para, texto) {
       const resp = await buscar(`https://graph.facebook.com/${versao}/${phoneNumberId}/messages`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ messaging_product: 'whatsapp', to: para, type: 'text', text: { body: texto, preview_url: false } }),
       });
       const corpo = await resp.json().catch(() => ({}));
-      if (!resp.ok) throw new Error(`WhatsApp: ${corpo?.error?.message || resp.status}`);
-      return corpo?.messages?.[0]?.id || null;
+      return { ok: resp.ok, corpo, status: resp.status };
+    }
+
+    async function enviarTexto(para, texto) {
+      let r = await tentar(para, texto);
+      // Celular do Brasil: a Meta às vezes informa o número sem o 9 (ou com), e no modo de
+      // teste só aceita o formato cadastrado na lista. Erro 131030 = "fora da lista": tenta o outro formato.
+      const alternativo = outroFormatoBR(para);
+      if (!r.ok && r.corpo?.error?.code === 131030 && alternativo) r = await tentar(alternativo, texto);
+      if (!r.ok) throw new Error(`WhatsApp: ${r.corpo?.error?.message || r.status}`);
+      return r.corpo?.messages?.[0]?.id || null;
     }
     return { enviarTexto };
   }
@@ -1527,7 +1544,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
   }
 
   return {
-    criarRelogio, repoSupabase, whatsappCloud, assinaturaValida, chaveTelefone, formatarDoWhatsapp,
+    criarRelogio, repoSupabase, whatsappCloud, outroFormatoBR, assinaturaValida, chaveTelefone, formatarDoWhatsapp,
     FERRAMENTAS, instrucoes, criarFerramentas, montarHistorico, responder, custoDe,
     criarWebhook, criarEnvioEquipe, PADRAO_AGENTE, textoDaMensagem,
   };
