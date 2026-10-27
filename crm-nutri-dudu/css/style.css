@@ -1446,6 +1446,111 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
   to { opacity: 1; transform: none; }
 }
 
+/* ---------- Conversas (WhatsApp) ---------- */
+.alerta-info { background: var(--info-soft); color: var(--info); }
+.segmentos-quebra { width: 100%; }
+.segmento.ativo .muted { color: inherit; opacity: 0.8; }
+.conversas-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+.conversas-lista { padding: 0; overflow: hidden; }
+.conversas-filtros { display: flex; flex-direction: column; gap: 0.6rem; padding: 0.75rem; border-bottom: 1px solid var(--border); }
+.conversas-filtros input[type="search"] {
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.conversas-itens { max-height: calc(100vh - 16rem); overflow-y: auto; }
+.conversas-itens .vazio { padding: 1rem; }
+.conversa-item {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.7rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.conversa-item:hover { background: var(--surface-2); text-decoration: none; }
+.conversa-item.ativa { background: var(--primary-soft); }
+.conversa-item[hidden] { display: none; }
+.conversa-item.nao-lida strong { font-weight: 700; }
+.conversa-item-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 0.15rem; }
+.conversa-item-topo, .conversa-item-rodape { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.nao-lidas {
+  min-width: 1.35rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--sobre-primaria);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.chat-painel { display: flex; flex-direction: column; gap: 0.6rem; min-height: 60vh; }
+.chat-vazio { align-items: center; justify-content: center; text-align: center; }
+.chat-topo { display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border); }
+.chat-topo-info { flex: 1; min-width: 10rem; }
+.chat-nome { margin: 0; font-size: 1.05rem; }
+.chat-voltar { display: none; }
+.chat-acoes { flex-wrap: wrap; }
+.chat-faixa { display: flex; flex-direction: column; gap: 0.25rem; }
+.chat-assumida, .chat-rodape { margin: 0; }
+.chat-mensagens {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 16rem;
+  max-height: calc(100vh - 24rem);
+  overflow-y: auto;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.chat-dia { align-self: center; margin: 0.4rem 0; font-size: 0.75rem; color: var(--text-muted); }
+.chat-dia span { padding: 0.15rem 0.6rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--border); }
+.bolha {
+  max-width: min(80%, 34rem);
+  padding: 0.45rem 0.7rem 0.3rem;
+  border-radius: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  overflow-wrap: anywhere;
+}
+.bolha-recebida { align-self: flex-start; border-bottom-left-radius: 4px; }
+.bolha-enviada { align-self: flex-end; border-bottom-right-radius: 4px; background: var(--primary-soft); border-color: transparent; }
+.bolha-agente { background: var(--info-soft); }
+.bolha-autor { display: block; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); }
+.bolha-texto { margin: 0.1rem 0; white-space: pre-wrap; }
+.bolha-meta { display: block; text-align: right; font-size: 0.7rem; color: var(--text-muted); }
+.bolha-status.status-lida { color: var(--info); }
+.bolha-status.status-falhou { color: var(--perigo); }
+.bolha-erro { display: block; font-size: 0.75rem; color: var(--perigo); }
+.chat-janela { margin: 0; }
+.chat-envio { display: flex; gap: 0.5rem; align-items: flex-end; }
+.chat-envio textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.uso-agente { display: flex; flex-wrap: wrap; gap: 0.5rem 1.5rem; margin: 0.5rem 0; }
+.medidor { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin: 0.25rem 0 0.75rem; }
+.medidor span { display: block; height: 100%; background: var(--primary); }
+.medidor.cheio span { background: var(--perigo); }
+
 /* ---------- Celular e tablet ---------- */
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }
@@ -1502,6 +1607,15 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
   .usuario-botao { padding-right: 0.3rem; }
 
   .view { padding: 1.25rem 1rem 6rem; }
+
+  .conversas-layout { grid-template-columns: minmax(0, 1fr); }
+  .com-conversa .conversas-lista,
+  .conversas-pagina:not(.com-conversa) .chat-painel { display: none; }
+  .com-conversa .page-header { display: none; }
+  .chat-voltar { display: inline-flex; }
+  .conversas-itens { max-height: none; }
+  .chat-mensagens { max-height: 60vh; }
+  .bolha { max-width: 88%; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
   .dash-grid { grid-template-columns: 1fr; }
   .grid-acoes { grid-template-columns: 1fr; }
@@ -1535,3 +1649,4 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
   .kpi-value { font-size: 1.15rem; }
   .toast-area { left: 1rem; right: 1rem; bottom: 5.5rem; }
 }
+.pre-linha { white-space: pre-line; }

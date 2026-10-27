@@ -465,6 +465,7 @@ NutriDudu.pages.cliente = (function () {
       store.list('servicos'),
       store.get('configuracoes', 'geral'),
     ]);
+    const conversa = (await store.list('conversas', doCliente)).sort((a, b) => (b.ultimaMensagemEm || '').localeCompare(a.ultimaMensagemEm || ''))[0];
 
     const porId = (lista) => Object.fromEntries(lista.map((x) => [x.id, x]));
     const resumo = calculos.resumoPessoa(pessoa, { consultas, pacotes, lancamentos }, geral || {});
@@ -517,7 +518,9 @@ NutriDudu.pages.cliente = (function () {
           <div class="ficha-acoes">
             ${pendenteHoje && podeAtender ? `<button type="button" class="btn btn-pequeno btn-primary" data-atender="${pendenteHoje.id}">Registrar atendimento</button>` : ''}
             <button type="button" class="btn btn-pequeno${pendenteHoje && podeAtender ? '' : ' btn-primary'}" data-agendar>Agendar</button>
-            <a class="btn btn-pequeno" href="https://wa.me/55${utils.soDigitos(pessoa.telefone)}" target="_blank" rel="noopener">WhatsApp</a>
+            ${conversa
+              ? `<a class="btn btn-pequeno" href="#/conversas/${encodeURIComponent(conversa.id)}" data-ver-conversa>Conversa${conversa.naoLidas ? ` (${conversa.naoLidas})` : ''}</a>`
+              : `<a class="btn btn-pequeno" href="https://wa.me/55${utils.soDigitos(pessoa.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`}
             <button type="button" class="btn btn-pequeno" data-editar-cadastro>Editar cadastro</button>
           </div>
         </div>

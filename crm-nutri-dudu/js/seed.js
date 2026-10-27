@@ -65,6 +65,13 @@ NutriDudu.seed = (function () {
       diasLeadParado: 7,
       intervaloEntreConsultasMin: 10,
       chavePix: 'pix@nutridudu.exemplo',
+    }, {
+      id: 'agente',
+      ativo: false,
+      informacoes: 'Endereço: Rua das Flores, 100, sala 12 — Centro (exemplo).\nEstacionamento conveniado na rua de trás.\nFormas de pagamento: Pix, cartão de crédito (até 3x) e débito.\nConsulta online por videochamada (o link chega pelo WhatsApp no dia).\nCancelamento ou remarcação: até 24 horas antes.',
+      horarioEquipe: 'segunda a sexta, das 8h às 18h, e sábado, das 8h às 12h',
+      limiteMensalUsd: 50,
+      maxRespostasDia: 30,
     }];
 
     const profissionais = [{
@@ -324,17 +331,32 @@ NutriDudu.seed = (function () {
       i('int_9', 'pes_12', diaHora(-1, '10:00'), 'etapa', 'Movido para "Renovação": resta 1 consulta no pacote.', 'sistema', true),
     ];
 
+    // Conversas do WhatsApp (fictícias). Em "aguardando equipe", o assistente deixou um resumo.
     const conversas = [
-      { id: 'cvs_1', pessoaId: 'pes_8', telefone: '(11) 91890-1208', status: 'agente', ultimaMensagemEm: diaHora(0, '09:07') },
-      { id: 'cvs_2', pessoaId: 'pes_4', telefone: '(11) 95456-7804', status: 'aguardando_equipe', ultimaMensagemEm: diaHora(-1, '20:15') },
+      { id: 'cvs_1', pessoaId: 'pes_8', telefone: '(11) 91890-1208', status: 'agente', naoLidas: 1, ultimaMensagemEm: diaHora(0, '09:07'), ultimaMensagemContatoEm: diaHora(0, '09:07') },
+      {
+        id: 'cvs_2', pessoaId: 'pes_4', telefone: '(11) 95456-7804', status: 'aguardando_equipe', naoLidas: 2,
+        ultimaMensagemEm: diaHora(-1, '20:15'), ultimaMensagemContatoEm: diaHora(-1, '20:12'),
+        motivoEquipe: 'Negociação de preço',
+        resumo: 'Bruno quer fechar o plano anual e pergunta se há desconto para pagamento à vista. Já sabe os valores da tabela.',
+      },
+      { id: 'cvs_3', pessoaId: 'pes_1', telefone: '(11) 98123-4501', status: 'equipe', assumidaPor: 'Recepção', naoLidas: 0, ultimaMensagemEm: diaHora(-1, '10:20'), ultimaMensagemContatoEm: diaHora(-1, '10:18') },
     ];
-    const m = (id, conversaId, dataHora, autor, texto) => ({ id, conversaId, dataHora, autor, texto, direcao: autor === 'contato' ? 'recebida' : 'enviada' });
+    const m = (id, conversaId, dataHora, autor, texto, extra = {}) => ({
+      id, conversaId, dataHora, autor, texto, direcao: autor === 'contato' ? 'recebida' : 'enviada', ...(autor === 'contato' ? {} : { status: 'lida' }), ...extra,
+    });
     const mensagens = [
       m('msg_1', 'cvs_1', diaHora(0, '09:05'), 'contato', 'Bom dia! Quanto custa a consulta?'),
       m('msg_2', 'cvs_1', diaHora(0, '09:06'), 'agente', 'Olá! Eu sou o Assistente Nutri Dudu, o assistente virtual da clínica 😊 A consulta inicial custa R$ 250,00 e dura 1 hora. Quer que eu veja os horários livres?'),
       m('msg_3', 'cvs_1', diaHora(0, '09:07'), 'contato', 'Quero sim, de preferência de manhã.'),
       m('msg_4', 'cvs_2', diaHora(-1, '20:10'), 'contato', 'Vocês fazem desconto no plano anual se eu pagar à vista?'),
-      m('msg_5', 'cvs_2', diaHora(-1, '20:15'), 'agente', 'Ótima pergunta! Condições especiais de pagamento são definidas pela nossa equipe. Já chamei alguém, e eles respondem a partir das 8h do próximo dia útil. Obrigado!'),
+      m('msg_5', 'cvs_2', diaHora(-1, '20:12'), 'contato', 'É que eu já decidi, só falta isso 😅'),
+      m('msg_6', 'cvs_2', diaHora(-1, '20:15'), 'agente', 'Ótima pergunta! Condições especiais de pagamento são definidas pela nossa equipe. Já chamei alguém, e eles respondem a partir das 8h do próximo dia útil. Obrigado!'),
+      m('msg_7', 'cvs_3', diaHora(-1, '10:05'), 'contato', 'Oi! Consigo trocar minha consulta de quinta para sexta?'),
+      m('msg_8', 'cvs_3', diaHora(-1, '10:06'), 'agente', 'Claro! Vou chamar a recepção para ver a melhor opção para você. 😊'),
+      m('msg_9', 'cvs_3', diaHora(-1, '10:15'), 'equipe', 'Oi, Mariana! Aqui é da recepção. Tenho sexta às 9h ou às 15h. Qual prefere?', { autorNome: 'Recepção' }),
+      m('msg_10', 'cvs_3', diaHora(-1, '10:18'), 'contato', 'Às 9h, por favor!'),
+      m('msg_11', 'cvs_3', diaHora(-1, '10:20'), 'equipe', 'Prontinho, remarcado para sexta às 9h. Até lá! 💚', { autorNome: 'Recepção', status: 'entregue' }),
     ];
 
     const agora = new Date().toISOString();

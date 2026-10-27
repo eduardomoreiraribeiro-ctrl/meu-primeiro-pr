@@ -166,6 +166,10 @@ end $$;
 create index if not exists consultas_pessoa on public.consultas ((dados ->> 'pessoaId'));
 create index if not exists lancamentos_pessoa on public.lancamentos ((dados ->> 'pessoaId'));
 create index if not exists interacoes_pessoa on public.interacoes ((dados ->> 'pessoaId'));
+-- WhatsApp (fase 10): mensagens de uma conversa e mensagens pelo id da Meta.
+create index if not exists mensagens_conversa on public.mensagens ((dados ->> 'conversaId'));
+create index if not exists mensagens_waid on public.mensagens ((dados ->> 'waId'));
+create index if not exists conversas_pessoa on public.conversas ((dados ->> 'pessoaId'));
 
 
 -- ---------------------------------------------------------------------
@@ -310,7 +314,26 @@ create policy "fotos: clínico apaga" on storage.objects
 
 
 -- ---------------------------------------------------------------------
--- 6. Tempo real: o que um computador grava aparece nos outros
+-- 6. Assistente do WhatsApp (fase 10): uso e gasto por mês
+--    Só o servidor grava (chave de serviço); o administrador consulta.
+-- ---------------------------------------------------------------------
+create table if not exists public.agente_uso (
+  mes text primary key,                 -- '2026-10'
+  respostas integer not null default 0,
+  tokens_entrada bigint not null default 0,
+  tokens_saida bigint not null default 0,
+  tokens_cache bigint not null default 0,
+  custo_usd numeric(10, 4) not null default 0,
+  atualizado_em timestamptz not null default now()
+);
+alter table public.agente_uso enable row level security;
+drop policy if exists "agente_uso: admin consulta" on public.agente_uso;
+create policy "agente_uso: admin consulta" on public.agente_uso
+  for select using (public.e_admin());
+
+
+-- ---------------------------------------------------------------------
+-- 7. Tempo real: o que um computador grava aparece nos outros
 --    (cada um só recebe o que as regras acima deixam ver)
 -- ---------------------------------------------------------------------
 do $$

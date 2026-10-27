@@ -97,7 +97,29 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - Passo a passo para configurar: [`supabase/COMO-CONFIGURAR.md`](supabase/COMO-CONFIGURAR.md).
 - Arquivos novos: `js/nuvem-config.js` (endereço e chave pública), `js/nuvem.js` (conexão), `js/components/login.js`, `js/vendor/supabase-2.116.0.js` (biblioteca oficial, licença MIT) e `supabase/schema.sql`.
 
-A página de Conversas (fase 10) ainda mostra os dados só para leitura.
+### Fase 10 — WhatsApp e Assistente de IA
+
+- **Conversas:** caixa de entrada do WhatsApp da clínica. Busca, filtros (Aguardando equipe, Assistente, Equipe, Encerradas) e contador de não lidas. Na conversa aberta: **Assumir**, **Devolver ao assistente**, **Encerrar/Reabrir** e **Ver ficha**. O resumo do assistente aparece quando ele chama a equipe. A equipe responde pelo próprio sistema, com status de entrega (✓ enviada, ✓✓ entregue, ✓✓ lida). Também há o aviso da janela de 24 horas do WhatsApp. No celular, a lista e a conversa ficam em telas separadas.
+- **Assistente Nutri Dudu** (Claude, da Anthropic), funcionando 24 horas:
+  - tira dúvidas com as informações da clínica;
+  - mostra horários livres de verdade;
+  - agenda, remarca, cancela e confirma consultas;
+  - informa o saldo do pacote e os pagamentos em aberto (com a chave Pix);
+  - atualiza o cadastro do lead;
+  - chama a equipe deixando um resumo.
+- **Segurança do assistente:**
+  - nunca dá orientação de saúde nem lê o prontuário;
+  - só fala da pessoa da conversa;
+  - toda ação é conferida pelo servidor (conflitos, intervalo, horário de atendimento);
+  - respeita o pedido de "PARAR";
+  - tem limites de respostas por dia e de gasto por mês;
+  - se der erro, o paciente recebe uma mensagem educada e a equipe é chamada.
+- Quem escreve pela primeira vez vira **lead** automaticamente (origem WhatsApp, etapa "Novo lead"). O que o assistente faz fica no histórico do cliente.
+- **Configurações › Assistente do WhatsApp:** ligar e desligar, informações da clínica, horário da equipe, limites e uso do mês (respostas e custo estimado).
+- No **Dashboard**, a lista "Conversas aguardando equipe". Na **ficha do cliente**, o botão **Conversa**.
+- **Servidor:** duas funções no Supabase (`supabase/functions/whatsapp-webhook` e `whatsapp-enviar`). Elas são montadas a partir de `supabase/fonte/` com `node supabase/montar-funcoes.mjs` e reaproveitam as regras de agenda do próprio sistema.
+- Passo a passo (Meta, chaves e publicação): [`supabase/WHATSAPP.md`](supabase/WHATSAPP.md).
+- Fica para a **fase 10c:** lembretes automáticos (consulta, retorno, pacote, cobrança) e o link da pré-anamnese, que exigem modelos de mensagem aprovados pela Meta.
 
 ## Como abrir
 
@@ -112,7 +134,10 @@ Não precisa instalar nada: abra o arquivo `index.html` no navegador (dois cliqu
 
 ```
 crm-nutri-dudu/
-├── supabase/             # schema.sql (banco e regras de acesso) e o guia de configuração
+├── supabase/             # schema.sql (banco e regras de acesso) e os guias de configuração
+│   ├── fonte/            # código do servidor do WhatsApp e do assistente (edite aqui)
+│   ├── functions/        # funções prontas para colar no Supabase (geradas: não edite)
+│   └── montar-funcoes.mjs# gera supabase/functions a partir de fonte/
 ├── index.html            # casca: menu, barra superior e área das páginas
 ├── css/style.css         # visual (cores em variáveis no topo do arquivo)
 └── js/

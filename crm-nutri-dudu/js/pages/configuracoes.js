@@ -455,6 +455,114 @@ NutriDudu.pages.configuracoes = (function () {
 
   // ---------------- Página ----------------
 
+
+  // ---------------- Assistente do WhatsApp (fase 10) ----------------
+
+  // Mesmos valores padrão do servidor (supabase/fonte/nucleo.js).
+  const PADRAO_AGENTE = { ativo: false, informacoes: '', horarioEquipe: 'segunda a sexta, das 8h às 18h', limiteMensalUsd: 50, maxRespostasDia: 30 };
+
+  function blocoAgente(cfg) {
+    const { utils, permissoes, ui } = NutriDudu;
+    const pode = permissoes.pode('configurarAgente');
+    return `
+      <section class="card" data-bloco-agente>
+        <div class="secao-cabecalho">
+          <h2 class="card-title">Assistente do WhatsApp</h2>
+          ${ui.badge(cfg.ativo ? 'Ligado' : 'Desligado', cfg.ativo ? 'sucesso' : 'neutro')}
+        </div>
+        <p class="muted small card-sub">O Assistente Nutri Dudu responde no WhatsApp da clínica: tira dúvidas, mostra horários livres, agenda, remarca, confirma e informa saldo de pacote e pagamentos. Nunca dá orientação de saúde: nesses casos (e quando não sabe) chama a equipe.</p>
+        <table class="tabela-simples">
+          <tr><th scope="row">Horário da equipe</th><td>${utils.escapeHtml(cfg.horarioEquipe || '—')}</td></tr>
+          <tr><th scope="row">Limites</th><td>até ${cfg.maxRespostasDia} respostas por conversa por dia · até US$ ${Number(cfg.limiteMensalUsd).toFixed(2)} por mês</td></tr>
+          <tr><th scope="row">Informações da clínica</th><td class="pre-linha small">${cfg.informacoes ? utils.escapeHtml(cfg.informacoes) : '<span class="muted">Nenhuma ainda. Escreva endereço, formas de pagamento, regras de cancelamento…</span>'}</td></tr>
+        </table>
+        <div data-uso-agente></div>
+        ${pode ? `
+          <div class="acoes-linha">
+            <button type="button" class="btn btn-pequeno btn-primary" data-alternar-agente>${cfg.ativo ? 'Desligar assistente' : 'Ligar assistente'}</button>
+            <button type="button" class="btn btn-pequeno" data-editar-agente>Editar</button>
+          </div>` : '<p class="muted small">Só o administrador altera o assistente.</p>'}
+        <p class="muted small">Em breve (fase 10c): lembretes automáticos de consulta, retorno, pacote e cobrança, e o link da pré-anamnese, com os modelos de mensagem aprovados pela Meta.</p>
+      </section>`;
+  }
+
+  async function mostrarUsoAgente(container, cfg) {
+    const { nuvem, permissoes, utils } = NutriDudu;
+    const alvo = container.querySelector('[data-uso-agente]');
+    if (!alvo || !permissoes.pode('configurarAgente')) return;
+    if (!nuvem.ativa()) {
+      alvo.innerHTML = '<p class="muted small">Demonstração: o assistente não responde de verdade (precisa da nuvem e do WhatsApp configurados — veja supabase/WHATSAPP.md).</p>';
+      return;
+    }
+    const mes = utils.isoDia(new Date()).slice(0, 7);
+    try {
+      const uso = await nuvem.usoAgente(mes);
+      const gasto = Number(uso.custo_usd || 0);
+      const limite = Number(cfg.limiteMensalUsd) || 0;
+      const fracao = limite ? Math.min(1, gasto / limite) : 0;
+      alvo.innerHTML = `
+        <div class="uso-agente small">
+          <span><strong>Uso neste mês:</strong> ${uso.respostas || 0} resposta(s)</span>
+          <span><strong>Custo estimado:</strong> US$ ${gasto.toFixed(2)} de US$ ${limite.toFixed(2)}</span>
+        </div>
+        <div class="medidor${fracao >= 1 ? ' cheio' : ''}" role="img" aria-label="${Math.round(fracao * 100)}% do limite do mês"><span style="width:${(fracao * 100).toFixed(1)}%"></span></div>
+        ${fracao >= 1 ? '<p class="alerta alerta-aviso small">Limite do mês atingido: o assistente está passando as conversas para a equipe. Aumente o limite se quiser que ele volte a responder.</p>' : ''}`;
+    } catch (erro) {
+      alvo.innerHTML = `<p class="muted small">Não foi possível ler o uso do mês. Rode o supabase/schema.sql de novo no Supabase (ele cria a tabela agente_uso). ${utils.escapeHtml(erro.message || '')}</p>`;
+    }
+  }
+
+  async function salvarAgente(mudancas, aviso) {
+    const { store, ui, permissoes } = NutriDudu;
+    if (!permissoes.exigir('configurarAgente')) return;
+    try {
+      if (await store.get('configuracoes', 'agente')) await store.update('configuracoes', 'agente', mudancas);
+      else await store.create('configuracoes', { ...PADRAO_AGENTE, ...mudancas }, { id: 'agente' });
+      if (aviso) ui.toast(aviso);
+    } catch (erro) {
+      ui.toast(erro.message || 'Não foi possível salvar.', 'erro');
+      throw erro;
+    }
+  }
+
+  function validarAgente(d) {
+    const erros = {};
+    if (!(Number.isFinite(d.limiteMensalUsd) && d.limiteMensalUsd >= 1 && d.limiteMensalUsd <= 2000)) erros.limiteMensalUsd = 'Use um valor entre 1 e 2000 dólares.';
+    if (!(Number.isInteger(d.maxRespostasDia) && d.maxRespostasDia >= 1 && d.maxRespostasDia <= 200)) erros.maxRespostasDia = 'Use um número inteiro entre 1 e 200.';
+    if (!d.horarioEquipe) erros.horarioEquipe = 'Informe quando a equipe responde (o assistente avisa os pacientes).';
+    if (d.informacoes.length > 4000) erros.informacoes = 'Texto muito longo (máximo de 4000 caracteres).';
+    return erros;
+  }
+
+  function abrirAgente(cfg) {
+    const { form: f, modal } = NutriDudu;
+    if (!NutriDudu.permissoes.exigir('configurarAgente')) return;
+    modal.formulario({
+      titulo: 'Assistente do WhatsApp',
+      largo: true,
+      corpo: `
+        ${f.chave('ativo', 'Assistente ligado (responde automaticamente)', cfg.ativo, { ajuda: 'Desligado, as mensagens só ficam guardadas em Conversas, esperando a equipe.' })}
+        ${f.areaTexto('informacoes', 'Informações da clínica para o assistente', cfg.informacoes, {
+          linhas: 8,
+          ajuda: 'O que ele pode contar aos pacientes: endereço, estacionamento, formas de pagamento, regras de cancelamento, como funciona a consulta online. Serviços, preços, profissionais e a chave Pix ele já lê do sistema. Não coloque dados de pacientes aqui.',
+        })}
+        ${f.texto('horarioEquipe', 'Quando a equipe responde', cfg.horarioEquipe, { obrigatorio: true, ajuda: 'Ex.: segunda a sexta, das 8h às 18h. O assistente avisa isso quando chama a equipe.' })}
+        <div class="grade-2">
+          ${f.texto('limiteMensalUsd', 'Limite de gasto por mês (US$)', cfg.limiteMensalUsd, { tipo: 'number', obrigatorio: true, atributos: 'min="1" max="2000" step="1"', ajuda: 'Ao atingir, o assistente para e passa as conversas para a equipe.' })}
+          ${f.texto('maxRespostasDia', 'Máximo de respostas por conversa por dia', cfg.maxRespostasDia, { tipo: 'number', obrigatorio: true, atributos: 'min="1" max="200" step="1"', ajuda: 'Proteção contra conversas sem fim.' })}
+        </div>`,
+      ler: (form) => ({
+        ativo: f.marcado(form, 'ativo'),
+        informacoes: form.elements.informacoes.value.trim(),
+        horarioEquipe: f.valor(form, 'horarioEquipe'),
+        limiteMensalUsd: f.numero(form, 'limiteMensalUsd'),
+        maxRespostasDia: f.numero(form, 'maxRespostasDia'),
+      }),
+      validar: validarAgente,
+      salvar: (d) => salvarAgente(d, 'Assistente atualizado.'),
+    });
+  }
+
   async function render(container) {
     const { store, ui, config, utils, permissoes } = NutriDudu;
     const [profissionais, horarios, bloqueios, geral, servicos, consultas] = await Promise.all([
@@ -465,6 +573,7 @@ NutriDudu.pages.configuracoes = (function () {
       store.list('servicos'),
       store.list('consultas'),
     ]);
+    const agenteCfg = { ...PADRAO_AGENTE, ...((await store.get('configuracoes', 'agente')) || {}) };
     const podeProf = permissoes.pode('editarProfissionais');
     const nomeProf = Object.fromEntries(profissionais.map((p) => [p.id, p.nome]));
     const naNuvem = NutriDudu.nuvem.ativa();
@@ -590,9 +699,7 @@ NutriDudu.pages.configuracoes = (function () {
           ${naNuvem ? '<p class="muted small">"Começar do zero" apaga pacientes, agenda, prontuários e financeiro (por exemplo, depois do treinamento com dados de exemplo) e mantém serviços, profissionais, horários e regras.</p>' : ''}
         </section>` : ''}
 
-      ${ui.emBreve(10, [
-        'Textos do agente de IA e das mensagens automáticas do WhatsApp',
-      ])}
+      ${blocoAgente(agenteCfg)}
     `;
 
     const porId = (lista, id) => lista.find((x) => x.id === id);
@@ -610,8 +717,11 @@ NutriDudu.pages.configuracoes = (function () {
     });
     container.querySelector('[data-importar-backup]')?.addEventListener('click', () => NutriDudu.backup.abrirImportacao());
     container.querySelector('[data-comecar-zero]')?.addEventListener('click', () => comecarDoZero());
+    container.querySelector('[data-editar-agente]')?.addEventListener('click', () => abrirAgente(agenteCfg));
+    container.querySelector('[data-alternar-agente]')?.addEventListener('click', () => salvarAgente({ ativo: !agenteCfg.ativo }, agenteCfg.ativo ? 'Assistente desligado. Novas mensagens ficam esperando a equipe.' : 'Assistente ligado.'));
+    mostrarUsoAgente(container, agenteCfg);
     container.querySelectorAll('[data-salvar-perfil]').forEach((b) => b.addEventListener('click', () => salvarPerfil(b.closest('[data-conta]'))));
   }
 
-  return { titulo: 'Configurações', render, validarHorarios, validarProfissional, validarBloqueio };
+  return { titulo: 'Configurações', render, validarHorarios, validarProfissional, validarBloqueio, validarAgente };
 })();

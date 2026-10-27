@@ -99,7 +99,8 @@ NutriDudu.store = (function () {
   async function create(colecao, dados, opcoes) {
     validarColecao(colecao);
     const agora = new Date().toISOString();
-    const item = { ...dados, id: uid(COLECOES[colecao]), criadoEm: agora, atualizadoEm: agora };
+    // opcoes.id: id fixo (ex.: o documento 'agente' das configurações).
+    const item = { ...dados, id: opcoes?.id || uid(COLECOES[colecao]), criadoEm: agora, atualizadoEm: agora };
     if (nuvem()) await NutriDudu.nuvem.criar(colecao, item);
     db[colecao].push(item);
     salvarEAvisar(colecao, opcoes);

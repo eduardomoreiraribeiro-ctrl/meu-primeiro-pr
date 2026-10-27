@@ -313,7 +313,29 @@ NutriDudu.nuvem = (function () {
     }
   }
 
+  // ---------------- WhatsApp e Assistente (fase 10) ----------------
+
+  /** Envia uma mensagem da equipe pelo WhatsApp (função whatsapp-enviar no Supabase). */
+  async function enviarWhatsApp(conversaId, texto) {
+    const { data, error } = await obterCliente().functions.invoke('whatsapp-enviar', { body: { conversaId, texto } });
+    if (error) {
+      let msg = '';
+      try { msg = (await error.context?.json())?.erro || ''; } catch (e) { /* resposta sem JSON */ }
+      throw new Error(msg || 'Não foi possível enviar pelo WhatsApp. Confira se a função "whatsapp-enviar" foi publicada no Supabase.');
+    }
+    if (data?.erro) throw new Error(data.erro);
+    return data;
+  }
+
+  /** Uso do Assistente no mês ("2026-10"): respostas e custo em US$. Só o administrador lê. */
+  async function usoAgente(mes) {
+    const { data, error } = await obterCliente().from('agente_uso').select('*').eq('mes', mes).maybeSingle();
+    if (error) falhar(error, 'Não foi possível ler o uso do assistente.');
+    return data || { mes, respostas: 0, custo_usd: 0 };
+  }
+
   return {
+    enviarWhatsApp, usoAgente,
     TABELAS, configurada, ativa, emDemonstracao, problemaNaConfiguracao, traduzir,
     sessaoAtual, entrar, sair, trocarSenha, carregarPerfil, perfilAtual, veClinico, listarPerfis, atualizarPerfil, registrarAcesso,
     carregarTudo, criar, alterar, apagar, gravarLote, substituirTudo, ouvir, parar,

@@ -10,7 +10,7 @@
     { padrao: /^\/kanban\/(comercial|acompanhamento)$/, pagina: 'kanban', menu: 'kanban', params: ['funil'] },
     { padrao: /^\/clientes$/, pagina: 'clientes', menu: 'clientes' },
     { padrao: /^\/clientes\/([^/]+)(?:\/([a-z]+))?$/, pagina: 'cliente', menu: 'clientes', params: ['id', 'aba'] },
-    { padrao: /^\/conversas$/, pagina: 'conversas', menu: 'conversas' },
+    { padrao: /^\/conversas(?:\/([^/]+))?$/, pagina: 'conversas', menu: 'conversas', params: ['id'] },
     { padrao: /^\/servicos$/, pagina: 'servicos', menu: 'servicos' },
     { padrao: /^\/configuracoes$/, pagina: 'configuracoes', menu: 'configuracoes' },
   ];
@@ -47,7 +47,7 @@
       return;
     }
 
-    const valores = caminho.match(rota.padrao).slice(1).map(decodeURIComponent);
+    const valores = caminho.match(rota.padrao).slice(1).map((v) => (v === undefined ? undefined : decodeURIComponent(v)));
     const params = Object.fromEntries((rota.params || []).map((nome, i) => [nome, valores[i]]));
     const pagina = pages[rota.pagina];
 

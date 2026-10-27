@@ -74,3 +74,7 @@ Para tirar o acesso de alguém: mude o perfil para **Desativado**. O histórico 
 As regras valem **no banco de dados**, não só nas telas: mesmo alguém que tente burlar o sistema não recebe o
 que o perfil dele não pode ver. Abrir, criar ou alterar um prontuário fica registrado na tabela `auditoria`
 (quem, quando, qual paciente).
+
+## Próximo passo: WhatsApp e Assistente
+
+Com a nuvem funcionando, siga [`WHATSAPP.md`](WHATSAPP.md) para ligar o WhatsApp da clínica e o Assistente Nutri Dudu.

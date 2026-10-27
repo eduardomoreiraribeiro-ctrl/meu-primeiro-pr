@@ -193,8 +193,23 @@ NutriDudu.pages.dashboard = (function () {
         whatsapp(p),
       ));
 
+    // 7. Conversas do WhatsApp esperando alguém da equipe (o agente chamou ou está desligado).
+    const aguardando = (d.conversas || [])
+      .filter((c) => c.status === 'aguardando_equipe')
+      .sort((a, b) => (a.ultimaMensagemEm || '').localeCompare(b.ultimaMensagemEm || ''))
+      .map((c) => {
+        const p = pessoa[c.pessoaId];
+        const nome = utils.escapeHtml(p?.nome || c.telefone || 'Contato');
+        return itemAcao(
+          `<a href="#/conversas/${encodeURIComponent(c.id)}">${nome}</a>`,
+          utils.escapeHtml([c.motivoEquipe || 'Aguardando resposta', c.ultimaMensagemEm ? `desde ${utils.data(c.ultimaMensagemEm).slice(0, 5)} às ${utils.hora(c.ultimaMensagemEm)}` : ''].filter(Boolean).join(' · ')),
+          `<a class="btn btn-pequeno btn-primary" href="#/conversas/${encodeURIComponent(c.id)}">Responder</a>`,
+        );
+      });
+
     return `
       <div class="grid-acoes">
+        ${cartaoAcao({ id: 'conversas', titulo: 'Conversas aguardando equipe', sub: 'WhatsApp: o assistente chamou alguém ou está desligado', itens: aguardando, vazio: 'Nenhuma conversa esperando a equipe.', verTodos: '#/conversas' })}
         ${cartaoAcao({ id: 'retornos', titulo: 'Retornos pendentes', sub: 'Clientes sem próximo passo: sem retorno, faltas sem remarcar, sumidos', itens: retornos, vazio: 'Todos os clientes ativos têm próximo passo.', verTodos: '#/clientes' })}
         ${cartaoAcao({ id: 'confirmar', titulo: 'Consultas a confirmar', sub: 'Hoje e amanhã, ainda não confirmadas', itens: aConfirmar, vazio: 'Nada para confirmar até amanhã.' })}
         ${cartaoAcao({ id: 'atrasados', titulo: 'Pagamentos atrasados', sub: 'Do mais antigo para o mais recente', itens: atrasados, vazio: 'Nenhum pagamento atrasado.' })}
@@ -248,7 +263,7 @@ NutriDudu.pages.dashboard = (function () {
     const filtro = lerFiltro();
     const periodo = indicadores.intervalo(filtro.preset, filtro.de, filtro.ate);
 
-    const [todasPessoas, todasConsultas, todosLancamentos, servicos, pacotes, profissionais, horarios, bloqueios, geral] = await Promise.all([
+    const [todasPessoas, todasConsultas, todosLancamentos, servicos, pacotes, profissionais, horarios, bloqueios, geral, conversas] = await Promise.all([
       store.list('pessoas'),
       store.list('consultas'),
       store.list('lancamentos'),
@@ -258,6 +273,7 @@ NutriDudu.pages.dashboard = (function () {
       store.list('horarios'),
       store.list('bloqueios'),
       store.get('configuracoes', 'geral'),
+      store.list('conversas'),
     ]);
 
     // Filtro por profissional: pessoas (responsável), consultas e lançamentos dela.
@@ -344,6 +360,7 @@ NutriDudu.pages.dashboard = (function () {
           pessoaPorId: porId(todasPessoas), servicoPorId: porId(servicos),
           pacotesDe: calculos.agruparPorPessoa(pacotesFiltrados),
           consultasDe: calculos.agruparPorPessoa(consultas.filter((c) => c.status !== 'cancelada')),
+          conversas,
         })}
 
         <h2 class="titulo-secao">Gráficos</h2>
