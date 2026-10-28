@@ -155,6 +155,13 @@ Use alguns dias assim, só com pessoas de confiança, antes de divulgar o númer
 5. Na Meta, deixe o app no modo **Publicado** (Live): botão no topo da página do app.
 6. Se a Meta pedir, faça a **verificação da empresa** (CNPJ e documentos). Ela libera limites maiores de mensagens.
 
+## Problemas comuns
+
+- **Mensagens não aparecem e o registro (Invocations) da `whatsapp-webhook` mostra POST 403:** foi colado o código da outra função. Confira o final do código: precisa terminar com `// ---- Entrada da função whatsapp-webhook`.
+- **POST 401:** o **Verify JWT** da `whatsapp-webhook` está ligado. Ele volta a ligar quando a função é criada de novo.
+- **Trocar o código pelo iPad:** apagar tudo no editor é difícil. É mais fácil apagar a função (**Settings › Delete function**) e criar de novo com o mesmo nome. Os segredos e o endereço continuam valendo.
+- **Token expirado:** o token da tela de teste vale 24 horas. Use o token permanente do usuário do sistema (passo 3).
+
 ## Bom saber
 
 - **Janela de 24 horas:** pelo WhatsApp oficial, a clínica só escreve livremente até 24 horas depois da última mensagem do paciente. Depois disso, o sistema avisa e bloqueia o campo de mensagem. As mensagens fora da janela (lembretes, cobranças) usam modelos aprovados pela Meta e chegam na **fase 10c**.
