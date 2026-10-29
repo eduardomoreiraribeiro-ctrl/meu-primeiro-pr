@@ -17,7 +17,7 @@ const NutriDuduAutomacoes = (() => {
   const LIMITE_POR_EXECUCAO = 40;
   const NOVA_TENTATIVA_APOS_ERRO = 6 * HORA;
 
-  const { MODELOS, PADRAO, configuracao, preencher } = NutriDudu.mensagensAutomaticas;
+  const { MODELOS, PADRAO, configuracao, preencher, telefonesDaEquipe } = NutriDudu.mensagensAutomaticas;
 
   const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || 'tudo bem';
 
@@ -185,6 +185,65 @@ const NutriDuduAutomacoes = (() => {
 
     // ---------------- Execução periódica ----------------
 
+    /** Dentro do horário de envio (segunda a sábado, das horaInicio às horaFim, no relógio da clínica)? */
+    function dentroDoHorario(cfg) {
+      const local = relogio.agoraLocal();
+      const hora = local.getHours() + local.getMinutes() / 60;
+      return local.getDay() !== 0 && hora >= Number(cfg.horaInicio) && hora < Number(cfg.horaFim);
+    }
+
+    // ---------------- Aviso para a equipe ----------------
+
+    /** A conversa está aguardando a equipe e ainda não houve aviso desde que passou a aguardar? */
+    function precisaAviso(c) {
+      if (c.status !== 'aguardando_equipe') return false;
+      if (!c.avisoEquipeEm) return true;
+      const desde = new Date(c.aguardandoDesde || 0).getTime();
+      const aviso = new Date(c.avisoEquipeEm).getTime();
+      if (desde > aviso) return true;
+      return c.avisoEquipe?.ok === false && relogio.agora().getTime() - aviso >= NOVA_TENTATIVA_APOS_ERRO;
+    }
+
+    async function enviarAvisoEquipe({ cfg, conversa, pessoa, geral, conversas }) {
+      const destinos = telefonesDaEquipe(cfg.telefonesEquipe);
+      if (!destinos.length) return { ok: false, motivo: 'nenhum celular da equipe cadastrado' };
+      const nomeModelo = String(cfg.modelos.avisoEquipe || '').trim();
+      const motivo = String(conversa.motivoEquipe || 'nova mensagem para a equipe').replace(/\s+/g, ' ').trim().slice(0, 120);
+      const valores = [String(pessoa?.nome || conversa.telefone || 'Um contato').replace(/\s+/g, ' ').slice(0, 80), motivo];
+      const texto = preencher(MODELOS.avisoEquipe.corpo(geral.nomeClinica || 'clínica'), valores);
+      let enviados = 0;
+      let erro = null;
+      for (const para of destinos) {
+        const doDestino = conversas.find((c) => S.chaveTelefone(c.waId || c.telefone) === S.chaveTelefone(para));
+        const livre = janelaAberta(doDestino);
+        if (!livre && !nomeModelo) { erro = 'sem modelo aprovado configurado'; continue; }
+        try {
+          if (livre) await whatsapp.enviarTexto(para, texto);
+          else await whatsapp.enviarModelo(para, { nome: nomeModelo, idioma: cfg.idioma || 'pt_BR', parametros: valores });
+          enviados++;
+        } catch (e) {
+          erro = e.message || String(e);
+        }
+      }
+      const atual = await repo.pega('conversas', conversa.id);
+      if (atual) {
+        Object.assign(atual, { avisoEquipeEm: agoraIso(), avisoEquipe: { ok: enviados > 0, destinos: enviados, ...(enviados ? {} : { erro }) } });
+        await repo.grava('conversas', atual);
+      }
+      return enviados ? { ok: true, via: 'aviso' } : { ok: false, motivo: erro, erro: true };
+    }
+
+    /** Chamado pelo webhook quando uma conversa passa a aguardar a equipe (fora do horário, fica para a próxima verificação). */
+    async function avisarEquipe(conversaId) {
+      const configuracoes = await repo.todos('configuracoes');
+      const cfg = configuracao(configuracoes.find((c) => c.id === 'automacoes'));
+      if (!cfg.ativas.avisoEquipe || !dentroDoHorario(cfg)) return { ok: false, motivo: 'desligado ou fora do horário' };
+      const conversa = await repo.pega('conversas', conversaId);
+      if (!conversa || !precisaAviso(conversa)) return { ok: false, motivo: 'não precisa' };
+      const [pessoa, conversas] = await Promise.all([repo.pega('pessoas', conversa.pessoaId), repo.todos('conversas')]);
+      return enviarAvisoEquipe({ cfg, conversa, pessoa, geral: configuracoes.find((c) => c.id === 'geral') || {}, conversas });
+    }
+
     async function rodar({ manual = false, por = null } = {}) {
       const inicio = relogio.agora();
       const [configuracoes, pessoas, consultas, pacotes, lancamentos, conversas, servicos, profissionais] = await Promise.all(
@@ -198,9 +257,7 @@ const NutriDuduAutomacoes = (() => {
       const profPor = Object.fromEntries(profissionais.map((p) => [p.id, p]));
       const relatorio = { em: inicio.toISOString(), manual, por, enviados: [], pulados: [], erros: [], foraDoHorario: false };
 
-      const local = relogio.agoraLocal();
-      const hora = local.getHours() + local.getMinutes() / 60;
-      if (local.getDay() === 0 || hora < Number(cfg.horaInicio) || hora >= Number(cfg.horaFim)) {
+      if (!dentroDoHorario(cfg)) {
         relatorio.foraDoHorario = true;
         await salvarStatus(relatorio, configuracoes);
         return relatorio;
@@ -340,6 +397,37 @@ const NutriDuduAutomacoes = (() => {
         }, indicado.nome);
       }
 
+      // 8. Link da consulta online (entre 3 h e 15 min antes).
+      if (cfg.ativas.linkOnline) {
+        for (const c of consultas) {
+          if (c.tipo !== 'online' || !STATUS_FUTURO.includes(c.status) || jaFeito(c.automacoes?.linkOnline)) continue;
+          const falta = new Date(c.inicio).getTime() - agoraMs;
+          if (falta < 15 * 60000 || falta > 3 * HORA) continue;
+          const pessoa = pessoaPor[c.pessoaId];
+          const link = String(profPor[c.profissionalId]?.linkOnline || '').trim();
+          if (!link) { relatorio.pulados.push({ automacao: 'linkOnline', pessoa: pessoa?.nome, motivo: 'o profissional não tem link da sala de vídeo cadastrado' }); continue; }
+          await tentar('linkOnline', pessoa, async () => {
+            const r = await enviar({
+              cfg, automacao: 'linkOnline', pessoa, dados, conversas,
+              valores: [primeiroNome(pessoa.nome), nomeProf(c.profissionalId), utils.hora(relogio.paraLocal(c.inicio)), link],
+            });
+            await marcar('consultas', c.id, 'linkOnline', { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
+            return r;
+          }, relogio.descrever(c.inicio));
+        }
+      }
+
+      // 9. Avisos para a equipe que ficaram pendentes (ex.: chegaram fora do horário).
+      if (cfg.ativas.avisoEquipe) {
+        for (const c of conversas.filter(precisaAviso)) {
+          const pessoa = pessoaPor[c.pessoaId];
+          const r = await enviarAvisoEquipe({ cfg, conversa: c, pessoa, geral, conversas });
+          if (r.ok) relatorio.enviados.push({ automacao: 'avisoEquipe', pessoa: pessoa?.nome || c.telefone, via: 'aviso' });
+          else if (r.erro) relatorio.erros.push({ automacao: 'avisoEquipe', pessoa: pessoa?.nome || c.telefone, motivo: r.motivo });
+          else relatorio.pulados.push({ automacao: 'avisoEquipe', pessoa: pessoa?.nome || c.telefone, motivo: r.motivo });
+        }
+      }
+
       await salvarStatus(relatorio, configuracoes);
       return relatorio;
     }
@@ -356,7 +444,7 @@ const NutriDuduAutomacoes = (() => {
       else await repo.cria('configuracoes', { ...doc, criadoEm: agora });
     }
 
-    return { rodar, enviarPreAnamnese, enviar };
+    return { rodar, enviarPreAnamnese, enviar, avisarEquipe };
   }
 
   // =====================================================================

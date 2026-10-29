@@ -24,6 +24,7 @@ NutriDudu.pages.configuracoes = (function () {
     if (!dados.registro) erros.registro = 'Informe o registro profissional (CRN).';
     if (!/^#[0-9a-f]{6}$/i.test(dados.cor)) erros.cor = 'Escolha uma cor.';
     if (!['admin', 'profissional'].includes(dados.perfil)) erros.perfil = 'Escolha o perfil de acesso.';
+    if (dados.linkOnline && !/^https:\/\/\S+\.\S+$/.test(dados.linkOnline)) erros.linkOnline = 'Cole o link completo, começando com https://';
 
     // A clínica nunca pode ficar sem um administrador ativo.
     const outrosAdmins = profissionais.filter((p) => p.id !== dados.id && p.ativo && p.perfil === 'admin');
@@ -56,6 +57,10 @@ NutriDudu.pages.configuracoes = (function () {
           <p class="campo-erro" data-erro-para="cor" role="alert"></p>
         </div>
       </div>
+      ${f.texto('linkOnline', 'Link da sala de vídeo (consulta online)', p.linkOnline || '', {
+        tipo: 'url', placeholder: 'https://meet.google.com/…',
+        ajuda: 'Um link fixo de videochamada (Google Meet, Zoom…). O assistente e o lembrete enviam este link nas consultas online.',
+      })}
       ${novo ? '' : `<p class="campo-ajuda">Serviços que realiza: ${utils.escapeHtml(realiza.join(', ') || 'nenhum')}. Para mudar, edite cada serviço em Serviços.</p>`}
     `;
 
@@ -69,6 +74,7 @@ NutriDudu.pages.configuracoes = (function () {
         registro: f.valor(form, 'registro'),
         cor: f.valor(form, 'cor'),
         perfil: f.valor(form, 'perfil'),
+        linkOnline: f.valor(form, 'linkOnline'),
       }),
       validar: (dados) => validarProfissional(dados, profissionais),
       salvar: async ({ id, ...campos }) => {
@@ -613,6 +619,7 @@ NutriDudu.pages.configuracoes = (function () {
         </div>
         <p class="muted small card-sub">Lembretes e avisos que a clínica envia pelo WhatsApp. Se a pessoa escreveu nas últimas 24 horas, vai como mensagem normal (sem custo); se não, usa o <strong>modelo aprovado pela Meta</strong>. Só para quem deu consentimento de WhatsApp e não pediu para PARAR, de segunda a sábado, das ${cfg.horaInicio}h às ${cfg.horaFim}h.</p>
         <ul class="lista-automacoes">${itens}</ul>
+        <p class="small"><strong>Avisos para a equipe vão para:</strong> ${MA.telefonesDaEquipe(cfg.telefonesEquipe).length ? utils.escapeHtml(MA.telefonesDaEquipe(cfg.telefonesEquipe).map((t) => utils.formatarTelefone(t.slice(2))).join(', ')) : '<span class="muted">nenhum celular informado (Editar)</span>'}</p>
         <p class="small"><strong>Link da pré-anamnese:</strong> ${cfg.linkSistema ? `<code>${utils.escapeHtml(cfg.linkSistema)}/pre-anamnese.html</code>` : '<span class="muted">endereço do sistema ainda não informado (Editar)</span>'}</p>
         ${status?.erros?.length ? `<div class="alerta alerta-aviso small"><strong>Erros na última verificação:</strong><ul>${status.erros.map((e) => `<li>${utils.escapeHtml(MA.MODELOS[e.automacao]?.titulo || e.automacao)} — ${utils.escapeHtml(e.pessoa || '')}: ${utils.escapeHtml(e.motivo)}</li>`).join('')}</ul></div>` : ''}
         <p class="muted small" data-status-automacoes>${utils.escapeHtml(naNuvem ? ultima : 'Demonstração: as mensagens não são enviadas de verdade (precisa da nuvem, do WhatsApp e do agendamento — veja supabase/AUTOMACOES.md).')}</p>
@@ -672,6 +679,7 @@ NutriDudu.pages.configuracoes = (function () {
     const ligadas = Object.values(d.ativas).some(Boolean);
     if (d.ativas.preAnamnese && !/^https:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Para a pré-anamnese, informe o endereço do sistema (começa com https://).';
     else if (d.linkSistema && !/^https?:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Endereço inválido.';
+    if (d.ativas.avisoEquipe && !NutriDudu.mensagensAutomaticas.telefonesDaEquipe(d.telefonesEquipe).length) erros.telefonesEquipe = 'Informe pelo menos um celular com DDD.';
     if (!(Number.isInteger(d.horaInicio) && d.horaInicio >= 6 && d.horaInicio <= 12)) erros.horaInicio = 'Entre 6 e 12.';
     if (!(Number.isInteger(d.horaFim) && d.horaFim >= 14 && d.horaFim <= 22 && d.horaFim > d.horaInicio)) erros.horaFim = 'Entre 14 e 22.';
     Object.entries(d.modelos).forEach(([id, nome]) => {
@@ -697,6 +705,10 @@ NutriDudu.pages.configuracoes = (function () {
         ${f.texto('linkSistema', 'Endereço do sistema (para o link da pré-anamnese)', cfg.linkSistema || (NutriDudu.nuvem.ativa() ? enderecoAtual() : ''), {
           placeholder: 'https://…/crm-nutri-dudu', ajuda: 'O endereço onde a equipe abre o sistema. O paciente recebe um link para a página "pre-anamnese.html" dessa pasta.',
         })}
+        ${f.texto('telefonesEquipe', 'Celulares da equipe para os avisos', cfg.telefonesEquipe, {
+          placeholder: '(27) 99999-0000, (27) 98888-0000',
+          ajuda: 'Recebem o "Aviso para a equipe" quando um paciente fica esperando resposta. Separe por vírgula. Enquanto usar o número de teste da Meta, cada celular precisa estar na lista de destinatários de teste.',
+        })}
         <div class="grade-2">
           ${f.texto('horaInicio', 'Enviar a partir das (hora)', cfg.horaInicio, { tipo: 'number', atributos: 'min="6" max="12" step="1"' })}
           ${f.texto('horaFim', 'Até as (hora)', cfg.horaFim, { tipo: 'number', atributos: 'min="14" max="22" step="1"' })}
@@ -705,6 +717,7 @@ NutriDudu.pages.configuracoes = (function () {
         ${linhas}`,
       ler: (form) => ({
         linkSistema: f.valor(form, 'linkSistema').replace(/\/+$/, '').replace(/\/index\.html$/, ''),
+        telefonesEquipe: f.valor(form, 'telefonesEquipe'),
         horaInicio: f.numero(form, 'horaInicio'),
         horaFim: f.numero(form, 'horaFim'),
         ativas: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.marcado(form, `ativa_${id}`)])),

@@ -13,6 +13,8 @@ Faça isto depois que o WhatsApp e o Assistente estiverem funcionando ([`WHATSAP
 | **Pacote acabando ou vencendo** | 1 aviso para cada situação. |
 | **Reativação** | Cliente sumido; no máximo 1 a cada 90 dias. |
 | **Agradecimento de indicação** | Quando uma pessoa indicada vira cliente. |
+| **Link da consulta online** | Entre 3 horas e 15 minutos antes de cada consulta online, com o link da sala de vídeo do profissional (Configurações › Profissionais › Editar dados). O assistente também envia o link ao agendar online, e a confirmação pelo botão já vai com ele. |
+| **Aviso para a equipe** | Quando uma conversa passa a aguardar a equipe, vai um aviso para os **celulares da equipe** cadastrados em Mensagens automáticas (não para o paciente). Fora do horário de envio, sai no começo do próximo. Só o nome do paciente e o motivo — nada de saúde. |
 
 Regras:
 - Só recebe quem deu **consentimento de WhatsApp** e não pediu para **PARAR**.

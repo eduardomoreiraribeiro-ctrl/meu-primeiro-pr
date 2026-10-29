@@ -129,7 +129,9 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
   - retorno pendente;
   - pacote acabando ou vencendo;
   - reativação;
-  - agradecimento de indicação.
+  - agradecimento de indicação;
+  - link da consulta online (o link da sala de vídeo fica no cadastro do profissional);
+  - aviso para a equipe no celular quando um paciente fica esperando resposta.
 - **Como as mensagens saem:**
   - cada uma é ligada separadamente e tem limite de repetição;
   - só vão para quem deu consentimento e não pediu para PARAR;

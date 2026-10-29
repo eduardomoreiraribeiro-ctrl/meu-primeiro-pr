@@ -446,6 +446,7 @@ NutriDudu.agendamento = (function () {
           ${pacote ? linha('Pacote', utils.escapeHtml(`${d.servicoPorId[pacote.servicoId]?.nome || 'Pacote'} · ${uso.usadas} de ${uso.total} usadas, ${uso.reservadas} agendada(s)`)) : ''}
           ${linha('Agendada por', utils.escapeHtml(config.AGENDADA_POR[c.agendadaPor] || '—'))}
           ${c.observacaoAgenda ? linha('Observação', utils.escapeHtml(c.observacaoAgenda)) : ''}
+          ${c.tipo === 'online' ? linha('Videochamada', prof?.linkOnline ? `<a href="${utils.escapeHtml(prof.linkOnline)}" target="_blank" rel="noopener">${utils.escapeHtml(prof.linkOnline)}</a>` : '<span class="muted small">sem link cadastrado (Configurações › Profissionais › Editar dados)</span>') : ''}
           ${lembreteEPre(c, linha)}
           ${c.status === 'cancelada' && c.motivoCancelamento ? linha('Cancelamento', utils.escapeHtml(c.motivoCancelamento)) : ''}
           ${c.status === 'faltou' && c.pacoteId ? linha('Falta', c.descontarFalta === false ? 'Não descontada do pacote' : 'Descontada do pacote') : ''}

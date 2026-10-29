@@ -73,6 +73,25 @@ NutriDudu.mensagensAutomaticas = (function () {
       variaveis: ['primeiro nome de quem indicou', 'primeiro nome de quem foi indicado'],
       exemplo: ['Mariana', 'Rafael'],
     },
+    linkOnline: {
+      titulo: 'Link da consulta online',
+      quando: 'Entre 3 horas e 15 minutos antes de cada consulta online, com o link da sala de vídeo do profissional (cadastrado em Profissionais › Editar dados).',
+      nomePadrao: 'nutridudu_link_online',
+      categoria: 'UTILITY',
+      corpo: () => 'Olá, {{1}}! Sua consulta online com {{2}} começa às {{3}}. Entre pela videochamada neste link: {{4}} Até já!',
+      variaveis: ['primeiro nome', 'profissional', 'hora (ex.: 16:00)', 'link da videochamada'],
+      exemplo: ['Mariana', 'Dra. Ana Lima', '16:00', 'https://meet.google.com/abc-defg-hij'],
+    },
+    avisoEquipe: {
+      titulo: 'Aviso para a equipe',
+      quando: 'Quando uma conversa passa a aguardar a equipe (o assistente chamou, está desligado ou deu erro). Vai para os celulares da equipe cadastrados aqui, não para o paciente. Fora do horário de envio, sai no começo do próximo.',
+      nomePadrao: 'nutridudu_aviso_equipe',
+      categoria: 'UTILITY',
+      corpo: (clinica) => `Aviso do sistema ${clinica}: {{1}} está aguardando resposta da equipe no WhatsApp. Motivo: {{2}}. Abra Conversas no sistema para responder.`,
+      variaveis: ['nome do paciente', 'motivo'],
+      exemplo: ['Mariana Alves', 'Pergunta sobre suplemento'],
+      paraEquipe: true,
+    },
   };
 
   const PADRAO = {
@@ -82,7 +101,16 @@ NutriDudu.mensagensAutomaticas = (function () {
     horaInicio: 8,
     horaFim: 20,
     linkSistema: '',
+    telefonesEquipe: '',
   };
+
+  /** Celulares da equipe para os avisos: "(27) 99999-0000, 27988887777" → ['5527999990000', '5527988887777']. */
+  function telefonesDaEquipe(texto) {
+    return [...new Set(String(texto || '').split(/[,;\n]+/)
+      .map((t) => t.replace(/\D/g, ''))
+      .filter((d) => d.length >= 10 && d.length <= 13)
+      .map((d) => (d.length >= 12 && d.startsWith('55') ? d : `55${d}`)))];
+  }
 
   const configuracao = (doc = {}) => ({
     ...PADRAO, ...doc,
@@ -94,5 +122,5 @@ NutriDudu.mensagensAutomaticas = (function () {
 
   const CATEGORIAS = { UTILITY: 'Utilidade', MARKETING: 'Marketing' };
 
-  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS };
+  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, telefonesDaEquipe };
 })();

@@ -79,6 +79,7 @@ NutriDudu.seed = (function () {
 
     const profissionais = [{
       id: 'prof_1',
+      linkOnline: 'https://meet.google.com/exemplo-ficticio',
       nome: 'Dra. Ana Lima',
       registro: 'Nutricionista — CRN-3 00000 (fictício)',
       cor: '#16a34a',

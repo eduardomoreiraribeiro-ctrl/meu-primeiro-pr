@@ -248,6 +248,7 @@ Como falar da agenda (agenda concorrida)
 - Ofereça no máximo 2 ou 3 opções por vez, as mais próximas, de preferência em dias diferentes, como uma seleção feita para a pessoa. Ex.: "Consegui separar estes horários para você: *quinta (29/10) às 10h* ou *sexta (30/10) às 15h*. Qual fica melhor?"
 - Incentive a decidir logo, com gentileza: os horários são reservados por ordem de confirmação. Ex.: "Esses horários costumam ser preenchidos rápido; se quiser, já deixo reservado para você."
 - Dias que você oferece e agenda: consulta *presencial* ${descreverDias(diasDoAgente(agenteCfg, 'presencial'))}; consulta *online* (por vídeo) ${descreverDias(diasDoAgente(agenteCfg, 'online'))} (sempre conforme os horários livres da agenda).
+- Consulta online: ao confirmar o agendamento (ou quando a pessoa pedir), envie o link da videochamada que vem no campo link_videochamada e diga para entrar alguns minutos antes. Nunca invente links.
 - Em dia sem atendimento presencial (ex.: fim de semana), ofereça só consulta online: consulte os horários com modalidade "online" e deixe claro que é por vídeo. Se a pessoa quiser presencial, ofereça o dia útil mais próximo. Se ela realmente precisar de outra coisa, chame a equipe.
 - Se nenhuma opção servir, pergunte a preferência (manhã ou tarde, dia da semana) e ofereça mais 2 ou 3 — sem dizer que há muitas outras.
 - Seja honesto: não invente lotação ("só resta 1 vaga", "última vaga do mês") nem prazos que não existem. Quando a ferramenta indicar "poucos_horarios", aí sim diga que restam poucos horários naquele período.
@@ -430,6 +431,10 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       servico: servicoPorId[c.servicoId]?.nome || 'Consulta',
       profissional: profPorId[c.profissionalId]?.nome || '',
       status: config.STATUS_CONSULTA[c.status] || c.status,
+      ...(c.tipo === 'online' ? {
+        modalidade: 'online (videochamada)',
+        link_videochamada: profPorId[c.profissionalId]?.linkOnline || 'ainda não cadastrado: diga que a equipe envia o link antes da consulta',
+      } : {}),
     });
 
     function validarHorario({ profissionalId, servico, inicioLocal, modalidade, ignorarId }) {
@@ -787,7 +792,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       const agora = agoraIso();
       const nova = {
         id: uid('conversas'), pessoaId: pessoa.id, telefone: pessoa.telefone, waId,
-        status: ativo ? 'agente' : 'aguardando_equipe', naoLidas: 0, ultimaMensagemEm: agora, ultimaMensagemContatoEm: agora,
+        status: ativo ? 'agente' : 'aguardando_equipe', ...(ativo ? {} : { aguardandoDesde: agora }), naoLidas: 0, ultimaMensagemEm: agora, ultimaMensagemContatoEm: agora,
         criadoEm: agora, atualizadoEm: agora,
       };
       await repo.cria('conversas', nova);
@@ -825,6 +830,13 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         resumo: resumo || conversa.resumo || null, atualizadoEm: agoraIso(),
       });
       await repo.grava('conversas', conversa);
+      await avisar(conversa);
+    }
+
+    /** Avisa a equipe no celular (se ligado em Mensagens automáticas). Nunca atrapalha o atendimento. */
+    async function avisar(conversa) {
+      if (!automacoes?.avisarEquipe) return;
+      try { await automacoes.avisarEquipe(conversa.id); } catch (erro) { console.error('Aviso para a equipe:', erro); }
     }
 
     /** Uma mensagem recebida. */
@@ -836,6 +848,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       const nomePerfil = contatos?.find((c) => c.wa_id === msg.from)?.profile?.name;
       const { pessoa, nova: pessoaNova } = await acharOuCriarPessoa(msg.from, nomePerfil);
       const { conversa, nova: conversaNova } = await acharOuCriarConversa(pessoa, msg.from, ativo);
+      const jaAguardava = !conversaNova && conversa.status === 'aguardando_equipe';
       let { texto, tipo } = textoDaMensagem(msg);
       // Botões do lembrete de consulta (modelo aprovado): "confirmar:<id>" / "remarcar:<id>".
       const [acaoBotao, consultaBotaoId] = String(msg.button?.payload || '').split(':');
@@ -856,7 +869,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       });
       if (conversa.status === 'encerrada') conversa.status = ativo ? 'agente' : 'aguardando_equipe';
       if (!ativo && conversa.status === 'agente') conversa.status = 'aguardando_equipe';
+      const passouAAguardar = conversa.status === 'aguardando_equipe' && !jaAguardava;
+      if (passouAAguardar && !conversaNova) conversa.aguardandoDesde = recebidaEm;
       await repo.grava('conversas', conversa);
+      // Assistente desligado (ou conversa reaberta sem ele): avisa a equipe no celular.
+      const ehBotao = ['confirmar', 'remarcar'].includes(acaoBotao);
+      if (passouAAguardar && !ehBotao && !/^\s*(parar|pare|stop|sair)\s*[.!]?\s*$/i.test(texto)) await avisar(conversa);
 
       // "PARAR": desliga as mensagens automáticas para esta pessoa.
       if (/^\s*(parar|pare|stop|sair)\s*[.!]?\s*$/i.test(texto)) {
@@ -883,7 +901,8 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
               descricao: `Paciente confirmou pelo lembrete do WhatsApp a consulta de ${relogio.descrever(consultaBotao.inicio)}.`, criadoEm: agoraIso(), atualizadoEm: agoraIso(),
             });
           }
-          await enviarComoAgente(conversa, `Consulta confirmada! ✅ Te esperamos ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())}. Se precisar remarcar, é só escrever por aqui.`);
+          const linkOnline = consultaBotao.tipo === 'online' ? (await repo.pega('profissionais', consultaBotao.profissionalId))?.linkOnline : null;
+          await enviarComoAgente(conversa, `Consulta confirmada! ✅ Te esperamos ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())}.${linkOnline ? ` A consulta é online: entre por este link alguns minutos antes: ${linkOnline}` : ''} Se precisar remarcar, é só escrever por aqui.`);
           if (conversa.status === 'aguardando_equipe' && !conversa.motivoEquipe) conversa.status = ativo ? 'agente' : 'encerrada';
           await repo.grava('conversas', conversa);
           return { confirmada: consultaBotao.id };
