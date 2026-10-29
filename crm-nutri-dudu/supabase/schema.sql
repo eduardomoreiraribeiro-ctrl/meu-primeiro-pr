@@ -331,6 +331,15 @@ drop policy if exists "agente_uso: admin consulta" on public.agente_uso;
 create policy "agente_uso: admin consulta" on public.agente_uso
   for select using (public.e_admin());
 
+-- Links pessoais da pré-anamnese (fase 10c). Guarda só o "resumo" (hash) do código do link.
+-- Sem nenhuma regra de acesso: só o servidor (chave de serviço) lê e grava.
+create table if not exists public.pre_anamnese_links (
+  id text primary key,
+  dados jsonb not null default '{}'::jsonb,
+  criado_em timestamptz not null default now()
+);
+alter table public.pre_anamnese_links enable row level security;
+
 
 -- ---------------------------------------------------------------------
 -- 7. Tempo real: o que um computador grava aparece nos outros

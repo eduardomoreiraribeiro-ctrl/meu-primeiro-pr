@@ -86,13 +86,14 @@ NutriDudu.pages.conversas = (function () {
   function bolha(m) {
     const { utils } = NutriDudu;
     const lado = m.autor === 'contato' ? 'recebida' : 'enviada';
-    const autor = m.autor === 'agente' ? '🤖 Assistente' : m.autor === 'equipe' ? (m.autorNome || 'Equipe') : '';
+    const automatica = m.automacao ? NutriDudu.mensagensAutomaticas?.MODELOS[m.automacao]?.titulo || 'Mensagem automática' : null;
+    const autor = automatica ? `⏰ Mensagem automática · ${automatica}` : m.autor === 'agente' ? '🤖 Assistente' : m.autor === 'equipe' ? (m.autorNome || 'Equipe') : '';
     const st = lado === 'enviada' && m.status ? `<span class="bolha-status status-${utils.escapeHtml(m.status)}" title="${utils.escapeHtml(ROTULO_STATUS[m.status] || m.status)}" aria-label="${utils.escapeHtml(ROTULO_STATUS[m.status] || m.status)}">${ICONE_STATUS[m.status] || ''}</span>` : '';
     return `
-      <div class="bolha bolha-${lado} bolha-${utils.escapeHtml(m.autor)}" data-mensagem="${utils.escapeHtml(m.id)}">
+      <div class="bolha bolha-${lado} bolha-${utils.escapeHtml(m.autor)}${automatica ? ' bolha-automatica' : ''}" data-mensagem="${utils.escapeHtml(m.id)}">
         ${autor ? `<span class="bolha-autor">${utils.escapeHtml(autor)}</span>` : ''}
         <p class="bolha-texto">${utils.escapeHtml(m.texto || '')}</p>
-        <span class="bolha-meta">${m.simulada ? 'simulada · ' : ''}${utils.escapeHtml(utils.hora(m.dataHora))} ${st}</span>
+        <span class="bolha-meta">${m.tipo === 'modelo' ? 'modelo aprovado · ' : ''}${m.simulada ? 'simulada · ' : ''}${utils.escapeHtml(utils.hora(m.dataHora))} ${st}</span>
         ${m.status === 'falhou' && m.erro ? `<span class="bolha-erro">Não foi enviada: ${utils.escapeHtml(m.erro)}</span>` : ''}
       </div>`;
   }

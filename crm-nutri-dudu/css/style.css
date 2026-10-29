@@ -1551,6 +1551,20 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
 .medidor span { display: block; height: 100%; background: var(--primary); }
 .medidor.cheio span { background: var(--perigo); }
 
+/* Mensagens automáticas (fase 10c) */
+.lista-automacoes { list-style: none; margin: 0.5rem 0; padding: 0; }
+.automacao-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.6rem 0; border-top: 1px solid var(--border); }
+.automacao-item:first-child { border-top: 0; }
+.automacao-info { min-width: 0; }
+.automacao-info code, .card code { font-size: 0.8rem; overflow-wrap: anywhere; }
+.modelo-linha { margin: 0.6rem 0; }
+.modelo-valor { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.5rem; margin-top: 0.15rem; }
+.modelo-valor .copiavel { flex: 1; min-width: 0; padding: 0.45rem 0.6rem; border-radius: var(--radius-sm); background: var(--surface-2); white-space: pre-wrap; overflow-wrap: anywhere; user-select: all; }
+.previa-whatsapp { margin: 0; padding: 0.6rem 0.75rem; border-radius: 12px; background: var(--surface-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.previa-botoes { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+.previa-botoes span { flex: 1; text-align: center; padding: 0.35rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--info); font-size: 0.85rem; }
+.bolha-automatica { border-style: dashed; border-color: var(--border); }
+
 /* ---------- Celular e tablet ---------- */
 @media (max-width: 860px) {
   .app { grid-template-columns: 1fr; }
@@ -1616,6 +1630,7 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
   .conversas-itens { max-height: none; }
   .chat-mensagens { max-height: 60vh; }
   .bolha { max-width: 88%; }
+  .automacao-item { flex-direction: column; align-items: stretch; }
   .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
   .dash-grid { grid-template-columns: 1fr; }
   .grid-acoes { grid-template-columns: 1fr; }

@@ -96,7 +96,13 @@ const NutriDuduServidor = (() => {
       if (error) throw new Error(`Banco (agente_uso): ${error.message}`);
       return novo;
     }
-    return { todos, porCampo, pega, cria, grava, lerUso, somarUso };
+    /** Só os números de versão das anamneses de uma pessoa (o servidor nunca lê o conteúdo clínico). */
+    async function versoesAnamnese(pessoaId) {
+      const { data, error } = await supabase.from('anamneses').select('id, versao:dados->versao').eq('dados->>pessoaId', String(pessoaId));
+      if (error) throw new Error(`Banco (anamneses): ${error.message}`);
+      return (data || []).map((l) => Number(l.versao) || 0);
+    }
+    return { todos, porCampo, pega, cria, grava, lerUso, somarUso, versoesAnamnese };
   }
 
   // ---------------------------------------------------------------------
@@ -111,26 +117,43 @@ const NutriDuduServidor = (() => {
   }
 
   function whatsappCloud({ token, phoneNumberId, versao = 'v23.0', fetch: buscar = fetch }) {
-    async function tentar(para, texto) {
+    async function postar(corpoMensagem) {
       const resp = await buscar(`https://graph.facebook.com/${versao}/${phoneNumberId}/messages`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messaging_product: 'whatsapp', to: para, type: 'text', text: { body: texto, preview_url: false } }),
+        body: JSON.stringify({ messaging_product: 'whatsapp', ...corpoMensagem }),
       });
       const corpo = await resp.json().catch(() => ({}));
       return { ok: resp.ok, corpo, status: resp.status };
     }
 
-    async function enviarTexto(para, texto) {
-      let r = await tentar(para, texto);
-      // Celular do Brasil: a Meta às vezes informa o número sem o 9 (ou com), e no modo de
-      // teste só aceita o formato cadastrado na lista. Erro 131030 = "fora da lista": tenta o outro formato.
+    /** Envia; se a Meta recusar o celular do Brasil por estar "fora da lista" (131030), tenta o outro formato (com/sem o 9). */
+    async function enviar(para, corpoMensagem) {
+      let r = await postar({ to: para, ...corpoMensagem });
       const alternativo = outroFormatoBR(para);
-      if (!r.ok && r.corpo?.error?.code === 131030 && alternativo) r = await tentar(alternativo, texto);
-      if (!r.ok) throw new Error(`WhatsApp: ${r.corpo?.error?.message || r.status}`);
+      if (!r.ok && r.corpo?.error?.code === 131030 && alternativo) r = await postar({ to: alternativo, ...corpoMensagem });
+      if (!r.ok) {
+        const erro = new Error(`WhatsApp: ${r.corpo?.error?.message || r.status}`);
+        erro.codigo = r.corpo?.error?.code || null;
+        throw erro;
+      }
       return r.corpo?.messages?.[0]?.id || null;
     }
-    return { enviarTexto };
+
+    const enviarTexto = (para, texto) => enviar(para, { type: 'text', text: { body: texto, preview_url: false } });
+
+    /**
+     * Mensagem com modelo aprovado pela Meta (fora da janela de 24 h).
+     * parametros: textos de {{1}}, {{2}}… do corpo; botoes: "payload" de cada botão de resposta rápida.
+     */
+    function enviarModelo(para, { nome, idioma = 'pt_BR', parametros = [], botoes = [] }) {
+      const components = [];
+      if (parametros.length) components.push({ type: 'body', parameters: parametros.map((t) => ({ type: 'text', text: String(t) })) });
+      botoes.forEach((payload, i) => components.push({ type: 'button', sub_type: 'quick_reply', index: String(i), parameters: [{ type: 'payload', payload }] }));
+      return enviar(para, { type: 'template', template: { name: nome, language: { code: idioma }, ...(components.length ? { components } : {}) } });
+    }
+
+    return { enviarTexto, enviarModelo };
   }
 
   /** Assinatura do webhook da Meta (X-Hub-Signature-256), com o "App Secret". */
@@ -342,7 +365,8 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
     );
     const geral = configuracoes.find((c) => c.id === 'geral') || {};
     const agenteCfg = { ...PADRAO_AGENTE, ...(configuracoes.find((c) => c.id === 'agente') || {}) };
-    return { servicos, profissionais, horarios, bloqueios, consultas, pacotes, lancamentos, geral, agenteCfg };
+    const automacoesCfg = configuracoes.find((c) => c.id === 'automacoes') || {};
+    return { servicos, profissionais, horarios, bloqueios, consultas, pacotes, lancamentos, geral, agenteCfg, automacoesCfg };
   }
 
   /** As ferramentas, sempre presas à pessoa desta conversa. */
@@ -350,7 +374,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
     const servicoPorId = Object.fromEntries(dados.servicos.map((s) => [s.id, s]));
     const profPorId = Object.fromEntries(dados.profissionais.map((p) => [p.id, p]));
     const consultasDaPessoa = () => dados.consultas.filter((c) => c.pessoaId === pessoa.id);
-    const efeitos = { chamouEquipe: null, acoes: [] };
+    const efeitos = { chamouEquipe: null, acoes: [], consultasAgendadas: [] };
 
     async function registrar(descricao, tipo = 'agente') {
       await repo.cria('interacoes', {
@@ -467,13 +491,17 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         };
         await repo.cria('consultas', nova);
         dados.consultas.push(nova);
+        efeitos.consultasAgendadas.push(nova);
         await registrar(`Assistente agendou ${servicoPorId[nova.servicoId]?.nome || 'consulta'} para ${relogio.descrever(nova.inicio)} com ${profPorId[profissional_id].nome}${pacote ? ' (pelo pacote)' : ''}.`, 'consulta');
         if (pessoa.funil === 'comercial' && ['novo', 'contato'].includes(pessoa.etapa)) {
           Object.assign(pessoa, { etapa: 'agendada', etapaDesde: agoraIso, atualizadoEm: agoraIso });
           await repo.grava('pessoas', pessoa);
           await registrar('Movido(a) para "Consulta agendada" pelo Assistente.', 'etapa');
         }
-        return { ok: true, consulta: descreverConsulta(nova), pelo_pacote: Boolean(pacote) };
+        const primeira = !dados.consultas.some((c) => c.pessoaId === pessoa.id && c.status === 'realizada');
+        const preAnamnese = primeira && dados.automacoesCfg?.ativas?.preAnamnese
+          ? 'Logo depois da sua resposta, o sistema envia automaticamente um link de pré-anamnese (formulário rápido). Avise a pessoa.' : undefined;
+        return { ok: true, consulta: descreverConsulta(nova), pelo_pacote: Boolean(pacote), ...(preAnamnese ? { pre_anamnese: preAnamnese } : {}) };
       },
 
       async minhas_consultas() {
@@ -675,7 +703,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
     }
   }
 
-  function criarWebhook({ repo, anthropic, whatsapp, relogio = criarRelogio(), verifyToken, appSecret, modelo, esperaMs = 2500, dormir = (ms) => new Promise((r) => setTimeout(r, ms)), emSegundoPlano }) {
+  function criarWebhook({ repo, anthropic, whatsapp, relogio = criarRelogio(), verifyToken, appSecret, modelo, esperaMs = 2500, dormir = (ms) => new Promise((r) => setTimeout(r, ms)), emSegundoPlano, automacoes = null }) {
     const agoraIso = () => relogio.agora().toISOString();
     const mesAtual = () => utils.isoDia(relogio.agoraLocal()).slice(0, 7);
 
@@ -759,7 +787,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       const nomePerfil = contatos?.find((c) => c.wa_id === msg.from)?.profile?.name;
       const { pessoa, nova: pessoaNova } = await acharOuCriarPessoa(msg.from, nomePerfil);
       const { conversa, nova: conversaNova } = await acharOuCriarConversa(pessoa, msg.from, ativo);
-      const { texto, tipo } = textoDaMensagem(msg);
+      let { texto, tipo } = textoDaMensagem(msg);
+      // Botões do lembrete de consulta (modelo aprovado): "confirmar:<id>" / "remarcar:<id>".
+      const [acaoBotao, consultaBotaoId] = String(msg.button?.payload || '').split(':');
+      const consultaBotao = ['confirmar', 'remarcar'].includes(acaoBotao) && consultaBotaoId ? await repo.pega('consultas', consultaBotaoId) : null;
+      const consultaValida = consultaBotao && consultaBotao.pessoaId === pessoa.id && STATUS_FUTURO.includes(consultaBotao.status) && new Date(consultaBotao.inicio) > relogio.agora();
+      if (acaoBotao === 'remarcar' && consultaValida) texto = `${texto} (quero remarcar a consulta de ${relogio.descrever(consultaBotao.inicio)})`;
       // Usa a hora em que chegou ao servidor (mesmo relógio das respostas), para a conversa nunca sair de ordem.
       const recebidaEm = agoraIso();
       const enviadaEm = msg.timestamp ? new Date(Number(msg.timestamp) * 1000).toISOString() : null;
@@ -789,6 +822,29 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         await enviarComoAgente(conversa, 'Pronto! Você não vai mais receber mensagens automáticas da clínica. Se precisar de algo, é só escrever por aqui. 🙂');
         await repo.grava('conversas', conversa);
         return { parar: true };
+      }
+
+      if (acaoBotao === 'confirmar' && consultaBotaoId) {
+        if (consultaValida) {
+          if (consultaBotao.status !== 'confirmada') {
+            Object.assign(consultaBotao, { status: 'confirmada', atualizadoEm: agoraIso() });
+            await repo.grava('consultas', consultaBotao);
+            await repo.cria('interacoes', {
+              id: uid('interacoes'), pessoaId: pessoa.id, dataHora: agoraIso(), tipo: 'consulta', autor: 'agente', automatico: true,
+              descricao: `Paciente confirmou pelo lembrete do WhatsApp a consulta de ${relogio.descrever(consultaBotao.inicio)}.`, criadoEm: agoraIso(), atualizadoEm: agoraIso(),
+            });
+          }
+          await enviarComoAgente(conversa, `Consulta confirmada! ✅ Te esperamos ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())}. Se precisar remarcar, é só escrever por aqui.`);
+          if (conversa.status === 'aguardando_equipe' && !conversa.motivoEquipe) conversa.status = ativo ? 'agente' : 'encerrada';
+          await repo.grava('conversas', conversa);
+          return { confirmada: consultaBotao.id };
+        }
+        await enviarComoAgente(conversa, 'Não encontrei essa consulta entre os seus próximos horários. Já chamei alguém da equipe para te ajudar. 🙏');
+        await marcarAguardando(conversa, 'Tentou confirmar uma consulta que não está mais marcada');
+        return { confirmada: null };
+      }
+      if (acaoBotao === 'remarcar' && (!ativo || conversa.status !== 'agente')) {
+        await marcarAguardando(conversa, 'Pediu para remarcar pelo lembrete', consultaValida ? `Quer remarcar a consulta de ${relogio.descrever(consultaBotao.inicio)}.` : null);
       }
 
       if (!ativo || conversa.status !== 'agente' || pessoa.agentePausado) return { salva: true, agente: false };
@@ -827,6 +883,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           return { falha: true };
         }
         const enviou = await enviarComoAgente(conversaAtual, r.texto);
+        // Primeira consulta agendada pelo assistente: manda o link da pré-anamnese em seguida (conversa aberta, sem custo).
+        if (automacoes && enviou) {
+          for (const consulta of r.efeitos.consultasAgendadas) {
+            await automacoes.enviarPreAnamnese({ consulta, pessoa, conversa: conversaAtual, imediato: true }).catch((e) => console.error('Pré-anamnese:', e));
+          }
+        }
         if (r.efeitos.chamouEquipe) {
           await marcarAguardando(conversaAtual, r.efeitos.chamouEquipe.motivo, r.efeitos.chamouEquipe.resumo);
         } else {
@@ -902,7 +964,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
   };
   const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-  function criarEnvioEquipe({ repo, whatsapp, relogio = criarRelogio(), quemEsta }) {
+  function criarEnvioEquipe({ repo, whatsapp, relogio = criarRelogio(), quemEsta, automacoes = null }) {
     async function atender(req) {
       if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
       if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405);
@@ -910,6 +972,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       if (!usuario || !['admin', 'profissional', 'recepcao'].includes(usuario.papel)) return json({ erro: 'Seu perfil não tem permissão para isso.' }, 403);
       let corpo;
       try { corpo = await req.json(); } catch (erro) { return json({ erro: 'Pedido inválido.' }, 400); }
+      // Administrador: rodar as mensagens automáticas agora (sem esperar o agendamento).
+      if (corpo?.acao === 'rodar-automacoes') {
+        if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador roda as mensagens automáticas.' }, 403);
+        if (!automacoes) return json({ erro: 'Mensagens automáticas indisponíveis nesta função.' }, 500);
+        return json({ ok: true, relatorio: await automacoes.rodar({ manual: true, por: usuario.nome }) });
+      }
       const texto = String(corpo?.texto || '').trim();
       if (!texto) return json({ erro: 'Escreva a mensagem.' }, 400);
       if (texto.length > 4000) return json({ erro: 'Mensagem longa demais (máximo 4.000 caracteres).' }, 400);

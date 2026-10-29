@@ -162,6 +162,10 @@ Use alguns dias assim, só com pessoas de confiança, antes de divulgar o númer
 - **Trocar o código pelo iPad:** apagar tudo no editor é difícil. É mais fácil apagar a função (**Settings › Delete function**) e criar de novo com o mesmo nome. Os segredos e o endereço continuam valendo.
 - **Token expirado:** o token da tela de teste vale 24 horas. Use o token permanente do usuário do sistema (passo 3).
 
+## Próximo passo: mensagens automáticas
+
+Com o WhatsApp funcionando, siga [`AUTOMACOES.md`](AUTOMACOES.md) para ligar os lembretes, as cobranças e a pré-anamnese.
+
 ## Bom saber
 
 - **Janela de 24 horas:** pelo WhatsApp oficial, a clínica só escreve livremente até 24 horas depois da última mensagem do paciente. Depois disso, o sistema avisa e bloqueia o campo de mensagem. As mensagens fora da janela (lembretes, cobranças) usam modelos aprovados pela Meta e chegam na **fase 10c**.

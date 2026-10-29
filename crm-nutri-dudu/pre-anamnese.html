@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Pré-anamnese · Nutri Dudu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f7f6; --surface: #ffffff; --surface-2: #eef2f0; --border: #dce3df; --text: #17211b; --muted: #55625b;
+    --primary: #15803d; --primary-hover: #166534; --primary-soft: #dcfce7; --on-primary: #ffffff;
+    --danger: #b91c1c; --danger-soft: #fee2e2; --info-soft: #e0ecff; --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1311; --surface: #161d19; --surface-2: #1f2823; --border: #2c3731; --text: #e3eae6; --muted: #a3b0a8;
+      --primary: #22c55e; --primary-hover: #4ade80; --primary-soft: #14301f; --on-primary: #06210f;
+      --danger: #f87171; --danger-soft: #3b1515; --info-soft: #172338;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.5; }
+  main { max-width: 680px; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  .marca { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; font-weight: 700; }
+  .marca span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--primary); color: var(--on-primary); font-size: 0.85rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; margin-bottom: 1rem; }
+  h1 { font-size: 1.4rem; margin: 0 0 0.35rem; }
+  h2 { font-size: 1.05rem; margin: 0 0 0.25rem; }
+  p { margin: 0.35rem 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.88rem; }
+  label { display: block; font-weight: 600; margin: 0.75rem 0 0.25rem; }
+  textarea, input[type="text"], select {
+    width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text); font: inherit; font-size: 16px;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .linha { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.4rem; margin-top: 0.4rem; align-items: center; }
+  .linha.med { grid-template-columns: 2fr 1fr 1fr auto; }
+  .remover { border: 0; background: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; padding: 0 0.4rem; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1.1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+  .btn-primario { background: var(--primary); border-color: var(--primary); color: var(--on-primary); width: 100%; font-size: 1.05rem; padding: 0.9rem; }
+  .btn-primario:disabled { opacity: 0.6; cursor: wait; }
+  .btn-link { border: 0; background: none; color: var(--primary); font: inherit; font-weight: 600; padding: 0.4rem 0; cursor: pointer; }
+  .consentimento { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 500; margin: 0; }
+  .consentimento input { width: 22px; height: 22px; margin-top: 0.1rem; flex: none; accent-color: var(--primary); }
+  .erro { background: var(--danger-soft); color: var(--danger); border-radius: 10px; padding: 0.65rem 0.8rem; margin: 0.75rem 0 0; }
+  .aviso { background: var(--info-soft); border-radius: 10px; padding: 0.65rem 0.8rem; }
+  .centro { text-align: center; padding: 2rem 1.1rem; }
+  .icone-grande { font-size: 2.6rem; }
+  a { color: var(--primary); }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) {
+    .linha, .linha.med { grid-template-columns: 1fr 1fr auto; }
+    .linha > :first-child { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="marca"><span>ND</span><div data-clinica>Nutri Dudu</div></div>
+
+  <section class="card centro" data-tela="carregando"><p class="muted">Carregando o formulário…</p></section>
+
+  <section class="card centro" data-tela="erro" hidden>
+    <div class="icone-grande" aria-hidden="true">⚠️</div>
+    <h1>Não foi possível abrir</h1>
+    <p data-erro-texto class="muted">Este link não é válido.</p>
+    <p class="small muted">Se precisar, fale com a clínica pelo WhatsApp.</p>
+  </section>
+
+  <section class="card centro" data-tela="pronto" hidden>
+    <div class="icone-grande" aria-hidden="true">✅</div>
+    <h1>Obrigado!</h1>
+    <p>Suas respostas foram enviadas para a nutricionista. Ela vai conferir tudo com você na consulta.</p>
+    <p class="small muted">Já pode fechar esta página.</p>
+  </section>
+
+  <form data-tela="formulario" novalidate hidden>
+    <section class="card">
+      <h1>Olá, <span data-nome></span>!</h1>
+      <p>Esta é a sua <strong>pré-anamnese</strong> para a consulta de <strong data-consulta></strong><span data-profissional></span>.</p>
+      <p class="muted small">Leva uns 5 minutos. Responda do seu jeito — não precisa ser perfeito. <strong>Suas respostas são vistas só pela nutricionista</strong> e não passam pelo WhatsApp.</p>
+    </section>
+
+    <section class="card">
+      <h2>1. Seu objetivo</h2>
+      <label for="queixa">O que você quer alcançar com o acompanhamento? <span aria-hidden="true">*</span></label>
+      <textarea id="queixa" name="queixa" maxlength="3000" required placeholder="Ex.: perder 5 kg, ganhar massa muscular, controlar o colesterol, melhorar a disposição…"></textarea>
+      <p class="small muted">Se quiser, conte também o que já tentou antes.</p>
+    </section>
+
+    <section class="card">
+      <h2>2. Sua saúde</h2>
+      <label for="historicoSaude">Doenças, cirurgias, histórico na família, gestação, ciclo menstrual</label>
+      <textarea id="historicoSaude" name="historicoSaude" maxlength="3000" placeholder="Ex.: hipotireoidismo; cirurgia de vesícula em 2020; mãe com diabetes"></textarea>
+
+      <label>Alergias e intolerâncias</label>
+      <div data-lista="alergias"></div>
+      <button type="button" class="btn-link" data-adicionar="alergias">+ adicionar alergia ou intolerância</button>
+
+      <label>Medicamentos e suplementos que usa</label>
+      <div data-lista="medicamentos"></div>
+      <button type="button" class="btn-link" data-adicionar="medicamentos">+ adicionar medicamento ou suplemento</button>
+    </section>
+
+    <section class="card">
+      <h2>3. Seus hábitos</h2>
+      <label for="habitosVida">Rotina e estilo de vida</label>
+      <textarea id="habitosVida" name="habitosVida" maxlength="3000" placeholder="Sono (horas por noite), atividade física, quanto de água bebe, álcool, cigarro, intestino, estresse…"></textarea>
+      <label for="habitosAlimentares">Como você se alimenta</label>
+      <textarea id="habitosAlimentares" name="habitosAlimentares" maxlength="3000" placeholder="Horários das refeições, o que costuma comer, preferências, o que não gosta, quem cozinha, se come fora…"></textarea>
+    </section>
+
+    <section class="card">
+      <label class="consentimento">
+        <input type="checkbox" name="consentimento" required>
+        <span>Autorizo a clínica <strong data-clinica>Nutri Dudu</strong> a usar estas informações de saúde <strong>somente para o meu atendimento nutricional</strong>, conforme a Lei Geral de Proteção de Dados (LGPD). Sei que posso pedir para corrigir ou apagar meus dados.</span>
+      </label>
+      <p class="small"><a href="privacidade.html" target="_blank" rel="noopener">Ler a política de privacidade</a></p>
+      <p class="erro" data-erro-form role="alert" hidden></p>
+      <p style="margin-top:1rem"><button type="submit" class="btn btn-primario">Enviar para a nutricionista</button></p>
+    </section>
+  </form>
+</main>
+
+<script src="js/nuvem-config.js"></script>
+<script src="js/pre-anamnese.js"></script>
+</body>
+</html>

@@ -119,7 +119,29 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
 - No **Dashboard**, a lista "Conversas aguardando equipe". Na **ficha do cliente**, o botão **Conversa**.
 - **Servidor:** duas funções no Supabase (`supabase/functions/whatsapp-webhook` e `whatsapp-enviar`). Elas são montadas a partir de `supabase/fonte/` com `node supabase/montar-funcoes.mjs` e reaproveitam as regras de agenda do próprio sistema.
 - Passo a passo (Meta, chaves e publicação): [`supabase/WHATSAPP.md`](supabase/WHATSAPP.md).
-- Fica para a **fase 10c:** lembretes automáticos (consulta, retorno, pacote, cobrança) e o link da pré-anamnese, que exigem modelos de mensagem aprovados pela Meta.
+
+### Fase 10c — Mensagens automáticas e pré-anamnese
+
+- **Mensagens automáticas** pelo WhatsApp:
+  - lembrete de consulta, com os botões **Confirmar** (confirma na agenda) e **Remarcar**;
+  - pré-anamnese;
+  - pagamento em atraso (com a chave Pix);
+  - retorno pendente;
+  - pacote acabando ou vencendo;
+  - reativação;
+  - agradecimento de indicação.
+- **Como as mensagens saem:**
+  - cada uma é ligada separadamente e tem limite de repetição;
+  - só vão para quem deu consentimento e não pediu para PARAR;
+  - de segunda a sábado, em horário comercial;
+  - sem custo (mensagem normal) se a pessoa escreveu nas últimas 24 horas; fora disso, com o modelo aprovado pela Meta.
+- **Pré-anamnese:** quando a primeira consulta é agendada, o paciente recebe um **link pessoal** (vale até o dia da consulta e só pode ser usado uma vez) para a página `pre-anamnese.html`. Ela é simples no celular e pede o consentimento LGPD antes do envio. As respostas entram na ficha como **"pré-anamnese a revisar"**, visíveis só para a nutricionista; o assistente não lê as respostas.
+- **Onde aparece no sistema:**
+  - **Configurações › Mensagens automáticas:** ligar e desligar, nomes dos modelos, o **texto para cadastrar na Meta** (com botões de copiar e prévia), a última verificação e erros, e o botão **Verificar e enviar agora**;
+  - **Agenda:** os detalhes da consulta mostram o lembrete e a situação da pré-anamnese;
+  - **Conversas:** as mensagens automáticas aparecem com ⏰.
+- **Servidor:** nova função `supabase/functions/whatsapp-automacoes`, chamada a cada 30 minutos pelo agendamento do Supabase (Cron) e usada pelo formulário. Os textos dos modelos ficam em `js/mensagens-automaticas.js`, compartilhado entre o sistema e o servidor.
+- Passo a passo: [`supabase/AUTOMACOES.md`](supabase/AUTOMACOES.md).
 
 ## Como abrir
 

@@ -482,7 +482,6 @@ NutriDudu.pages.configuracoes = (function () {
             <button type="button" class="btn btn-pequeno btn-primary" data-alternar-agente>${cfg.ativo ? 'Desligar assistente' : 'Ligar assistente'}</button>
             <button type="button" class="btn btn-pequeno" data-editar-agente>Editar</button>
           </div>` : '<p class="muted small">Só o administrador altera o assistente.</p>'}
-        <p class="muted small">Em breve (fase 10c): lembretes automáticos de consulta, retorno, pacote e cobrança, e o link da pré-anamnese, com os modelos de mensagem aprovados pela Meta.</p>
       </section>`;
   }
 
@@ -563,6 +562,165 @@ NutriDudu.pages.configuracoes = (function () {
     });
   }
 
+  // ---------------- Mensagens automáticas (fase 10c) ----------------
+
+  /** Endereço do sistema (para o link da pré-anamnese): a pasta onde está o index.html. */
+  function enderecoAtual() {
+    return `${location.origin}${location.pathname.replace(/[^/]*$/, '')}`.replace(/\/$/, '');
+  }
+
+  function blocoAutomacoes(cfg, status, geral) {
+    const { utils, permissoes, ui, mensagensAutomaticas: MA } = NutriDudu;
+    const pode = permissoes.pode('configurarAgente');
+    const naNuvem = NutriDudu.nuvem.ativa();
+    const ligadas = Object.values(cfg.ativas).filter(Boolean).length;
+    const itens = Object.entries(MA.MODELOS).map(([id, m]) => `
+      <li class="automacao-item">
+        <div class="automacao-info">
+          <strong>${utils.escapeHtml(m.titulo)}</strong>
+          ${ui.badge(cfg.ativas[id] ? 'Ligada' : 'Desligada', cfg.ativas[id] ? 'sucesso' : 'neutro')}
+          ${ui.badge(MA.CATEGORIAS[m.categoria], m.categoria === 'MARKETING' ? 'alerta' : 'info')}
+          <span class="muted small bloco">${utils.escapeHtml(m.quando)}</span>
+          <span class="muted small bloco">Modelo: <code>${utils.escapeHtml(cfg.modelos[id] || '—')}</code></span>
+        </div>
+        <button type="button" class="btn btn-pequeno" data-ver-modelo="${id}">Texto para a Meta</button>
+      </li>`).join('');
+    const ultima = status?.ultimaExecucao
+      ? `Última verificação: ${utils.data(status.ultimaExecucao)} às ${utils.hora(status.ultimaExecucao)}${status.foraDoHorario ? ' (fora do horário: nada enviado)' : ` · ${status.enviados} enviada(s)${status.erros?.length ? ` · ${status.erros.length} erro(s)` : ''}`}`
+      : 'Ainda não rodou nenhuma vez.';
+    return `
+      <section class="card" data-bloco-automacoes>
+        <div class="secao-cabecalho">
+          <h2 class="card-title">Mensagens automáticas</h2>
+          ${ui.badge(ligadas ? `${ligadas} ligada(s)` : 'Todas desligadas', ligadas ? 'sucesso' : 'neutro')}
+        </div>
+        <p class="muted small card-sub">Lembretes e avisos que a clínica envia pelo WhatsApp. Se a pessoa escreveu nas últimas 24 horas, vai como mensagem normal (sem custo); se não, usa o <strong>modelo aprovado pela Meta</strong>. Só para quem deu consentimento de WhatsApp e não pediu para PARAR, de segunda a sábado, das ${cfg.horaInicio}h às ${cfg.horaFim}h.</p>
+        <ul class="lista-automacoes">${itens}</ul>
+        <p class="small"><strong>Link da pré-anamnese:</strong> ${cfg.linkSistema ? `<code>${utils.escapeHtml(cfg.linkSistema)}/pre-anamnese.html</code>` : '<span class="muted">endereço do sistema ainda não informado (Editar)</span>'}</p>
+        ${status?.erros?.length ? `<div class="alerta alerta-aviso small"><strong>Erros na última verificação:</strong><ul>${status.erros.map((e) => `<li>${utils.escapeHtml(MA.MODELOS[e.automacao]?.titulo || e.automacao)} — ${utils.escapeHtml(e.pessoa || '')}: ${utils.escapeHtml(e.motivo)}</li>`).join('')}</ul></div>` : ''}
+        <p class="muted small" data-status-automacoes>${utils.escapeHtml(naNuvem ? ultima : 'Demonstração: as mensagens não são enviadas de verdade (precisa da nuvem, do WhatsApp e do agendamento — veja supabase/AUTOMACOES.md).')}</p>
+        ${pode ? `
+          <div class="acoes-linha">
+            <button type="button" class="btn btn-pequeno btn-primary" data-editar-automacoes>Editar</button>
+            ${naNuvem ? '<button type="button" class="btn btn-pequeno" data-rodar-automacoes>Verificar e enviar agora</button>' : ''}
+          </div>` : '<p class="muted small">Só o administrador altera as mensagens automáticas.</p>'}
+      </section>`;
+  }
+
+  function verModelo(id, cfg, geral) {
+    const { utils, modal, ui, mensagensAutomaticas: MA } = NutriDudu;
+    const m = MA.MODELOS[id];
+    const corpo = m.corpo(geral?.nomeClinica || 'Nutri Dudu');
+    const linha = (rotulo, valor, copiar = false) => `
+      <div class="modelo-linha">
+        <span class="muted small">${utils.escapeHtml(rotulo)}</span>
+        <div class="modelo-valor"><span${copiar ? ' class="copiavel"' : ''}>${utils.escapeHtml(valor)}</span>${copiar ? `<button type="button" class="btn btn-pequeno" data-copiar="${utils.escapeHtml(valor)}">Copiar</button>` : ''}</div>
+      </div>`;
+    modal.painel({
+      titulo: `Modelo: ${m.titulo}`,
+      corpo: `
+        <p class="muted small">Cadastre no <strong>Gerenciador do WhatsApp › Modelos de mensagem › Criar modelo</strong> exatamente assim (passo a passo em supabase/AUTOMACOES.md). A Meta revisa em minutos ou algumas horas.</p>
+        ${linha('Nome do modelo', cfg.modelos[id] || m.nomePadrao, true)}
+        ${linha('Categoria', `${MA.CATEGORIAS[m.categoria]} (${m.categoria})`)}
+        ${linha('Idioma', 'Português (BR) — pt_BR')}
+        ${linha('Corpo da mensagem', corpo, true)}
+        ${m.botoes ? linha('Botões (resposta rápida)', m.botoes.join(' · ')) : ''}
+        <div class="modelo-linha">
+          <span class="muted small">Exemplos das variáveis (a Meta pede)</span>
+          <ol class="small">${m.variaveis.map((v, i) => `<li><code>{{${i + 1}}}</code> ${utils.escapeHtml(v)} — ex.: <strong>${utils.escapeHtml(m.exemplo[i])}</strong></li>`).join('')}</ol>
+        </div>
+        <p class="small"><strong>Como chega para o paciente:</strong></p>
+        <p class="previa-whatsapp">${utils.escapeHtml(MA.preencher(corpo, m.exemplo))}${m.botoes ? `<span class="previa-botoes">${m.botoes.map((b) => `<span>${utils.escapeHtml(b)}</span>`).join('')}</span>` : ''}</p>`,
+    });
+    document.querySelectorAll('dialog[open] [data-copiar]').forEach((b) => b.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(b.dataset.copiar);
+        ui.toast('Copiado!');
+      } catch (erro) {
+        ui.toast('Não deu para copiar automaticamente. Selecione o texto e copie.', 'info');
+      }
+    }));
+  }
+
+  async function salvarAutomacoes(mudancas, aviso) {
+    const { store, ui, permissoes } = NutriDudu;
+    if (!permissoes.exigir('configurarAgente')) return;
+    if (await store.get('configuracoes', 'automacoes')) await store.update('configuracoes', 'automacoes', mudancas);
+    else await store.create('configuracoes', mudancas, { id: 'automacoes' });
+    if (aviso) ui.toast(aviso);
+  }
+
+  function validarAutomacoes(d) {
+    const erros = {};
+    const ligadas = Object.values(d.ativas).some(Boolean);
+    if (d.ativas.preAnamnese && !/^https:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Para a pré-anamnese, informe o endereço do sistema (começa com https://).';
+    else if (d.linkSistema && !/^https?:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Endereço inválido.';
+    if (!(Number.isInteger(d.horaInicio) && d.horaInicio >= 6 && d.horaInicio <= 12)) erros.horaInicio = 'Entre 6 e 12.';
+    if (!(Number.isInteger(d.horaFim) && d.horaFim >= 14 && d.horaFim <= 22 && d.horaFim > d.horaInicio)) erros.horaFim = 'Entre 14 e 22.';
+    Object.entries(d.modelos).forEach(([id, nome]) => {
+      if (nome && !/^[a-z0-9_]{1,512}$/.test(nome)) erros[`modelo_${id}`] = 'Só letras minúsculas, números e _ (como na Meta).';
+      else if (!nome && d.ativas[id] && ligadas) erros[`modelo_${id}`] = 'Informe o nome do modelo aprovado.';
+    });
+    return erros;
+  }
+
+  function abrirAutomacoes(cfg) {
+    const { form: f, modal, utils, mensagensAutomaticas: MA } = NutriDudu;
+    if (!NutriDudu.permissoes.exigir('configurarAgente')) return;
+    const linhas = Object.entries(MA.MODELOS).map(([id, m]) => `
+      <fieldset class="bloco-pacote">
+        <legend>${utils.escapeHtml(m.titulo)}</legend>
+        ${f.chave(`ativa_${id}`, 'Ligada', cfg.ativas[id], { ajuda: utils.escapeHtml(m.quando) })}
+        ${f.texto(`modelo_${id}`, 'Nome do modelo aprovado na Meta', cfg.modelos[id], { placeholder: m.nomePadrao })}
+      </fieldset>`).join('');
+    modal.formulario({
+      titulo: 'Mensagens automáticas',
+      largo: true,
+      corpo: `
+        ${f.texto('linkSistema', 'Endereço do sistema (para o link da pré-anamnese)', cfg.linkSistema || (NutriDudu.nuvem.ativa() ? enderecoAtual() : ''), {
+          placeholder: 'https://…/crm-nutri-dudu', ajuda: 'O endereço onde a equipe abre o sistema. O paciente recebe um link para a página "pre-anamnese.html" dessa pasta.',
+        })}
+        <div class="grade-2">
+          ${f.texto('horaInicio', 'Enviar a partir das (hora)', cfg.horaInicio, { tipo: 'number', atributos: 'min="6" max="12" step="1"' })}
+          ${f.texto('horaFim', 'Até as (hora)', cfg.horaFim, { tipo: 'number', atributos: 'min="14" max="22" step="1"' })}
+        </div>
+        <p class="muted small">Ligue cada mensagem só depois que o modelo dela estiver <strong>aprovado</strong> na Meta (o botão "Texto para a Meta" mostra o que cadastrar).</p>
+        ${linhas}`,
+      ler: (form) => ({
+        linkSistema: f.valor(form, 'linkSistema').replace(/\/+$/, '').replace(/\/index\.html$/, ''),
+        horaInicio: f.numero(form, 'horaInicio'),
+        horaFim: f.numero(form, 'horaFim'),
+        ativas: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.marcado(form, `ativa_${id}`)])),
+        modelos: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.valor(form, `modelo_${id}`)])),
+      }),
+      validar: validarAutomacoes,
+      salvar: (d) => salvarAutomacoes(d, 'Mensagens automáticas atualizadas.'),
+    });
+  }
+
+  async function rodarAutomacoes(botao) {
+    const { ui, utils, modal, nuvem, mensagensAutomaticas: MA } = NutriDudu;
+    botao.disabled = true;
+    botao.textContent = 'Verificando…';
+    try {
+      const r = await nuvem.rodarAutomacoes();
+      const lista = (itens, vazio) => (itens.length ? `<ul class="small">${itens.map((x) => `<li>${utils.escapeHtml(MA.MODELOS[x.automacao]?.titulo || x.automacao)} — ${utils.escapeHtml(x.pessoa || '')}${x.motivo ? `: ${utils.escapeHtml(x.motivo)}` : x.via === 'texto' ? ' (mensagem normal)' : ' (modelo)'}</li>`).join('')}</ul>` : `<p class="muted small">${vazio}</p>`);
+      modal.painel({
+        titulo: 'Verificação das mensagens automáticas',
+        corpo: r.foraDoHorario
+          ? '<p>Fora do horário de envio (ou domingo): nada foi enviado. Tente de novo dentro do horário configurado.</p>'
+          : `<h3 class="small">Enviadas (${r.enviados.length})</h3>${lista(r.enviados, 'Nenhuma mensagem precisava ser enviada agora.')}
+             ${r.erros.length ? `<h3 class="small">Erros (${r.erros.length})</h3>${lista(r.erros, '')}` : ''}
+             ${r.pulados.length ? `<h3 class="small">Não enviadas (${r.pulados.length})</h3>${lista(r.pulados.slice(0, 30), '')}` : ''}`,
+      });
+    } catch (erro) {
+      ui.toast(erro.message || 'Não foi possível verificar agora.', 'erro');
+    } finally {
+      botao.disabled = false;
+      botao.textContent = 'Verificar e enviar agora';
+    }
+  }
+
   async function render(container) {
     const { store, ui, config, utils, permissoes } = NutriDudu;
     const [profissionais, horarios, bloqueios, geral, servicos, consultas] = await Promise.all([
@@ -574,6 +732,8 @@ NutriDudu.pages.configuracoes = (function () {
       store.list('consultas'),
     ]);
     const agenteCfg = { ...PADRAO_AGENTE, ...((await store.get('configuracoes', 'agente')) || {}) };
+    const automacoesCfg = NutriDudu.mensagensAutomaticas.configuracao((await store.get('configuracoes', 'automacoes')) || {});
+    const automacoesStatus = await store.get('configuracoes', 'automacoes_status');
     const podeProf = permissoes.pode('editarProfissionais');
     const nomeProf = Object.fromEntries(profissionais.map((p) => [p.id, p.nome]));
     const naNuvem = NutriDudu.nuvem.ativa();
@@ -700,6 +860,7 @@ NutriDudu.pages.configuracoes = (function () {
         </section>` : ''}
 
       ${blocoAgente(agenteCfg)}
+      ${blocoAutomacoes(automacoesCfg, automacoesStatus, geral)}
     `;
 
     const porId = (lista, id) => lista.find((x) => x.id === id);
@@ -720,8 +881,11 @@ NutriDudu.pages.configuracoes = (function () {
     container.querySelector('[data-editar-agente]')?.addEventListener('click', () => abrirAgente(agenteCfg));
     container.querySelector('[data-alternar-agente]')?.addEventListener('click', () => salvarAgente({ ativo: !agenteCfg.ativo }, agenteCfg.ativo ? 'Assistente desligado. Novas mensagens ficam esperando a equipe.' : 'Assistente ligado.'));
     mostrarUsoAgente(container, agenteCfg);
+    container.querySelector('[data-editar-automacoes]')?.addEventListener('click', () => abrirAutomacoes(automacoesCfg));
+    container.querySelector('[data-rodar-automacoes]')?.addEventListener('click', (e) => rodarAutomacoes(e.currentTarget));
+    container.querySelectorAll('[data-ver-modelo]').forEach((b) => b.addEventListener('click', () => verModelo(b.dataset.verModelo, automacoesCfg, geral)));
     container.querySelectorAll('[data-salvar-perfil]').forEach((b) => b.addEventListener('click', () => salvarPerfil(b.closest('[data-conta]'))));
   }
 
-  return { titulo: 'Configurações', render, validarHorarios, validarProfissional, validarBloqueio, validarAgente };
+  return { titulo: 'Configurações', render, validarHorarios, validarProfissional, validarBloqueio, validarAgente, validarAutomacoes };
 })();

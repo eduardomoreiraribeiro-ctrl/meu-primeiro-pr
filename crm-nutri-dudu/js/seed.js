@@ -72,6 +72,9 @@ NutriDudu.seed = (function () {
       horarioEquipe: 'segunda a sexta, das 8h às 18h, e sábado, das 8h às 12h',
       limiteMensalUsd: 50,
       maxRespostasDia: 30,
+    }, {
+      id: 'automacoes',
+      ...NutriDudu.mensagensAutomaticas.PADRAO,
     }];
 
     const profissionais = [{
@@ -246,6 +249,18 @@ NutriDudu.seed = (function () {
     // para acomodar cada uma no primeiro horário válido do mesmo dia (ou dos seguintes).
     acomodar(consultas, horarios, bloqueios, configuracoes[0]);
 
+    // Mensagens automáticas (fase 10c): lembrete enviado e confirmado pelo botão; pré-anamneses.
+    const porId = (id) => consultas.find((x) => x.id === id);
+    Object.assign(porId('con_19'), { automacoes: { lembrete: { em: diaHora(0, '09:00'), ok: true, via: 'modelo' } } });
+    Object.assign(porId('con_11'), {
+      automacoes: { preAnamnese: { em: diaHora(-4, '08:46'), ok: true, via: 'texto' } },
+      preAnamnese: { status: 'preenchida', enviadaEm: diaHora(-4, '08:46'), preenchidaEm: diaHora(-2, '19:40') },
+    });
+    Object.assign(porId('con_10'), {
+      automacoes: { preAnamnese: { em: diaHora(-3, '16:05'), ok: true, via: 'texto' }, preAnamneseLembrete: { em: diaHora(-1, '09:00'), ok: true, via: 'modelo' } },
+      preAnamnese: { status: 'enviada', enviadaEm: diaHora(-3, '16:05'), lembreteEm: diaHora(-1, '09:00') },
+    });
+
     // A anamnese "nasce" no dia da consulta em que foi feita (a pré-anamnese, 2 dias atrás).
     const an = (id, pessoaId, consultaId, dados) => ({
       id, pessoaId, consultaId, versao: 1, origem: 'consulta', status: 'confirmada', autor: 'profissional',
@@ -333,6 +348,7 @@ NutriDudu.seed = (function () {
 
     // Conversas do WhatsApp (fictícias). Em "aguardando equipe", o assistente deixou um resumo.
     const conversas = [
+      { id: 'cvs_4', pessoaId: 'pes_12', telefone: '(11) 96234-5612', status: 'encerrada', naoLidas: 0, ultimaMensagemEm: diaHora(0, '09:12'), ultimaMensagemContatoEm: diaHora(0, '09:12') },
       { id: 'cvs_1', pessoaId: 'pes_8', telefone: '(11) 91890-1208', status: 'agente', naoLidas: 1, ultimaMensagemEm: diaHora(0, '09:07'), ultimaMensagemContatoEm: diaHora(0, '09:07') },
       {
         id: 'cvs_2', pessoaId: 'pes_4', telefone: '(11) 95456-7804', status: 'aguardando_equipe', naoLidas: 2,
@@ -356,6 +372,9 @@ NutriDudu.seed = (function () {
       m('msg_8', 'cvs_3', diaHora(-1, '10:06'), 'agente', 'Claro! Vou chamar a recepção para ver a melhor opção para você. 😊'),
       m('msg_9', 'cvs_3', diaHora(-1, '10:15'), 'equipe', 'Oi, Mariana! Aqui é da recepção. Tenho sexta às 9h ou às 15h. Qual prefere?', { autorNome: 'Recepção' }),
       m('msg_10', 'cvs_3', diaHora(-1, '10:18'), 'contato', 'Às 9h, por favor!'),
+      m('msg_12', 'cvs_4', diaHora(0, '09:00'), 'agente', 'Olá, Diego! Lembrete da sua consulta na Nutri Dudu: amanhã, às 16:00, com Dra. Ana Lima. Toque em um botão abaixo para confirmar ou remarcar.', { automacao: 'lembrete', tipo: 'modelo', status: 'lida' }),
+      m('msg_13', 'cvs_4', diaHora(0, '09:11'), 'contato', 'Confirmar'),
+      m('msg_14', 'cvs_4', diaHora(0, '09:12'), 'agente', 'Consulta confirmada! ✅ Te esperamos amanhã às 16:00. Se precisar remarcar, é só escrever por aqui.'),
       m('msg_11', 'cvs_3', diaHora(-1, '10:20'), 'equipe', 'Prontinho, remarcado para sexta às 9h. Até lá! 💚', { autorNome: 'Recepção', status: 'entregue' }),
     ];
 

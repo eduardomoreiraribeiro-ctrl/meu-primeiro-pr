@@ -405,6 +405,20 @@ NutriDudu.agendamento = (function () {
   }
 
   /** Painel com os detalhes da consulta e as ações permitidas. */
+  /** Mensagens automáticas da consulta (fase 10c): lembrete e pré-anamnese. */
+  function lembreteEPre(c, linha) {
+    const { utils, ui } = NutriDudu;
+    const quando = (iso) => `${utils.data(iso).slice(0, 5)} às ${utils.hora(iso)}`;
+    const partes = [];
+    const lem = c.automacoes?.lembrete;
+    if (lem) partes.push(linha('Lembrete', lem.ok ? `${ui.badge('Enviado', 'sucesso')} <span class="muted small">${quando(lem.em)}</span>` : `${ui.badge('Não enviado', 'perigo')} <span class="muted small">${utils.escapeHtml(lem.erro || '')}</span>`));
+    const pre = c.preAnamnese;
+    if (pre?.status === 'preenchida') partes.push(linha('Pré-anamnese', `${ui.badge('Preenchida', 'sucesso')} <span class="muted small">${quando(pre.preenchidaEm)} · a revisar na ficha</span>`));
+    else if (pre?.status === 'enviada') partes.push(linha('Pré-anamnese', `${ui.badge('Enviada, ainda não preenchida', 'alerta')} <span class="muted small">${quando(pre.enviadaEm)}${pre.lembreteEm ? ' · lembrete enviado' : ''}</span>`));
+    else if (c.automacoes?.preAnamnese && !c.automacoes.preAnamnese.ok) partes.push(linha('Pré-anamnese', `${ui.badge('Não enviada', 'perigo')} <span class="muted small">${utils.escapeHtml(c.automacoes.preAnamnese.erro || '')}</span>`));
+    return partes.join('');
+  }
+
   async function detalhes(consultaId) {
     const { store, modal, ui, utils, config, permissoes, calculos } = NutriDudu;
     const c = await store.get('consultas', consultaId);
@@ -432,6 +446,7 @@ NutriDudu.agendamento = (function () {
           ${pacote ? linha('Pacote', utils.escapeHtml(`${d.servicoPorId[pacote.servicoId]?.nome || 'Pacote'} · ${uso.usadas} de ${uso.total} usadas, ${uso.reservadas} agendada(s)`)) : ''}
           ${linha('Agendada por', utils.escapeHtml(config.AGENDADA_POR[c.agendadaPor] || '—'))}
           ${c.observacaoAgenda ? linha('Observação', utils.escapeHtml(c.observacaoAgenda)) : ''}
+          ${lembreteEPre(c, linha)}
           ${c.status === 'cancelada' && c.motivoCancelamento ? linha('Cancelamento', utils.escapeHtml(c.motivoCancelamento)) : ''}
           ${c.status === 'faltou' && c.pacoteId ? linha('Falta', c.descontarFalta === false ? 'Não descontada do pacote' : 'Descontada do pacote') : ''}
         </table>

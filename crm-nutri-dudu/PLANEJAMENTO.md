@@ -1,6 +1,6 @@
 # CRM Nutri Dudu — Planejamento
 
-Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fases 1 a 10 (Base, Serviços e profissionais, Clientes, Agenda, Prontuário + Pacotes e financeiro, Kanban, Retornos e Dashboard, Acabamento, Nuvem, WhatsApp e Assistente de IA) concluídas e o sistema publicado no GitHub Pages — ver [`README.md`](README.md). Próxima: fase 10c (mensagens automáticas com modelos aprovados pela Meta e formulário de pré-anamnese).
+Documento de planejamento do CRM da clínica de nutrição **Nutri Dudu**. **Andamento:** fases 1 a 10c (Base, Serviços e profissionais, Clientes, Agenda, Prontuário + Pacotes e financeiro, Kanban, Retornos e Dashboard, Acabamento, Nuvem, WhatsApp e Assistente de IA, Mensagens automáticas e pré-anamnese) concluídas e o sistema publicado no GitHub Pages — ver [`README.md`](README.md). Próximo: número definitivo da clínica no WhatsApp.
 
 **Versão 7** — inclui agenda por profissional, origens de leads, anamnese (com **pré-anamnese enviada pelo WhatsApp**), fotos de antes e depois, pacotes longos e controle de retorno. Todas as decisões estão na seção 17; nenhuma em aberto.
 
@@ -593,7 +593,7 @@ Toda ação do agente vira uma **interação automática** com autor "agente de 
 | Reativação | cliente sumido há 120 dias | convite para voltar |
 | Agradecimento de indicação | quando um indicado vira cliente | agradece a quem indicou |
 
-- Cada automação pode ser ligada ou desligada e ter o texto editado em **Configurações**.
+- Cada automação pode ser ligada ou desligada em **Configurações**. Os textos ficam em `js/mensagens-automaticas.js` (iguais aos modelos cadastrados na Meta; mudar o texto exige cadastrar o modelo de novo).
 - Só é enviada para quem deu **consentimento** e não pediu para parar. "PARAR" desliga as automações para aquela pessoa.
 
 ### 12.3 Passagem para a equipe
