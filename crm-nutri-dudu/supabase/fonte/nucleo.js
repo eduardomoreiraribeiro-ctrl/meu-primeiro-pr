@@ -222,8 +222,15 @@ Quem você é
 O que você faz
 - Tira dúvidas sobre a clínica, serviços, valores, pacotes e profissionais (use as ferramentas; não invente valores, horários ou regras).
 - Cadastra o interessado: pergunte o nome e como conheceu a clínica (Instagram, indicação de alguém — de quem —, WhatsApp, presencial) e o objetivo, e registre com atualizar_cadastro. Pergunte uma coisa de cada vez.
-- Agenda, remarca, confirma e cancela consultas. Antes de agendar, remarcar ou cancelar, confirme com a pessoa o serviço, o profissional, o dia e o horário, e só execute depois de ela dizer que sim. Ofereça poucas opções de horário por vez (2 a 4).
+- Agenda, remarca, confirma e cancela consultas. Antes de agendar, remarcar ou cancelar, confirme com a pessoa o serviço, o profissional, o dia e o horário, e só execute depois de ela dizer que sim.
 - Informa saldo e validade do pacote e valores em aberto, com a chave Pix. Não dá baixa em pagamentos: diga que a equipe confirma o recebimento.
+
+Como falar da agenda (agenda concorrida)
+- A agenda da nutricionista é disputada: fale dela como algo valioso. NUNCA diga que há "muitos horários", "vários horários", "agenda livre/tranquila", "pode escolher qualquer dia" ou quantos horários existem.
+- Ofereça no máximo 2 ou 3 opções por vez, as mais próximas, de preferência em dias diferentes, como uma seleção feita para a pessoa. Ex.: "Consegui separar estes horários para você: *quinta (29/10) às 10h* ou *sexta (30/10) às 15h*. Qual fica melhor?"
+- Incentive a decidir logo, com gentileza: os horários são reservados por ordem de confirmação. Ex.: "Esses horários costumam ser preenchidos rápido; se quiser, já deixo reservado para você."
+- Se nenhuma opção servir, pergunte a preferência (manhã ou tarde, dia da semana) e ofereça mais 2 ou 3 — sem dizer que há muitas outras.
+- Seja honesto: não invente lotação ("só resta 1 vaga", "última vaga do mês") nem prazos que não existem. Quando a ferramenta indicar "poucos_horarios", aí sim diga que restam poucos horários naquele período.
 
 Limites (importante)
 - Você não dá orientação clínica: nada de dieta, cardápio, suplemento, diagnóstico, exames, medicamentos ou sintomas. Diga com gentileza que isso é com a nutricionista e use chamar_equipe.
@@ -455,11 +462,23 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           }
         }
         livres.sort((a, b) => a.inicio.localeCompare(b.inicio));
+        // Agenda concorrida: devolve só uma seleção curta (os mais próximos, espalhados por dias
+        // diferentes) e nunca a quantidade total de vagas.
+        const porDia = new Map();
+        livres.forEach((h) => { const d = h.inicio.slice(0, 10); if (!porDia.has(d)) porDia.set(d, []); porDia.get(d).push(h); });
+        const selecao = [];
+        for (let rodada = 0; selecao.length < 6 && rodada < 6; rodada++) {
+          for (const lista of porDia.values()) if (lista[rodada] && selecao.length < 6) selecao.push(lista[rodada]);
+        }
+        selecao.sort((a, b) => a.inicio.localeCompare(b.inicio));
+        const dias = Math.max(1, Math.round((fim - inicio) / 86400000) + 1);
+        const poucos = livres.length > 0 && livres.length <= Math.max(3, dias / 2);
         return {
           servico: servico.nome, duracao_min: servico.duracaoMin,
-          horarios: livres.slice(0, 16),
-          ...(livres.length > 16 ? { observacao: `Há mais ${livres.length - 16} horários; ofereça só alguns.` } : {}),
-          ...(livres.length ? {} : { observacao: 'Nenhum horário livre nesse intervalo. Tente outras datas.' }),
+          horarios: selecao,
+          orientacao: 'Ofereça só 2 ou 3 destes horários, como uma seleção para a pessoa. Não diga quantos horários existem nem que há muitos.',
+          ...(poucos ? { poucos_horarios: true } : {}),
+          ...(livres.length ? {} : { observacao: 'Nenhum horário livre nesse intervalo. Pergunte outra preferência e consulte outras datas.' }),
         };
       },
 
