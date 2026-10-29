@@ -1035,7 +1035,16 @@ const NutriDuduServidor = (() => {
     horarioEquipe: 'segunda a sexta, das 8h às 18h',
     limiteMensalUsd: 50,
     maxRespostasDia: 30,
+    diasAgenda: [1, 2, 3, 4, 5], // dias em que o assistente oferece e agenda (0 = domingo … 6 = sábado)
   };
+  const NOMES_DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+  function descreverDias(dias) {
+    const lista = [...new Set(dias)].sort((a, b) => a - b);
+    if (lista.join() === '1,2,3,4,5') return 'de segunda a sexta';
+    if (lista.join() === '1,2,3,4,5,6') return 'de segunda a sábado';
+    const nomes = lista.map((d) => NOMES_DIAS[d]);
+    return nomes.length > 1 ? `${nomes.slice(0, -1).join(', ')} e ${nomes[nomes.length - 1]}` : nomes[0] || 'nenhum dia';
+  }
 
   // Preço do Claude Opus 5.5 (US$ por milhão de tokens) para controlar o limite mensal.
   const PRECO = { entrada: 4, saida: 20, cacheLeitura: 0.2, cacheEscrita: 5 };
@@ -1065,6 +1074,7 @@ Como falar da agenda (agenda concorrida)
 - A agenda da nutricionista é disputada: fale dela como algo valioso. NUNCA diga que há "muitos horários", "vários horários", "agenda livre/tranquila", "pode escolher qualquer dia" ou quantos horários existem.
 - Ofereça no máximo 2 ou 3 opções por vez, as mais próximas, de preferência em dias diferentes, como uma seleção feita para a pessoa. Ex.: "Consegui separar estes horários para você: *quinta (29/10) às 10h* ou *sexta (30/10) às 15h*. Qual fica melhor?"
 - Incentive a decidir logo, com gentileza: os horários são reservados por ordem de confirmação. Ex.: "Esses horários costumam ser preenchidos rápido; se quiser, já deixo reservado para você."
+- Você só oferece e agenda horários ${descreverDias(agenteCfg.diasAgenda || PADRAO_AGENTE.diasAgenda)}. Se a pessoa pedir outro dia (ex.: sábado), diga com gentileza que pelo WhatsApp os agendamentos são ${descreverDias(agenteCfg.diasAgenda || PADRAO_AGENTE.diasAgenda)} e ofereça a opção mais próxima; se ela realmente precisar daquele dia, chame a equipe.
 - Se nenhuma opção servir, pergunte a preferência (manhã ou tarde, dia da semana) e ofereça mais 2 ou 3 — sem dizer que há muitas outras.
 - Seja honesto: não invente lotação ("só resta 1 vaga", "última vaga do mês") nem prazos que não existem. Quando a ferramenta indicar "poucos_horarios", aí sim diga que restam poucos horários naquele período.
 
@@ -1254,6 +1264,8 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       return { fimLocal, problemas };
     }
 
+    const diaPermitido = (dataLocal) => (dados.agenteCfg?.diasAgenda || PADRAO_AGENTE.diasAgenda).includes(dataLocal.getDay());
+
     function tipoDaConsulta(servico, modalidade) {
       if (modalidade === 'online') return 'online';
       if (servico.categoria === 'avaliacao') return 'avaliacao';
@@ -1290,7 +1302,9 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         if (!profs.length) return { erro: 'Nenhum profissional atende este serviço.' };
         const ctx = ctxAgenda();
         const livres = [];
+        const diasPermitidos = dados.agenteCfg?.diasAgenda || PADRAO_AGENTE.diasAgenda;
         for (let d = new Date(inicio); d <= fim; d.setDate(d.getDate() + 1)) {
+          if (!diasPermitidos.includes(d.getDay())) continue;
           for (const profissionalId of profs) {
             agenda.horariosLivres({ profissionalId, dia: utils.isoDia(d), duracaoMin: servico.duracaoMin || 60, modalidade }, ctx)
               .filter((h) => periodo === 'qualquer' || (periodo === 'manha' ? h.getHours() < 12 : h.getHours() >= 12))
@@ -1324,6 +1338,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         if (!profPorId[profissional_id] || !(servico.profissionalIds || []).includes(profissional_id)) return { erro: 'Este profissional não atende este serviço.' };
         const inicioLocal = relogio.lerLocal(inicio);
         if (!inicioLocal) return { erro: 'Horário inválido (use AAAA-MM-DDTHH:MM).' };
+        if (!diaPermitido(inicioLocal)) return { erro: `Pelo WhatsApp, os agendamentos são ${descreverDias(dados.agenteCfg?.diasAgenda || PADRAO_AGENTE.diasAgenda)}. Ofereça outro dia ou chame a equipe.` };
         const { fimLocal, problemas } = validarHorario({ profissionalId: profissional_id, servico, inicioLocal, modalidade });
         if (problemas.length) return { erro: `Não é possível agendar: ${problemas.map((p) => p.mensagem).join(' ')} Consulte os horários livres de novo.` };
         // Pacote ativo com saldo livre, se houver (o serviço passa a ser o do pacote).
@@ -1373,6 +1388,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         const servico = servicoPorId[c.servicoId] || { duracaoMin: Math.round((new Date(c.fim) - new Date(c.inicio)) / 60000) };
         const inicioLocal = relogio.lerLocal(novo_inicio);
         if (!inicioLocal) return { erro: 'Horário inválido (use AAAA-MM-DDTHH:MM).' };
+        if (!diaPermitido(inicioLocal)) return { erro: `Pelo WhatsApp, os agendamentos são ${descreverDias(dados.agenteCfg?.diasAgenda || PADRAO_AGENTE.diasAgenda)}. Ofereça outro dia ou chame a equipe.` };
         const { fimLocal, problemas } = validarHorario({ profissionalId: c.profissionalId, servico, inicioLocal, modalidade: c.tipo === 'online' ? 'online' : 'presencial', ignorarId: c.id });
         if (problemas.length) return { erro: `Não é possível remarcar: ${problemas.map((p) => p.mensagem).join(' ')}` };
         const antes = relogio.descrever(c.inicio);

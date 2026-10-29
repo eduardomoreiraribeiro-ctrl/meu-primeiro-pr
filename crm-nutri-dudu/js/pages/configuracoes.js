@@ -459,7 +459,7 @@ NutriDudu.pages.configuracoes = (function () {
   // ---------------- Assistente do WhatsApp (fase 10) ----------------
 
   // Mesmos valores padrão do servidor (supabase/fonte/nucleo.js).
-  const PADRAO_AGENTE = { ativo: false, informacoes: '', horarioEquipe: 'segunda a sexta, das 8h às 18h', limiteMensalUsd: 50, maxRespostasDia: 30 };
+  const PADRAO_AGENTE = { ativo: false, informacoes: '', horarioEquipe: 'segunda a sexta, das 8h às 18h', limiteMensalUsd: 50, maxRespostasDia: 30, diasAgenda: [1, 2, 3, 4, 5] };
 
   function blocoAgente(cfg) {
     const { utils, permissoes, ui } = NutriDudu;
@@ -473,6 +473,7 @@ NutriDudu.pages.configuracoes = (function () {
         <p class="muted small card-sub">O Assistente Nutri Dudu responde no WhatsApp da clínica: tira dúvidas, mostra horários livres, agenda, remarca, confirma e informa saldo de pacote e pagamentos. Nunca dá orientação de saúde: nesses casos (e quando não sabe) chama a equipe.</p>
         <table class="tabela-simples">
           <tr><th scope="row">Horário da equipe</th><td>${utils.escapeHtml(cfg.horarioEquipe || '—')}</td></tr>
+          <tr><th scope="row">Dias que ele agenda</th><td>${utils.escapeHtml((cfg.diasAgenda || []).slice().sort((a, b) => a - b).map((d) => NutriDudu.config.DIAS_SEMANA[d]).join(', ') || '—')}</td></tr>
           <tr><th scope="row">Limites</th><td>até ${cfg.maxRespostasDia} respostas por conversa por dia · até US$ ${Number(cfg.limiteMensalUsd).toFixed(2)} por mês</td></tr>
           <tr><th scope="row">Informações da clínica</th><td class="pre-linha small">${cfg.informacoes ? utils.escapeHtml(cfg.informacoes) : '<span class="muted">Nenhuma ainda. Escreva endereço, formas de pagamento, regras de cancelamento…</span>'}</td></tr>
         </table>
@@ -529,6 +530,7 @@ NutriDudu.pages.configuracoes = (function () {
     if (!(Number.isFinite(d.limiteMensalUsd) && d.limiteMensalUsd >= 1 && d.limiteMensalUsd <= 2000)) erros.limiteMensalUsd = 'Use um valor entre 1 e 2000 dólares.';
     if (!(Number.isInteger(d.maxRespostasDia) && d.maxRespostasDia >= 1 && d.maxRespostasDia <= 200)) erros.maxRespostasDia = 'Use um número inteiro entre 1 e 200.';
     if (!d.horarioEquipe) erros.horarioEquipe = 'Informe quando a equipe responde (o assistente avisa os pacientes).';
+    if (!d.diasAgenda?.length) erros.diasAgenda = 'Escolha pelo menos um dia.';
     if (d.informacoes.length > 4000) erros.informacoes = 'Texto muito longo (máximo de 4000 caracteres).';
     return erros;
   }
@@ -546,6 +548,9 @@ NutriDudu.pages.configuracoes = (function () {
           ajuda: 'O que ele pode contar aos pacientes: endereço, estacionamento, formas de pagamento, regras de cancelamento, como funciona a consulta online. Serviços, preços, profissionais e a chave Pix ele já lê do sistema. Não coloque dados de pacientes aqui.',
         })}
         ${f.texto('horarioEquipe', 'Quando a equipe responde', cfg.horarioEquipe, { obrigatorio: true, ajuda: 'Ex.: segunda a sexta, das 8h às 18h. O assistente avisa isso quando chama a equipe.' })}
+        ${f.marcadores('diasAgenda', 'Dias em que o assistente oferece e agenda horários', [1, 2, 3, 4, 5, 6, 0].map((d) => [String(d), NutriDudu.config.DIAS_SEMANA[d]]), (cfg.diasAgenda || []).map(String), {
+          obrigatorio: true, ajuda: 'Mesmo que a agenda tenha outros dias, o assistente só oferece estes. A equipe continua podendo agendar qualquer dia pelo sistema.',
+        })}
         <div class="grade-2">
           ${f.texto('limiteMensalUsd', 'Limite de gasto por mês (US$)', cfg.limiteMensalUsd, { tipo: 'number', obrigatorio: true, atributos: 'min="1" max="2000" step="1"', ajuda: 'Ao atingir, o assistente para e passa as conversas para a equipe.' })}
           ${f.texto('maxRespostasDia', 'Máximo de respostas por conversa por dia', cfg.maxRespostasDia, { tipo: 'number', obrigatorio: true, atributos: 'min="1" max="200" step="1"', ajuda: 'Proteção contra conversas sem fim.' })}
@@ -556,6 +561,7 @@ NutriDudu.pages.configuracoes = (function () {
         horarioEquipe: f.valor(form, 'horarioEquipe'),
         limiteMensalUsd: f.numero(form, 'limiteMensalUsd'),
         maxRespostasDia: f.numero(form, 'maxRespostasDia'),
+        diasAgenda: f.marcadosDe(form, 'diasAgenda').map(Number),
       }),
       validar: validarAgente,
       salvar: (d) => salvarAgente(d, 'Assistente atualizado.'),
