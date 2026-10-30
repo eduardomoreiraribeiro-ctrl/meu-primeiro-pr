@@ -3,7 +3,7 @@ NutriDudu.pages = NutriDudu.pages || {};
 
 NutriDudu.pages.clientes = (function () {
   const FILTROS_PADRAO = {
-    busca: '', status: 'clientes', profissionalId: '', origem: '', objetivo: '', tag: '', situacao: '', clinico: '',
+    busca: '', status: 'todos', profissionalId: '', origem: '', objetivo: '', tag: '', situacao: '', clinico: '',
   };
   const SITUACOES = {
     com_alerta: 'Com alerta de retorno',
@@ -235,7 +235,10 @@ NutriDudu.pages.clientes = (function () {
     const { ui } = NutriDudu;
     const lista = ordenar(linhas, estado.ordem);
     if (!lista.length) {
-      return `<div class="card">${ui.vazio(total ? 'Ninguém encontrado com esses filtros.' : 'Nenhum cadastro ainda.')}</div>`;
+      // Filtro "clientes" sem nenhum cliente, mas com leads: explica e oferece mostrar todos.
+      const soLeads = total && estado.filtros.status === 'clientes' && !estado.filtros.busca
+        ? `<p class="small muted">Os cadastros que ainda não tiveram consulta realizada são <strong>leads</strong>. <button type="button" class="btn-link" data-ver-todos>Ver todos (clientes e leads)</button></p>` : '';
+      return `<div class="card">${ui.vazio(total ? 'Ninguém encontrado com esses filtros.' : 'Nenhum cadastro ainda.')}${soLeads}</div>`;
     }
     return `
       <div class="card card-tabela so-desktop">${tabelaHtml(lista, mostrarProfissional)}</div>
@@ -330,6 +333,12 @@ NutriDudu.pages.clientes = (function () {
       contagem.textContent = `${filtradas.length} de ${base} ${CONTAGEM[fl.status]}`;
       // Com uma só profissional, a coluna não acrescenta nada.
       resultados.innerHTML = resultadosHtml(filtradas, linhas.length, profissionais.filter((p) => p.ativo).length > 1);
+      resultados.querySelector('[data-ver-todos]')?.addEventListener('click', () => {
+        fl.status = 'todos';
+        const sel = resultados.parentElement.querySelector('[data-filtro="status"]');
+        if (sel) sel.value = 'todos';
+        atualizar();
+      });
     };
 
     container.querySelectorAll('[data-filtro]').forEach((el) => {
