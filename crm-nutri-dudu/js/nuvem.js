@@ -251,7 +251,15 @@ NutriDudu.nuvem = (function () {
     for (const t of TABELAS) {
       const novos = Array.isArray(colecoes[t]) ? colecoes[t] : [];
       const novosIds = new Set(novos.map((x) => x.id));
-      const atuais = (await lerTabela(t)).map((l) => l.id);
+      let atuais;
+      try {
+        atuais = (await lerTabela(t)).map((l) => l.id);
+      } catch (erro) {
+        // Tabela nova ainda não criada: segue sem ela, para não deixar a importação pela metade.
+        if (!OPCIONAIS.includes(t)) throw erro;
+        if (novos.length) console.warn(`${novos.length} registro(s) de "${t}" não foram importados: rode o supabase/schema.sql atualizado.`);
+        continue;
+      }
       await apagar(t, atuais.filter((id) => !novosIds.has(id)));
       if (novos.length) await gravarLote(t, novos);
     }
