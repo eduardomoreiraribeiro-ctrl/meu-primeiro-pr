@@ -2309,7 +2309,14 @@ const NutriDuduAutomacoes = (() => {
       if (!STATUS_FUTURO.includes(consulta.status)) return false;
       if (new Date(consulta.inicio).getTime() - relogio.agora().getTime() < 2 * HORA) return false;
       if (consulta.preAnamnese?.status === 'preenchida') return false;
-      return !dados.consultas.some((c) => c.pessoaId === consulta.pessoaId && c.status === 'realizada');
+      const daPessoa = dados.consultas.filter((c) => c.pessoaId === consulta.pessoaId && c.id !== consulta.id);
+      if (daPessoa.some((c) => c.status === 'realizada')) return false;
+      // Um formulário só por pessoa: vai para a consulta futura mais próxima. Se outra consulta
+      // dela já recebeu (ou já tem a pré-anamnese preenchida), não manda de novo.
+      const agoraMs = relogio.agora().getTime();
+      return !daPessoa.some((c) => STATUS_FUTURO.includes(c.status) && new Date(c.inicio).getTime() > agoraMs && (
+        ['enviada', 'preenchida'].includes(c.preAnamnese?.status) || c.automacoes?.preAnamnese?.ok
+        || (new Date(c.inicio) < new Date(consulta.inicio) && new Date(c.inicio).getTime() - agoraMs >= 2 * HORA)));
     }
 
     async function enviarPre({ cfg, dados, conversas, consulta, pessoa, lembrete = false, forcarTexto = false }) {
