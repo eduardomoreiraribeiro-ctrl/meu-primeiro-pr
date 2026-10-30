@@ -839,6 +839,17 @@ NutriDudu.mensagensAutomaticas = (function () {
       exemplo: ['Mariana', 'Dra. Ana Lima', 'terça-feira, 03/11 às 10:00'],
       botoes: ['Quero este horário', 'Não posso'],
     },
+    posConsulta: {
+      titulo: 'Depois da consulta',
+      quando: 'No dia seguinte à consulta realizada (até 4 dias depois), no máximo 1 a cada 30 dias por pessoa. "Ótima" agradece e pede uma avaliação no Google (se o link estiver informado); "Poderia ser melhor" avisa a equipe.',
+      nomePadrao: 'nutridudu_pos_consulta',
+      // Pedido de opinião que leva à avaliação no Google: a Meta trata como Marketing.
+      categoria: 'MARKETING',
+      corpo: () => 'Olá, {{1}}! Como foi a sua consulta com {{2}}? Sua opinião ajuda a gente a cuidar cada vez melhor de você. Toque em uma opção abaixo.',
+      variaveis: ['primeiro nome', 'profissional'],
+      exemplo: ['Mariana', 'Dra. Ana Lima'],
+      botoes: ['Ótima', 'Boa', 'Poderia ser melhor'],
+    },
   };
 
   const PADRAO = {
@@ -849,6 +860,7 @@ NutriDudu.mensagensAutomaticas = (function () {
     horaFim: 20,
     linkSistema: '',
     telefonesEquipe: '',
+    linkAvaliacao: '',
   };
 
   /** Celulares da equipe para os avisos: "(27) 99999-0000, 27988887777" → ['5527999990000', '5527988887777']. */
@@ -867,9 +879,12 @@ NutriDudu.mensagensAutomaticas = (function () {
 
   const preencher = (texto, valores) => texto.replace(/\{\{(\d+)\}\}/g, (_, n) => String(valores[Number(n) - 1] ?? ''));
 
+  /** Respostas do "Depois da consulta" (botões): rótulo para a tela. */
+  const AVALIACOES = { otima: '😍 Ótima', boa: '🙂 Boa', melhorar: '😕 Poderia ser melhor' };
+
   const CATEGORIAS = { UTILITY: 'Utilidade', MARKETING: 'Marketing' };
 
-  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, telefonesDaEquipe };
+  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, AVALIACOES, telefonesDaEquipe };
 })();
 
 // ===== js/espera.js =====
@@ -1908,6 +1923,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       const payload = String(msg.button?.payload || msg.interactive?.button_reply?.id || '');
       const [acaoBotao, consultaBotaoId] = payload.split(':');
       const ehVaga = acaoBotao === 'vaga' && Boolean(automacoes?.responderVaga);
+      const ehAvaliacao = acaoBotao === 'avaliacao' && Boolean(automacoes?.responderAvaliacao);
       const consultaBotao = ['confirmar', 'remarcar'].includes(acaoBotao) && consultaBotaoId ? await repo.pega('consultas', consultaBotaoId) : null;
       const consultaValida = consultaBotao && consultaBotao.pessoaId === pessoa.id && STATUS_FUTURO.includes(consultaBotao.status) && new Date(consultaBotao.inicio) > relogio.agora();
       if (acaoBotao === 'remarcar' && consultaValida) texto = `${texto} (quero remarcar a consulta de ${relogio.descrever(consultaBotao.inicio)})`;
@@ -1929,7 +1945,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       if (passouAAguardar && !conversaNova) conversa.aguardandoDesde = recebidaEm;
       await repo.grava('conversas', conversa);
       // Assistente desligado (ou conversa reaberta sem ele): avisa a equipe no celular.
-      const ehBotao = ['confirmar', 'remarcar'].includes(acaoBotao) || ehVaga;
+      const ehBotao = ['confirmar', 'remarcar'].includes(acaoBotao) || ehVaga || ehAvaliacao;
       if (passouAAguardar && !ehBotao && !/^\s*(parar|pare|stop|sair)\s*[.!]?\s*$/i.test(texto)) await avisar(conversa);
 
       // "PARAR": desliga as mensagens automáticas para esta pessoa.
@@ -1945,6 +1961,26 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         await enviarComoAgente(conversa, 'Pronto! Você não vai mais receber mensagens automáticas da clínica. Se precisar de algo, é só escrever por aqui. 🙂');
         await repo.grava('conversas', conversa);
         return { parar: true };
+      }
+
+      // Depois da consulta: "Ótima" / "Boa" / "Poderia ser melhor".
+      if (ehAvaliacao) {
+        const [, nota, consultaId] = payload.split(':');
+        let r;
+        try {
+          r = await automacoes.responderAvaliacao({ pessoa, nota, consultaId });
+        } catch (erro) {
+          console.error('Avaliação:', erro);
+          r = { texto: 'Obrigado pela resposta! 🙂', resultado: 'erro' };
+        }
+        if (r.texto) await enviarComoAgente(conversa, r.texto);
+        if (r.equipe) {
+          await marcarAguardando(conversa, r.equipe, r.resumo);
+        } else {
+          if (passouAAguardar) conversa.status = ativo ? 'agente' : 'encerrada';
+          await repo.grava('conversas', conversa);
+        }
+        return { avaliacao: r.resultado };
       }
 
       // Lista de espera: "Quero este horário" reserva na hora (se ainda estiver livre); "Não posso" mantém na lista.
@@ -2608,6 +2644,31 @@ const NutriDuduAutomacoes = (() => {
       // 10. Lista de espera: horários liberados (cancelados ou remarcados) vão para quem está esperando.
       if (cfg.ativas.vagaEspera) await oferecerVagas({ cfg, dados, conversas, pessoaPor, profPor, tentar, agoraMs });
 
+      // 11. Depois da consulta: no dia seguinte à consulta realizada, pergunta como foi (1 a cada 30 dias por pessoa).
+      const hojeIso = utils.isoDia(relogio.agoraLocal());
+      const perguntadas = new Set();
+      for (const c of [...consultas].sort((a, b) => b.inicio.localeCompare(a.inicio))) {
+        if (c.status !== 'realizada' || c.automacoes?.posConsulta || c.avaliacaoPaciente) continue;
+        if (utils.isoDia(relogio.paraLocal(c.fim || c.inicio)) >= hojeIso) continue; // só a partir do dia seguinte
+        if (agoraMs - new Date(c.fim || c.inicio).getTime() > 4 * DIA) continue;
+        const pessoa = pessoaPor[c.pessoaId];
+        if (!pessoa || perguntadas.has(pessoa.id) || jaFeito(pessoa.automacoes?.posConsulta, 30 * DIA)) continue;
+        perguntadas.add(pessoa.id);
+        const botoes = ['otima', 'boa', 'melhorar'].map((n) => `avaliacao:${n}:${c.id}`);
+        await tentar('posConsulta', pessoa, async () => {
+          const r = await enviar({
+            cfg, automacao: 'posConsulta', pessoa, dados, conversas,
+            valores: [primeiroNome(pessoa.nome), nomeProf(c.profissionalId)],
+            botoes,
+            botoesLivres: MODELOS.posConsulta.botoes.map((titulo, i) => ({ id: botoes[i], titulo })),
+          });
+          const marca = { em: agoraIso(), ok: r.ok, ...(r.via ? { via: r.via } : {}), ...(r.ok ? {} : { erro: r.motivo }) };
+          await marcar('consultas', c.id, 'posConsulta', marca);
+          await marcar('pessoas', pessoa.id, 'posConsulta', marca);
+          return r;
+        }, relogio.descrever(c.inicio));
+      }
+
       await salvarStatus(relatorio, configuracoes);
       return relatorio;
     }
@@ -2784,6 +2845,46 @@ const NutriDuduAutomacoes = (() => {
       return { texto, consulta: nova, resultado: antecipar ? 'antecipada' : 'agendado' };
     }
 
+    // ---------------- Depois da consulta: resposta aos botões ----------------
+
+    /**
+     * "Ótima" agradece e pede a avaliação no Google (se o link estiver configurado);
+     * "Boa" agradece e abre espaço para sugestões; "Poderia ser melhor" chama a equipe.
+     * Devolve { texto, equipe?, resumo?, resultado }.
+     */
+    async function responderAvaliacao({ pessoa, nota, consultaId }) {
+      if (!['otima', 'boa', 'melhorar'].includes(nota)) return { texto: '', resultado: 'invalida' };
+      const consulta = consultaId ? await repo.pega('consultas', consultaId) : null;
+      if (!consulta || consulta.pessoaId !== pessoa.id) {
+        return { texto: 'Obrigado pela resposta! 🙂', resultado: 'nao_encontrada' };
+      }
+      const agora = agoraIso();
+      await repo.grava('consultas', { ...consulta, avaliacaoPaciente: { nota, em: agora }, atualizadoEm: agora });
+      const quando = relogio.descrever(consulta.inicio).replace(/^./, (x) => x.toLowerCase());
+      await repo.cria('interacoes', {
+        id: uidDe('int'), pessoaId: pessoa.id, dataHora: agora, tipo: 'nota', autor: 'paciente', automatico: true,
+        descricao: `Avaliou a consulta de ${quando}: ${NutriDudu.mensagensAutomaticas.AVALIACOES[nota]}.`, criadoEm: agora, atualizadoEm: agora,
+      });
+      const nome = primeiroNome(pessoa.nome);
+      if (nota === 'otima') {
+        const cfg = configuracao((await repo.pega('configuracoes', 'automacoes')) || {});
+        const link = /^https:\/\/\S+$/.test(String(cfg.linkAvaliacao || '').trim()) ? cfg.linkAvaliacao.trim() : '';
+        return {
+          texto: `Que bom saber, ${nome}! 💚 Obrigado pela confiança.${link ? ` Se puder, conte como foi numa avaliação no Google. Leva 1 minuto e ajuda outras pessoas a conhecerem o nosso trabalho: ${link}` : ''}`,
+          resultado: 'otima',
+        };
+      }
+      if (nota === 'boa') {
+        return { texto: `Obrigado pelo retorno, ${nome}! 🙂 Se quiser contar o que podemos melhorar, é só escrever aqui.`, resultado: 'boa' };
+      }
+      return {
+        texto: `Obrigado por contar, ${nome}. Sentimos muito que não foi como você esperava. Já avisei a nossa equipe, e alguém vai falar com você em breve. 🙏`,
+        equipe: 'Avaliou a consulta como "poderia ser melhor"',
+        resumo: `Avaliação da consulta de ${quando}: poderia ser melhor. Entrar em contato para entender o que aconteceu.`,
+        resultado: 'melhorar',
+      };
+    }
+
     /** Resumo da última execução, para a tela de Configurações. */
     async function salvarStatus(relatorio, configuracoes) {
       const agora = agoraIso();
@@ -2796,7 +2897,7 @@ const NutriDuduAutomacoes = (() => {
       else await repo.cria('configuracoes', { ...doc, criadoEm: agora });
     }
 
-    return { rodar, enviarPreAnamnese, enviar, avisarEquipe, responderVaga };
+    return { rodar, enviarPreAnamnese, enviar, avisarEquipe, responderVaga, responderAvaliacao };
   }
 
   // =====================================================================

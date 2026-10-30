@@ -620,6 +620,7 @@ NutriDudu.pages.configuracoes = (function () {
         <p class="muted small card-sub">Lembretes e avisos que a clínica envia pelo WhatsApp. Se a pessoa escreveu nas últimas 24 horas, vai como mensagem normal (sem custo); se não, usa o <strong>modelo aprovado pela Meta</strong>. Só para quem deu consentimento de WhatsApp e não pediu para PARAR, de segunda a sábado, das ${cfg.horaInicio}h às ${cfg.horaFim}h.</p>
         <ul class="lista-automacoes">${itens}</ul>
         <p class="small"><strong>Avisos para a equipe vão para:</strong> ${MA.telefonesDaEquipe(cfg.telefonesEquipe).length ? utils.escapeHtml(MA.telefonesDaEquipe(cfg.telefonesEquipe).map((t) => utils.formatarTelefone(t.slice(2))).join(', ')) : '<span class="muted">nenhum celular informado (Editar)</span>'}</p>
+        <p class="small"><strong>Avaliação no Google:</strong> ${cfg.linkAvaliacao ? `<a href="${utils.escapeHtml(cfg.linkAvaliacao)}" target="_blank" rel="noopener">${utils.escapeHtml(cfg.linkAvaliacao)}</a>` : '<span class="muted">link não informado (Editar): quem responder "Ótima" só recebe o agradecimento</span>'}</p>
         <p class="small"><strong>Link da pré-anamnese:</strong> ${cfg.linkSistema ? `<code>${utils.escapeHtml(cfg.linkSistema)}/pre-anamnese.html</code>` : '<span class="muted">endereço do sistema ainda não informado (Editar)</span>'}</p>
         ${status?.erros?.length ? `<div class="alerta alerta-aviso small"><strong>Erros na última verificação:</strong><ul>${status.erros.map((e) => `<li>${utils.escapeHtml(MA.MODELOS[e.automacao]?.titulo || e.automacao)} — ${utils.escapeHtml(e.pessoa || '')}: ${utils.escapeHtml(e.motivo)}</li>`).join('')}</ul></div>` : ''}
         <p class="muted small" data-status-automacoes>${utils.escapeHtml(naNuvem ? ultima : 'Demonstração: as mensagens não são enviadas de verdade (precisa da nuvem, do WhatsApp e do agendamento — veja supabase/AUTOMACOES.md).')}</p>
@@ -679,6 +680,7 @@ NutriDudu.pages.configuracoes = (function () {
     const ligadas = Object.values(d.ativas).some(Boolean);
     if (d.ativas.preAnamnese && !/^https:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Para a pré-anamnese, informe o endereço do sistema (começa com https://).';
     else if (d.linkSistema && !/^https?:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Endereço inválido.';
+    if (d.linkAvaliacao && !/^https:\/\/\S+$/.test(d.linkAvaliacao)) erros.linkAvaliacao = 'Cole o link completo, começando com https://.';
     if (d.ativas.avisoEquipe && !NutriDudu.mensagensAutomaticas.telefonesDaEquipe(d.telefonesEquipe).length) erros.telefonesEquipe = 'Informe pelo menos um celular com DDD.';
     if (!(Number.isInteger(d.horaInicio) && d.horaInicio >= 6 && d.horaInicio <= 12)) erros.horaInicio = 'Entre 6 e 12.';
     if (!(Number.isInteger(d.horaFim) && d.horaFim >= 14 && d.horaFim <= 22 && d.horaFim > d.horaInicio)) erros.horaFim = 'Entre 14 e 22.';
@@ -709,6 +711,10 @@ NutriDudu.pages.configuracoes = (function () {
           placeholder: '(27) 99999-0000, (27) 98888-0000',
           ajuda: 'Recebem o "Aviso para a equipe" quando um paciente fica esperando resposta. Separe por vírgula. Enquanto usar o número de teste da Meta, cada celular precisa estar na lista de destinatários de teste.',
         })}
+        ${f.texto('linkAvaliacao', 'Link para avaliar a clínica no Google', cfg.linkAvaliacao, {
+          placeholder: 'https://g.page/r/…/review',
+          ajuda: 'Vai para quem responder "Ótima" na mensagem "Depois da consulta". No Perfil da Empresa no Google, toque em "Pedir avaliações" e copie o link.',
+        })}
         <div class="grade-2">
           ${f.texto('horaInicio', 'Enviar a partir das (hora)', cfg.horaInicio, { tipo: 'number', atributos: 'min="6" max="12" step="1"' })}
           ${f.texto('horaFim', 'Até as (hora)', cfg.horaFim, { tipo: 'number', atributos: 'min="14" max="22" step="1"' })}
@@ -718,6 +724,7 @@ NutriDudu.pages.configuracoes = (function () {
       ler: (form) => ({
         linkSistema: f.valor(form, 'linkSistema').replace(/\/+$/, '').replace(/\/index\.html$/, ''),
         telefonesEquipe: f.valor(form, 'telefonesEquipe'),
+        linkAvaliacao: f.valor(form, 'linkAvaliacao'),
         horaInicio: f.numero(form, 'horaInicio'),
         horaFim: f.numero(form, 'horaFim'),
         ativas: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.marcado(form, `ativa_${id}`)])),

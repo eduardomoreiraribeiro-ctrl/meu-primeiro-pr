@@ -253,6 +253,8 @@ NutriDudu.seed = (function () {
     // Mensagens automáticas (fase 10c): lembrete enviado e confirmado pelo botão; pré-anamneses.
     const porId = (id) => consultas.find((x) => x.id === id);
     Object.assign(porId('con_19'), { automacoes: { lembrete: { em: diaHora(0, '09:00'), ok: true, via: 'modelo' } } });
+    // Depois da consulta: a Mariana respondeu "Ótima" sobre a última consulta.
+    Object.assign(porId('con_2'), { automacoes: { posConsulta: { em: diaHora(-39, '10:00'), ok: true, via: 'modelo' } }, avaliacaoPaciente: { nota: 'otima', em: diaHora(-39, '10:20') } });
     Object.assign(porId('con_11'), {
       automacoes: { preAnamnese: { em: diaHora(-4, '08:46'), ok: true, via: 'texto' } },
       preAnamnese: { status: 'preenchida', enviadaEm: diaHora(-4, '08:46'), preenchidaEm: diaHora(-2, '19:40') },

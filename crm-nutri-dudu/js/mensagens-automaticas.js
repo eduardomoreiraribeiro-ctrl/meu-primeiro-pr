@@ -103,6 +103,17 @@ NutriDudu.mensagensAutomaticas = (function () {
       exemplo: ['Mariana', 'Dra. Ana Lima', 'terça-feira, 03/11 às 10:00'],
       botoes: ['Quero este horário', 'Não posso'],
     },
+    posConsulta: {
+      titulo: 'Depois da consulta',
+      quando: 'No dia seguinte à consulta realizada (até 4 dias depois), no máximo 1 a cada 30 dias por pessoa. "Ótima" agradece e pede uma avaliação no Google (se o link estiver informado); "Poderia ser melhor" avisa a equipe.',
+      nomePadrao: 'nutridudu_pos_consulta',
+      // Pedido de opinião que leva à avaliação no Google: a Meta trata como Marketing.
+      categoria: 'MARKETING',
+      corpo: () => 'Olá, {{1}}! Como foi a sua consulta com {{2}}? Sua opinião ajuda a gente a cuidar cada vez melhor de você. Toque em uma opção abaixo.',
+      variaveis: ['primeiro nome', 'profissional'],
+      exemplo: ['Mariana', 'Dra. Ana Lima'],
+      botoes: ['Ótima', 'Boa', 'Poderia ser melhor'],
+    },
   };
 
   const PADRAO = {
@@ -113,6 +124,7 @@ NutriDudu.mensagensAutomaticas = (function () {
     horaFim: 20,
     linkSistema: '',
     telefonesEquipe: '',
+    linkAvaliacao: '',
   };
 
   /** Celulares da equipe para os avisos: "(27) 99999-0000, 27988887777" → ['5527999990000', '5527988887777']. */
@@ -131,7 +143,10 @@ NutriDudu.mensagensAutomaticas = (function () {
 
   const preencher = (texto, valores) => texto.replace(/\{\{(\d+)\}\}/g, (_, n) => String(valores[Number(n) - 1] ?? ''));
 
+  /** Respostas do "Depois da consulta" (botões): rótulo para a tela. */
+  const AVALIACOES = { otima: '😍 Ótima', boa: '🙂 Boa', melhorar: '😕 Poderia ser melhor' };
+
   const CATEGORIAS = { UTILITY: 'Utilidade', MARKETING: 'Marketing' };
 
-  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, telefonesDaEquipe };
+  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, AVALIACOES, telefonesDaEquipe };
 })();

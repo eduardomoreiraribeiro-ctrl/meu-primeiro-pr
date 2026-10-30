@@ -16,6 +16,7 @@ Faça isto depois que o WhatsApp e o Assistente estiverem funcionando ([`WHATSAP
 | **Link da consulta online** | Entre 3 horas e 15 minutos antes de cada consulta online, com o link da sala de vídeo do profissional (Configurações › Profissionais › Editar dados). O assistente também envia o link ao agendar online, e a confirmação pelo botão já vai com ele. |
 | **Aviso para a equipe** | Quando uma conversa passa a aguardar a equipe, vai um aviso para os **celulares da equipe** cadastrados em Mensagens automáticas (não para o paciente). Fora do horário de envio, sai no começo do próximo. Só o nome do paciente e o motivo — nada de saúde. |
 | **Horário liberado (lista de espera)** | Quando uma consulta é cancelada ou remarcada, o horário é oferecido a até 3 pessoas da **lista de espera** (Agenda › Lista de espera) que combinam com ele. Vem com os botões **Quero este horário** e **Não posso**. Quem tocar primeiro fica com o horário: a consulta é marcada sozinha. Só horários com pelo menos 3 horas de antecedência. |
+| **Depois da consulta** | No dia seguinte à consulta realizada (até 4 dias depois), no máximo 1 vez a cada 30 dias por pessoa. Pergunta como foi, com os botões **Ótima**, **Boa** e **Poderia ser melhor**. "Ótima" agradece e manda o link para avaliar a clínica no Google. "Boa" agradece e convida a dar sugestões. "Poderia ser melhor" pede desculpas e avisa a equipe. A resposta fica nos detalhes da consulta e no histórico. |
 
 Regras:
 - Só recebe quem deu **consentimento de WhatsApp** e não pediu para **PARAR**.
@@ -106,7 +107,8 @@ Fora das 24 horas, o WhatsApp só deixa a clínica escrever usando **modelos apr
    - **Corpo:** cole o texto. A Meta mostra as variáveis `{{1}}`, `{{2}}`…; preencha os **exemplos** que o sistema mostra.
    - **Botões:** **Resposta rápida**, nessa ordem:
      - no lembrete: `Confirmar` e `Remarcar`;
-     - no horário liberado: `Quero este horário` e `Não posso`.
+     - no horário liberado: `Quero este horário` e `Não posso`;
+     - depois da consulta: `Ótima`, `Boa` e `Poderia ser melhor`.
 4. Envie para análise. Costuma ser aprovado em minutos, às vezes em algumas horas.
 5. A Meta pode trocar a categoria (por exemplo, de Utilidade para Marketing). Tudo bem: o sistema funciona igual, só muda o preço.
 
@@ -115,8 +117,10 @@ Fora das 24 horas, o WhatsApp só deixa a clínica escrever usando **modelos apr
 1. Abra **Configurações › Mensagens automáticas › Editar**.
 2. Em **Endereço do sistema**, confira se está o endereço em que você abre o sistema (ex.: `https://eduardomoreiraribeiro-ctrl.github.io/meu-primeiro-pr/crm-nutri-dudu`).
    - O link da pré-anamnese usa esse endereço.
-3. Ligue **só** as mensagens cujo modelo já foi **aprovado**. O nome do modelo precisa ser igual ao da Meta.
-4. Salve.
+3. Em **Link para avaliar a clínica no Google**, cole o link de avaliação. No Perfil da Empresa no Google, toque em **Pedir avaliações** e copie o link.
+   - Ele vai para quem responder "Ótima" depois da consulta.
+4. Ligue **só** as mensagens cujo modelo já foi **aprovado**. O nome do modelo precisa ser igual ao da Meta.
+5. Salve.
 
 ## 7. Testar
 

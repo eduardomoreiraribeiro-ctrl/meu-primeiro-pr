@@ -948,6 +948,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       const payload = String(msg.button?.payload || msg.interactive?.button_reply?.id || '');
       const [acaoBotao, consultaBotaoId] = payload.split(':');
       const ehVaga = acaoBotao === 'vaga' && Boolean(automacoes?.responderVaga);
+      const ehAvaliacao = acaoBotao === 'avaliacao' && Boolean(automacoes?.responderAvaliacao);
       const consultaBotao = ['confirmar', 'remarcar'].includes(acaoBotao) && consultaBotaoId ? await repo.pega('consultas', consultaBotaoId) : null;
       const consultaValida = consultaBotao && consultaBotao.pessoaId === pessoa.id && STATUS_FUTURO.includes(consultaBotao.status) && new Date(consultaBotao.inicio) > relogio.agora();
       if (acaoBotao === 'remarcar' && consultaValida) texto = `${texto} (quero remarcar a consulta de ${relogio.descrever(consultaBotao.inicio)})`;
@@ -969,7 +970,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       if (passouAAguardar && !conversaNova) conversa.aguardandoDesde = recebidaEm;
       await repo.grava('conversas', conversa);
       // Assistente desligado (ou conversa reaberta sem ele): avisa a equipe no celular.
-      const ehBotao = ['confirmar', 'remarcar'].includes(acaoBotao) || ehVaga;
+      const ehBotao = ['confirmar', 'remarcar'].includes(acaoBotao) || ehVaga || ehAvaliacao;
       if (passouAAguardar && !ehBotao && !/^\s*(parar|pare|stop|sair)\s*[.!]?\s*$/i.test(texto)) await avisar(conversa);
 
       // "PARAR": desliga as mensagens automáticas para esta pessoa.
@@ -985,6 +986,26 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         await enviarComoAgente(conversa, 'Pronto! Você não vai mais receber mensagens automáticas da clínica. Se precisar de algo, é só escrever por aqui. 🙂');
         await repo.grava('conversas', conversa);
         return { parar: true };
+      }
+
+      // Depois da consulta: "Ótima" / "Boa" / "Poderia ser melhor".
+      if (ehAvaliacao) {
+        const [, nota, consultaId] = payload.split(':');
+        let r;
+        try {
+          r = await automacoes.responderAvaliacao({ pessoa, nota, consultaId });
+        } catch (erro) {
+          console.error('Avaliação:', erro);
+          r = { texto: 'Obrigado pela resposta! 🙂', resultado: 'erro' };
+        }
+        if (r.texto) await enviarComoAgente(conversa, r.texto);
+        if (r.equipe) {
+          await marcarAguardando(conversa, r.equipe, r.resumo);
+        } else {
+          if (passouAAguardar) conversa.status = ativo ? 'agente' : 'encerrada';
+          await repo.grava('conversas', conversa);
+        }
+        return { avaliacao: r.resultado };
       }
 
       // Lista de espera: "Quero este horário" reserva na hora (se ainda estiver livre); "Não posso" mantém na lista.

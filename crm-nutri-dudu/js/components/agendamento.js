@@ -420,7 +420,9 @@ NutriDudu.agendamento = (function () {
     const pre = c.preAnamnese;
     if (pre?.status === 'preenchida') partes.push(linha('Pré-anamnese', `${ui.badge('Preenchida', 'sucesso')} <span class="muted small">${quando(pre.preenchidaEm)} · a revisar na ficha</span>`));
     else if (pre?.status === 'enviada') partes.push(linha('Pré-anamnese', `${ui.badge('Enviada, ainda não preenchida', 'alerta')} <span class="muted small">${quando(pre.enviadaEm)}${pre.lembreteEm ? ' · lembrete enviado' : ''}</span>`));
-    else if (c.automacoes?.preAnamnese && !c.automacoes.preAnamnese.ok) partes.push(linha('Pré-anamnese', `${ui.badge('Não enviada', 'perigo')} <span class="muted small">${utils.escapeHtml(c.automacoes.preAnamnese.erro || '')}</span>`));
+    if (c.avaliacaoPaciente) partes.push(linha('Avaliação do paciente', `${utils.escapeHtml(NutriDudu.mensagensAutomaticas.AVALIACOES[c.avaliacaoPaciente.nota] || c.avaliacaoPaciente.nota)} <span class="muted small">${quando(c.avaliacaoPaciente.em)}</span>`));
+    else if (c.automacoes?.posConsulta?.ok) partes.push(linha('Avaliação do paciente', `<span class="muted small">Pergunta enviada em ${quando(c.automacoes.posConsulta.em)}, sem resposta</span>`));
+    if (c.automacoes?.preAnamnese && !c.automacoes.preAnamnese.ok && pre?.status !== 'preenchida' && pre?.status !== 'enviada') partes.push(linha('Pré-anamnese', `${ui.badge('Não enviada', 'perigo')} <span class="muted small">${utils.escapeHtml(c.automacoes.preAnamnese.erro || '')}</span>`));
     return partes.join('');
   }
 
