@@ -469,8 +469,53 @@ const NutriDuduAutomacoes = (() => {
         }, relogio.descrever(c.inicio));
       }
 
+      // 12. Resumo do dia para a equipe (uma vez por dia, no começo do horário de envio).
+      if (cfg.ativas.resumoDia) {
+        const r = await enviarResumoDia({ cfg, configuracoes, pessoas, consultas, lancamentos, conversas, profissionais });
+        if (r?.ok) relatorio.enviados.push({ automacao: 'resumoDia', pessoa: 'equipe', via: r.via });
+        else if (r?.erro) relatorio.erros.push({ automacao: 'resumoDia', pessoa: 'equipe', motivo: r.motivo });
+        else if (r?.motivo) relatorio.pulados.push({ automacao: 'resumoDia', pessoa: 'equipe', motivo: r.motivo });
+      }
+
       await salvarStatus(relatorio, configuracoes);
       return relatorio;
+    }
+
+    // ---------------- Resumo do dia ----------------
+
+    async function enviarResumoDia({ cfg, configuracoes, pessoas, consultas, lancamentos, conversas, profissionais }) {
+      const hoje = utils.isoDia(relogio.agoraLocal());
+      const marca = configuracoes.find((c) => c.id === 'resumo_dia');
+      if (marca?.dia === hoje && (marca.ok || relogio.agora().getTime() - new Date(marca.em).getTime() < NOVA_TENTATIVA_APOS_ERRO)) return null;
+      const destinos = telefonesDaEquipe(cfg.telefonesEquipe);
+      if (!destinos.length) return { ok: false, motivo: 'nenhum celular da equipe cadastrado' };
+      const espera = await lerOpcional('espera');
+      const resumo = NutriDudu.resumoDia.montar(
+        { consultas, pessoas, lancamentos, conversas, espera, profissionais },
+        { agora: relogio.agora(), local: (iso) => relogio.paraLocal(iso) },
+      );
+      const nomeModelo = String(cfg.modelos.resumoDia || '').trim();
+      let enviados = 0;
+      let viaUsada = null;
+      let erro = null;
+      for (const para of destinos) {
+        const doDestino = conversas.find((c) => S.chaveTelefone(c.waId || c.telefone) === S.chaveTelefone(para));
+        const livre = janelaAberta(doDestino);
+        if (!livre && !nomeModelo) { erro = 'sem modelo aprovado configurado'; continue; }
+        try {
+          if (livre) await whatsapp.enviarTexto(para, resumo.texto);
+          else await whatsapp.enviarModelo(para, { nome: nomeModelo, idioma: cfg.idioma || 'pt_BR', parametros: resumo.parametros });
+          enviados++;
+          viaUsada = viaUsada || (livre ? 'texto' : 'modelo');
+        } catch (e) {
+          erro = e.message || String(e);
+        }
+      }
+      const agora = agoraIso();
+      const doc = { id: 'resumo_dia', dia: hoje, em: agora, ok: enviados > 0, destinos: enviados, ...(enviados ? {} : { erro }), atualizadoEm: agora };
+      if (marca) await repo.grava('configuracoes', { ...marca, ...doc });
+      else await repo.cria('configuracoes', { ...doc, criadoEm: agora });
+      return enviados ? { ok: true, via: viaUsada } : { ok: false, motivo: erro, erro: true };
     }
 
     // ---------------- Lista de espera ----------------

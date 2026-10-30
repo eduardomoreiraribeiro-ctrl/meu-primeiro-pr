@@ -144,6 +144,16 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
   - **Conversas:** as mensagens automáticas aparecem com ⏰.
 - **Servidor:** nova função `supabase/functions/whatsapp-automacoes`, chamada a cada 30 minutos pelo agendamento do Supabase (Cron) e usada pelo formulário. Os textos dos modelos ficam em `js/mensagens-automaticas.js`, compartilhado entre o sistema e o servidor.
 
+### Resumo do dia
+
+- Toda manhã, de segunda a sábado, os **celulares da equipe** recebem pelo WhatsApp o resumo do dia:
+  - consultas de hoje (horário e primeiro nome, ✓ para as confirmadas);
+  - quem não confirmou e pré-anamneses para revisar;
+  - conversas aguardando a equipe e pagamentos atrasados;
+  - lista de espera e aniversariantes.
+- Se o celular da equipe escreveu para o número nas últimas 24 horas, chega como mensagem normal, em lista. Fora disso, vai pelo modelo aprovado, num parágrafo só.
+- **Configurações › Mensagens automáticas › Ver o resumo de hoje** mostra o texto com os dados do momento. O texto é montado em `js/resumo-dia.js`, usado pelo sistema e pelo servidor.
+
 ### Depois da consulta
 
 - **No dia seguinte à consulta realizada**, o paciente recebe pelo WhatsApp "Como foi a sua consulta?", com os botões **Ótima**, **Boa** e **Poderia ser melhor**. A pergunta sai no máximo 1 vez a cada 30 dias por pessoa.

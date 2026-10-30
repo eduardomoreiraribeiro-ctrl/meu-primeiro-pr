@@ -592,6 +592,7 @@ Toda ação do agente vira uma **interação automática** com autor "agente de 
 | Pagamento em atraso | 1 dia após o vencimento (no máximo 1 por semana) | aviso educado com a chave Pix |
 | Reativação | cliente sumido há 120 dias | convite para voltar |
 | Agradecimento de indicação | quando um indicado vira cliente | agradece a quem indicou |
+| **Resumo do dia (equipe)** | 1 vez por dia, de segunda a sábado, no começo do horário de envio | consultas de hoje, sem confirmar, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes, no celular da equipe |
 | **Depois da consulta** | dia seguinte à consulta realizada (1 a cada 30 dias por pessoa) | "Como foi a sua consulta?" com Ótima / Boa / Poderia ser melhor; "Ótima" recebe o link de avaliação no Google, "Poderia ser melhor" chama a equipe |
 | **Horário liberado (lista de espera)** | consulta cancelada ou remarcada (com pelo menos 3 h de antecedência) | oferece o horário a até 3 pessoas da lista de espera que combinam com ele; botões "Quero este horário" / "Não posso"; fica com quem confirmar primeiro |
 

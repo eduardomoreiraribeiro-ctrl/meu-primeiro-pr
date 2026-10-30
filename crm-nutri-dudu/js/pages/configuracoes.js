@@ -627,6 +627,7 @@ NutriDudu.pages.configuracoes = (function () {
         ${pode ? `
           <div class="acoes-linha">
             <button type="button" class="btn btn-pequeno btn-primary" data-editar-automacoes>Editar</button>
+            <button type="button" class="btn btn-pequeno" data-ver-resumo>Ver o resumo de hoje</button>
             ${naNuvem ? '<button type="button" class="btn btn-pequeno" data-rodar-automacoes>Verificar e enviar agora</button>' : ''}
           </div>` : '<p class="muted small">Só o administrador altera as mensagens automáticas.</p>'}
       </section>`;
@@ -667,6 +668,23 @@ NutriDudu.pages.configuracoes = (function () {
     }));
   }
 
+  /** Prévia do "Resumo do dia" com os dados de agora (o mesmo texto que o servidor envia). */
+  async function verResumo() {
+    const { store, modal, utils } = NutriDudu;
+    const [consultas, pessoas, lancamentos, conversas, espera, profissionais] = await Promise.all(
+      ['consultas', 'pessoas', 'lancamentos', 'conversas', 'espera', 'profissionais'].map((c) => store.list(c)),
+    );
+    const r = NutriDudu.resumoDia.montar({ consultas, pessoas, lancamentos, conversas, espera, profissionais });
+    modal.painel({
+      titulo: 'Resumo de hoje',
+      corpo: `
+        <p class="muted small">É isto que chega no celular da equipe quando o "Resumo do dia" está ligado (como mensagem normal, se o celular escreveu para o número nas últimas 24 horas).</p>
+        <p class="previa-whatsapp">${utils.escapeHtml(r.texto)}</p>
+        <p class="muted small">Fora das 24 horas, vai pelo modelo aprovado, num parágrafo só:</p>
+        <p class="previa-whatsapp">${utils.escapeHtml(NutriDudu.mensagensAutomaticas.preencher(NutriDudu.mensagensAutomaticas.MODELOS.resumoDia.corpo(), r.parametros))}</p>`,
+    });
+  }
+
   async function salvarAutomacoes(mudancas, aviso) {
     const { store, ui, permissoes } = NutriDudu;
     if (!permissoes.exigir('configurarAgente')) return;
@@ -681,7 +699,7 @@ NutriDudu.pages.configuracoes = (function () {
     if (d.ativas.preAnamnese && !/^https:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Para a pré-anamnese, informe o endereço do sistema (começa com https://).';
     else if (d.linkSistema && !/^https?:\/\/\S+$/.test(d.linkSistema)) erros.linkSistema = 'Endereço inválido.';
     if (d.linkAvaliacao && !/^https:\/\/\S+$/.test(d.linkAvaliacao)) erros.linkAvaliacao = 'Cole o link completo, começando com https://.';
-    if (d.ativas.avisoEquipe && !NutriDudu.mensagensAutomaticas.telefonesDaEquipe(d.telefonesEquipe).length) erros.telefonesEquipe = 'Informe pelo menos um celular com DDD.';
+    if ((d.ativas.avisoEquipe || d.ativas.resumoDia) && !NutriDudu.mensagensAutomaticas.telefonesDaEquipe(d.telefonesEquipe).length) erros.telefonesEquipe = 'Informe pelo menos um celular com DDD.';
     if (!(Number.isInteger(d.horaInicio) && d.horaInicio >= 6 && d.horaInicio <= 12)) erros.horaInicio = 'Entre 6 e 12.';
     if (!(Number.isInteger(d.horaFim) && d.horaFim >= 14 && d.horaFim <= 22 && d.horaFim > d.horaInicio)) erros.horaFim = 'Entre 14 e 22.';
     Object.entries(d.modelos).forEach(([id, nome]) => {
@@ -709,7 +727,7 @@ NutriDudu.pages.configuracoes = (function () {
         })}
         ${f.texto('telefonesEquipe', 'Celulares da equipe para os avisos', cfg.telefonesEquipe, {
           placeholder: '(27) 99999-0000, (27) 98888-0000',
-          ajuda: 'Recebem o "Aviso para a equipe" quando um paciente fica esperando resposta. Separe por vírgula. Enquanto usar o número de teste da Meta, cada celular precisa estar na lista de destinatários de teste.',
+          ajuda: 'Recebem o "Aviso para a equipe" quando um paciente fica esperando resposta, e o "Resumo do dia". Separe por vírgula. Enquanto usar o número de teste da Meta, cada celular precisa estar na lista de destinatários de teste.',
         })}
         ${f.texto('linkAvaliacao', 'Link para avaliar a clínica no Google', cfg.linkAvaliacao, {
           placeholder: 'https://g.page/r/…/review',
@@ -920,6 +938,7 @@ NutriDudu.pages.configuracoes = (function () {
     mostrarUsoAgente(container, agenteCfg);
     container.querySelector('[data-editar-automacoes]')?.addEventListener('click', () => abrirAutomacoes(automacoesCfg));
     container.querySelector('[data-rodar-automacoes]')?.addEventListener('click', (e) => rodarAutomacoes(e.currentTarget));
+    container.querySelector('[data-ver-resumo]')?.addEventListener('click', () => verResumo());
     container.querySelectorAll('[data-ver-modelo]').forEach((b) => b.addEventListener('click', () => verModelo(b.dataset.verModelo, automacoesCfg, geral)));
     container.querySelectorAll('[data-salvar-perfil]').forEach((b) => b.addEventListener('click', () => salvarPerfil(b.closest('[data-conta]'))));
   }

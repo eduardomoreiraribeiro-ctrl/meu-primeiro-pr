@@ -114,6 +114,16 @@ NutriDudu.mensagensAutomaticas = (function () {
       exemplo: ['Mariana', 'Dra. Ana Lima'],
       botoes: ['Ótima', 'Boa', 'Poderia ser melhor'],
     },
+    resumoDia: {
+      titulo: 'Resumo do dia (para a equipe)',
+      quando: 'Uma vez por dia, de segunda a sábado, logo no começo do horário de envio. Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',
+      nomePadrao: 'nutridudu_resumo_dia',
+      categoria: 'UTILITY',
+      corpo: () => 'Bom dia! Resumo de {{1}} no sistema: {{2}}. Abra o sistema para ver os detalhes.',
+      variaveis: ['dia (ex.: sexta-feira, 30/10)', 'resumo do dia'],
+      exemplo: ['sexta-feira, 30/10', '3 consultas (08:00 Mariana ✓, 10:00 Bruno (online), 16:00 Leila (sem confirmar)); 1 sem confirmar; 2 conversas aguardando a equipe'],
+      paraEquipe: true,
+    },
   };
 
   const PADRAO = {
