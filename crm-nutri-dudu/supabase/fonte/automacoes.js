@@ -8,7 +8,8 @@
 // - só no horário comercial configurado (padrão 8h–20h, segunda a sábado);
 // - cada envio fica marcado no próprio registro, para nunca repetir sem querer.
 const NutriDuduAutomacoes = (() => {
-  const { utils, calculos, alertas, config } = NutriDudu;
+  const { utils, calculos, alertas, config, agenda } = NutriDudu;
+  const E = NutriDudu.espera;
   const S = NutriDuduServidor;
 
   const HORA = 3600 * 1000;
@@ -68,6 +69,11 @@ const NutriDuduAutomacoes = (() => {
       await repo.grava(tabela, atual);
     }
 
+    /** Tabela de fase nova (ex.: lista de espera): se ainda não existir no banco, segue sem ela. */
+    async function lerOpcional(tabela) {
+      try { return await repo.todos(tabela); } catch (erro) { console.warn(`Tabela "${tabela}" indisponível:`, erro.message); return []; }
+    }
+
     const podeReceber = (pessoa) => Boolean(pessoa && pessoa.consentimentos?.whatsapp === true && !pessoa.automacoesDesligadas);
 
     function destinoDe(pessoa, conversa) {
@@ -85,7 +91,7 @@ const NutriDuduAutomacoes = (() => {
      * Envia uma automação para a pessoa: texto livre se a janela de 24 h estiver aberta,
      * senão o modelo aprovado. Guarda a mensagem na conversa (cria a conversa se preciso).
      */
-    async function enviar({ cfg, automacao, pessoa, valores, botoes = [], dados, conversas, forcarTexto = false }) {
+    async function enviar({ cfg, automacao, pessoa, valores, botoes = [], botoesLivres = null, dados, conversas, forcarTexto = false }) {
       const modelo = MODELOS[automacao];
       const conversa = conversas.find((c) => c.pessoaId === pessoa.id) || null;
       const para = destinoDe(pessoa, conversa);
@@ -99,7 +105,7 @@ const NutriDuduAutomacoes = (() => {
       let erro = null;
       try {
         waId = livre
-          ? await whatsapp.enviarTexto(para, texto)
+          ? (botoesLivres?.length && whatsapp.enviarBotoes ? await whatsapp.enviarBotoes(para, texto, botoesLivres) : await whatsapp.enviarTexto(para, texto))
           : await whatsapp.enviarModelo(para, { nome: nomeModelo, idioma: cfg.idioma || 'pt_BR', parametros: valores, botoes });
       } catch (e) {
         erro = e.message || String(e);
@@ -428,8 +434,183 @@ const NutriDuduAutomacoes = (() => {
         }
       }
 
+      // 10. Lista de espera: horários liberados (cancelados ou remarcados) vão para quem está esperando.
+      if (cfg.ativas.vagaEspera) await oferecerVagas({ cfg, dados, conversas, pessoaPor, profPor, tentar, agoraMs });
+
       await salvarStatus(relatorio, configuracoes);
       return relatorio;
+    }
+
+    // ---------------- Lista de espera ----------------
+
+    /** Contexto da agenda no relógio da clínica (o mesmo das regras do sistema). */
+    function contextoAgenda(d) {
+      const local = (x) => ({ ...x, inicio: relogio.paraLocal(x.inicio).toISOString(), fim: relogio.paraLocal(x.fim).toISOString() });
+      return {
+        horarios: d.horarios, bloqueios: d.bloqueios.map(local), consultas: d.consultas.map(local), geral: d.geral,
+        agora: relogio.agoraLocal(), nomePessoa: () => 'outro paciente', nomeProfissional: () => 'O profissional',
+      };
+    }
+
+    /** Horários que ficaram livres e ainda não foram oferecidos: [{ chave, consultaId, profissionalId, inicio, fim }]. */
+    function vagasLiberadas(consultas, agoraMs) {
+      const vagas = [];
+      const vistas = new Set();
+      for (const c of consultas) {
+        const fontes = [];
+        if (c.status === 'cancelada' && !jaFeito(c.automacoes?.vagaCancelada)) {
+          fontes.push({ chave: 'vagaCancelada', inicio: c.inicio, fim: c.fim, profissionalId: c.profissionalId });
+        }
+        const lib = c.vagaLiberada;
+        const marca = c.automacoes?.vagaRemarcada;
+        if (lib?.inicio && !(marca && new Date(marca.em) >= new Date(lib.em) && jaFeito(marca))) {
+          fontes.push({ chave: 'vagaRemarcada', inicio: lib.inicio, fim: lib.fim, profissionalId: lib.profissionalId });
+        }
+        for (const f of fontes) {
+          const falta = new Date(f.inicio).getTime() - agoraMs;
+          if (falta < E.ANTECEDENCIA_MIN_H * HORA || falta > E.ANTECEDENCIA_MAX_DIAS * DIA) continue;
+          const id = `${f.profissionalId}|${new Date(f.inicio).toISOString()}`;
+          if (vistas.has(id)) continue;
+          vistas.add(id);
+          vagas.push({ ...f, consultaId: c.id });
+        }
+      }
+      return vagas.sort((a, b) => a.inicio.localeCompare(b.inicio));
+    }
+
+    async function oferecerVagas({ cfg, dados, conversas, pessoaPor, profPor, tentar, agoraMs }) {
+      const espera = await lerOpcional('espera');
+      const hojeIso = utils.isoDia(relogio.agoraLocal());
+      if (!espera.some((e) => E.ativo(e, hojeIso))) return;
+      const d = await S.carregarContexto(repo);
+      const vagas = vagasLiberadas(d.consultas, agoraMs);
+      if (!vagas.length) return;
+      const ctx = contextoAgenda(d);
+      const servicoPor = Object.fromEntries(d.servicos.map((x) => [x.id, x]));
+      const consultaPorId = Object.fromEntries(d.consultas.map((c) => [c.id, { ...c, inicioLocal: relogio.paraLocal(c.inicio) }]));
+      const ctxEspera = { servicoPorId: servicoPor, consultaPorId, hojeIso, diasPermitidos: (m) => S.diasDoAgente(d.agenteCfg, m) };
+      const fila = espera.filter((e) => E.ativo(e, hojeIso)).sort((a, b) => String(a.criadoEm).localeCompare(String(b.criadoEm)));
+      const agora = relogio.agora();
+
+      for (const vaga of vagas) {
+        const inicioLocal = relogio.paraLocal(vaga.inicio);
+        const fimLocal = relogio.paraLocal(vaga.fim);
+        const livre = ['presencial', 'online'].some((m) => !agenda.verificar({ profissionalId: vaga.profissionalId, inicio: inicioLocal, fim: fimLocal, modalidade: m }, ctx).length);
+        if (!livre) { await marcar('consultas', vaga.consultaId, vaga.chave, { em: agoraIso(), ok: true, ocupada: true }); continue; }
+
+        let tentativas = 0;
+        let enviadas = 0;
+        let ultimoErro = null;
+        for (const e of fila) {
+          if (enviadas >= E.OFERTAS_POR_VAGA) break;
+          const modalidade = E.combina(e, { profissionalId: vaga.profissionalId, inicio: inicioLocal }, ctxEspera);
+          if (!modalidade || E.temOfertaAberta(e, agora)) continue;
+          if ((e.ofertas || []).some((o) => o.profissionalId === vaga.profissionalId && new Date(o.inicio).getTime() === new Date(vaga.inicio).getTime())) continue;
+          const pessoa = pessoaPor[e.pessoaId];
+          const servico = servicoPor[e.servicoId];
+          if (!pessoa || !servico) continue;
+          // O serviço da pessoa cabe no horário? (mesmas regras da agenda; ao antecipar, ignora a consulta dela).
+          const fimServico = new Date(inicioLocal.getTime() + (servico.duracaoMin || 60) * 60000);
+          if (agenda.verificar({ profissionalId: vaga.profissionalId, inicio: inicioLocal, fim: fimServico, modalidade, ignorarConsultaId: e.consultaId || null }, ctx).length) continue;
+
+          const ofertaId = utils.uid('ofe');
+          const quando = `${utils.diaPorExtenso(inicioLocal).toLowerCase()} às ${utils.hora(inicioLocal)}${modalidade === 'online' ? ' (online, por vídeo)' : ''}`;
+          const sim = `vaga:sim:${e.id}:${ofertaId}`;
+          const nao = `vaga:nao:${e.id}:${ofertaId}`;
+          let resultado = null;
+          await tentar('vagaEspera', pessoa, async () => {
+            tentativas++;
+            const r = await enviar({
+              cfg, automacao: 'vagaEspera', pessoa, dados, conversas,
+              valores: [primeiroNome(pessoa.nome), profPor[vaga.profissionalId]?.nome || 'a nutricionista', quando],
+              botoes: [sim, nao],
+              botoesLivres: [{ id: sim, titulo: 'Quero este horário' }, { id: nao, titulo: 'Não posso' }],
+            });
+            const atual = await repo.pega('espera', e.id);
+            if (atual) {
+              const oferta = {
+                id: ofertaId, profissionalId: vaga.profissionalId, servicoId: e.servicoId, modalidade,
+                inicio: new Date(vaga.inicio).toISOString(), fim: relogio.deLocal(fimServico).toISOString(),
+                em: agoraIso(), ok: r.ok, ...(r.via ? { via: r.via } : {}), status: r.ok ? 'enviada' : 'falhou', ...(r.ok ? {} : { erro: r.motivo }),
+              };
+              atual.ofertas = [...(atual.ofertas || []), oferta].slice(-20);
+              atual.atualizadoEm = agoraIso();
+              await repo.grava('espera', atual);
+              e.ofertas = atual.ofertas;
+            }
+            resultado = r;
+            return r;
+          }, quando);
+          if (resultado?.ok) enviadas++;
+          else if (resultado) ultimoErro = resultado.motivo;
+        }
+        if (tentativas) {
+          await marcar('consultas', vaga.consultaId, vaga.chave, { em: agoraIso(), ok: enviadas > 0, ofertas: enviadas, ...(enviadas ? {} : { erro: ultimoErro }) });
+        }
+      }
+    }
+
+    /**
+     * Resposta ao botão da oferta ("Quero este horário" / "Não posso"). Chamado pelo webhook.
+     * Devolve { texto, consulta?, equipe?, resumo?, resultado }.
+     */
+    async function responderVaga({ pessoa, conversa, resposta, entradaId, ofertaId }) {
+      let entrada = null;
+      try { entrada = entradaId ? await repo.pega('espera', entradaId) : null; } catch (erro) { entrada = null; }
+      const oferta = entrada?.ofertas?.find((o) => o.id === ofertaId);
+      if (!entrada || entrada.pessoaId !== pessoa.id || !oferta) {
+        return { texto: 'Não encontrei esse horário. Já chamei alguém da equipe para te ajudar. 🙏', equipe: 'Respondeu a uma oferta da lista de espera que não foi encontrada', resultado: 'nao_encontrada' };
+      }
+      const agora = agoraIso();
+      const quando = relogio.descrever(oferta.inicio).replace(/^./, (c) => c.toLowerCase());
+      async function salvarOferta(status, extra = {}) {
+        const atual = (await repo.pega('espera', entrada.id)) || entrada;
+        atual.ofertas = (atual.ofertas || []).map((o) => (o.id === ofertaId ? { ...o, status, respondidaEm: agora } : o));
+        Object.assign(atual, extra, { atualizadoEm: agora });
+        await repo.grava('espera', atual);
+      }
+      const anotar = (descricao) => repo.cria('interacoes', {
+        id: uidDe('int'), pessoaId: pessoa.id, dataHora: agora, tipo: 'agente', autor: 'agente', automatico: true, descricao, criadoEm: agora, atualizadoEm: agora,
+      });
+
+      if (resposta !== 'sim') {
+        if (oferta.status === 'enviada') await salvarOferta('recusada');
+        await anotar(`Lista de espera: não quis o horário de ${quando}.`);
+        return {
+          texto: entrada.status === 'aguardando' ? 'Tudo bem! Você continua na nossa lista de espera, e avisamos se abrir outro horário. 🙂' : 'Tudo bem! 🙂',
+          resultado: 'recusou',
+        };
+      }
+      if (oferta.status === 'aceita') return { texto: `Esse horário já está reservado para você: ${quando}. ✅`, resultado: 'ja_reservado' };
+      if (entrada.status !== 'aguardando') {
+        return { texto: 'Esse pedido da lista de espera não está mais ativo. Se ainda quiser um horário, é só escrever por aqui que a gente ajuda. 🙂', resultado: 'inativo' };
+      }
+      if (new Date(oferta.inicio).getTime() - relogio.agora().getTime() < HORA) {
+        await salvarOferta('expirada');
+        return { texto: 'Que pena, esse horário já está muito próximo e não dá mais para reservar. Você continua na lista de espera, e avisamos se abrir outro. 🙏', resultado: 'expirada' };
+      }
+
+      // Reserva com as mesmas regras do assistente (confere se o horário ainda está livre).
+      const dadosAg = await S.carregarContexto(repo);
+      const ferramentas = S.criarFerramentas({ repo, relogio, pessoa, conversa, dados: dadosAg });
+      const inicio = relogio.localISO(relogio.paraLocal(oferta.inicio));
+      const antecipar = entrada.consultaId
+        ? dadosAg.consultas.find((c) => c.id === entrada.consultaId && c.pessoaId === pessoa.id && S.STATUS_FUTURO.includes(c.status) && new Date(c.inicio) > relogio.agora())
+        : null;
+      const r = antecipar
+        ? await ferramentas.executar('remarcar_consulta', { consulta_id: antecipar.id, novo_inicio: inicio })
+        : await ferramentas.executar('agendar_consulta', { servico_id: oferta.servicoId || entrada.servicoId, profissional_id: oferta.profissionalId, inicio, modalidade: oferta.modalidade || 'presencial' });
+      if (r.erro) {
+        await salvarOferta('preenchida');
+        await anotar(`Lista de espera: quis o horário de ${quando}, mas ele já tinha sido preenchido.`);
+        return { texto: 'Que pena! Esse horário acabou de ser reservado por outra pessoa. Você continua na nossa lista de espera, e avisamos assim que abrir outro. 🙏', resultado: 'preenchida' };
+      }
+      const nova = ferramentas.efeitos.consultasAgendadas[0] || null;
+      await salvarOferta('aceita', { status: 'agendado', resolvidoEm: agora, consultaAgendadaId: nova?.id || antecipar?.id || null });
+      await anotar(`Lista de espera: aceitou o horário de ${quando}${antecipar ? ' (consulta antecipada)' : ''}.`);
+      const link = /^https:\/\//.test(r.consulta?.link_videochamada || '') ? r.consulta.link_videochamada : null;
+      const texto = `Pronto, ${primeiroNome(pessoa.nome)}! ✅ ${antecipar ? 'Sua consulta foi antecipada para' : 'Reservei para você:'} ${r.consulta.quando.replace(/^./, (c) => c.toLowerCase())}${r.consulta.profissional ? `, com ${r.consulta.profissional}` : ''}.${link ? ` A consulta é online: entre por este link alguns minutos antes: ${link}` : ''} Se precisar remarcar, é só escrever por aqui.`;
+      return { texto, consulta: nova, resultado: antecipar ? 'antecipada' : 'agendado' };
     }
 
     /** Resumo da última execução, para a tela de Configurações. */
@@ -444,7 +625,7 @@ const NutriDuduAutomacoes = (() => {
       else await repo.cria('configuracoes', { ...doc, criadoEm: agora });
     }
 
-    return { rodar, enviarPreAnamnese, enviar, avisarEquipe };
+    return { rodar, enviarPreAnamnese, enviar, avisarEquipe, responderVaga };
   }
 
   // =====================================================================

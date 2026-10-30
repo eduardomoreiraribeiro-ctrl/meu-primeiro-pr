@@ -34,6 +34,9 @@ NutriDudu.agendamento = (function () {
     return `${utils.data(c.inicio)} às ${utils.hora(c.inicio)}`;
   }
 
+  /** Horário antigo de uma consulta remarcada: o servidor oferece à lista de espera. */
+  const vagaDe = (c) => ({ inicio: c.inicio, fim: c.fim, profissionalId: c.profissionalId, em: new Date().toISOString() });
+
   async function registrar(pessoaId, descricao) {
     await NutriDudu.store.create('interacoes', {
       pessoaId, dataHora: new Date().toISOString(), tipo: 'consulta', descricao,
@@ -60,7 +63,7 @@ NutriDudu.agendamento = (function () {
    * Abre o formulário. Sem `consulta`: novo agendamento (pode vir com pessoaId, dia,
    * hora, profissionalId pré-preenchidos). Com `consulta`: remarcar/editar.
    */
-  async function abrir({ consulta = null, pessoaId = '', dia = '', hora = '', profissionalId = '', aoSalvar } = {}) {
+  async function abrir({ consulta = null, pessoaId = '', dia = '', hora = '', profissionalId = '', servicoId = '', aoSalvar } = {}) {
     const { form: f, modal, config, utils, permissoes, agenda, store, ui } = NutriDudu;
     const d = await carregar();
     const editando = Boolean(consulta);
@@ -75,11 +78,12 @@ NutriDudu.agendamento = (function () {
     const inicial = {
       pessoaId: c.pessoaId || pessoaId,
       profissionalId: c.profissionalId || profissionalId || permissoes.idProfissionalAtual() || profsPermitidos[0].id,
-      servicoId: c.servicoId || '',
+      servicoId: c.servicoId || servicoId || '',
       pacoteId: c.pacoteId || '',
       tipo: c.tipo || '',
-      dia: c.inicio ? utils.isoDia(c.inicio) : (dia || utils.isoDia(new Date())),
-      hora: c.inicio ? utils.hora(c.inicio) : hora,
+      // Remarcar pode já vir com o novo dia e horário sugeridos (ex.: pela lista de espera).
+      dia: dia || (c.inicio ? utils.isoDia(c.inicio) : utils.isoDia(new Date())),
+      hora: hora || (c.inicio ? utils.hora(c.inicio) : ''),
       observacaoAgenda: c.observacaoAgenda || '',
     };
 
@@ -172,13 +176,14 @@ NutriDudu.agendamento = (function () {
           const mudouHorario = campos.inicio !== consulta.inicio || campos.profissionalId !== consulta.profissionalId;
           await store.update('consultas', consulta.id, {
             ...campos,
-            // Mudou o horário: precisa confirmar de novo.
-            ...(mudouHorario ? { status: 'agendada' } : {}),
+            // Mudou o horário: precisa confirmar de novo, e o horário antigo fica livre para a lista de espera.
+            ...(mudouHorario ? { status: 'agendada', vagaLiberada: vagaDe(consulta) } : {}),
           });
           await registrar(dados.pessoaId, mudouHorario
             ? `Consulta remarcada de ${quando(consulta)} para ${quando(campos)}.`
             : `Agendamento de ${quando(campos)} atualizado.`);
           ui.toast(mudouHorario ? 'Consulta remarcada.' : 'Agendamento atualizado.');
+          if (aoSalvar) await aoSalvar({ ...consulta, ...campos });
         } else {
           const nova = await store.create('consultas', {
             ...campos,
@@ -397,7 +402,7 @@ NutriDudu.agendamento = (function () {
     }
     await store.update('consultas', c.id, {
       inicio: novoInicio.toISOString(), fim: novoFim.toISOString(), profissionalId,
-      status: 'agendada', encaixe: problemas.length > 0,
+      status: 'agendada', encaixe: problemas.length > 0, vagaLiberada: vagaDe(c),
     });
     await registrar(c.pessoaId, `Consulta remarcada de ${quando(c)} para ${quando({ inicio: novoInicio })}.`);
     ui.toast('Consulta remarcada.');

@@ -92,6 +92,16 @@ NutriDudu.mensagensAutomaticas = (function () {
       exemplo: ['Mariana Alves', 'Pergunta sobre suplemento'],
       paraEquipe: true,
     },
+    vagaEspera: {
+      titulo: 'Horário liberado (lista de espera)',
+      quando: 'Quando um horário é cancelado ou remarcado, ele é oferecido a até 3 pessoas da lista de espera que combinam com ele (por ordem de chegada na lista). Quem tocar primeiro em "Quero este horário" fica com ele.',
+      nomePadrao: 'nutridudu_vaga_disponivel',
+      categoria: 'UTILITY',
+      corpo: () => 'Olá, {{1}}! Abriu um horário na agenda de {{2}}: {{3}}. Como você está na nossa lista de espera, estamos avisando você primeiro. O horário fica com quem confirmar antes. Quer ficar com ele?',
+      variaveis: ['primeiro nome', 'profissional', 'dia e hora (ex.: terça, 03/11 às 10:00)'],
+      exemplo: ['Mariana', 'Dra. Ana Lima', 'terça-feira, 03/11 às 10:00'],
+      botoes: ['Quero este horário', 'Não posso'],
+    },
   };
 
   const PADRAO = {

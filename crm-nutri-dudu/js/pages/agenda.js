@@ -257,7 +257,8 @@ NutriDudu.pages.agenda = (function () {
 
   async function render(container) {
     const { ui, utils, agenda, permissoes, agendamento } = NutriDudu;
-    const d = await agendamento.carregar();
+    const [d, espera] = await Promise.all([agendamento.carregar(), NutriDudu.store.list('espera')]);
+    const naEspera = NutriDudu.listaEspera.contarAtivos(espera);
     if (!estado.data) estado.data = utils.isoDia(new Date());
 
     const meuId = permissoes.idProfissionalAtual();
@@ -326,7 +327,7 @@ NutriDudu.pages.agenda = (function () {
     const podeAgendar = d.profissionais.some((p) => p.ativo && permissoes.podeAgendarPara(p.id));
 
     container.innerHTML = `<div class="agenda-pagina">
-      ${ui.cabecalho('Agenda', '', podeAgendar ? '<button type="button" class="btn btn-primary" data-agendar>+ Agendar</button>' : '')}
+      ${ui.cabecalho('Agenda', '', podeAgendar ? `<button type="button" class="btn" data-lista-espera>Lista de espera${naEspera ? ` <span class="contador">${naEspera}</span>` : ''}</button><button type="button" class="btn btn-primary" data-agendar>+ Agendar</button>` : '')}
       <div class="agenda-barra">
         <div class="agenda-nav">
           <button type="button" class="btn btn-pequeno" data-nav="-1" aria-label="Anterior">‹</button>
@@ -356,6 +357,7 @@ NutriDudu.pages.agenda = (function () {
 
     // ----- Eventos -----
     container.querySelector('[data-agendar]')?.addEventListener('click', () => agendamento.abrir({ dia: estado.data }));
+    container.querySelector('[data-lista-espera]')?.addEventListener('click', () => NutriDudu.listaEspera.abrirPainel());
     container.querySelectorAll('[data-nav]').forEach((b) => b.addEventListener('click', () => navegar(Number(b.dataset.nav))));
     container.querySelector('[data-hoje]').addEventListener('click', () => {
       estado.data = utils.isoDia(new Date());

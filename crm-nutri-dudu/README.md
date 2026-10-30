@@ -143,6 +143,21 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
   - **Agenda:** os detalhes da consulta mostram o lembrete e a situação da pré-anamnese;
   - **Conversas:** as mensagens automáticas aparecem com ⏰.
 - **Servidor:** nova função `supabase/functions/whatsapp-automacoes`, chamada a cada 30 minutos pelo agendamento do Supabase (Cron) e usada pelo formulário. Os textos dos modelos ficam em `js/mensagens-automaticas.js`, compartilhado entre o sistema e o servidor.
+
+### Lista de espera
+
+- **Na Agenda**, o botão **Lista de espera** mostra quem está esperando um horário: serviço, profissional, dias, período (manhã ou tarde), modalidade (presencial ou online) e até quando serve. Também dá para pedir para **antecipar** uma consulta já marcada.
+  - Cada pedido mostra o **próximo horário livre que combina** e o que já foi oferecido. Os botões são **Agendar**, **Editar** e **Tirar da lista**.
+- **O assistente do WhatsApp** coloca e tira pessoas da lista quando nenhum horário serve.
+- **Horário liberado:** quando uma consulta é **cancelada** ou **remarcada**, a verificação automática oferece o horário pelo WhatsApp a até **3 pessoas** da lista que combinam com ele, por ordem de chegada.
+  - A mensagem tem os botões **Quero este horário** e **Não posso**.
+  - Quem tocar primeiro fica com o horário: a consulta é marcada na hora (ou a consulta é antecipada). Quem tocar depois recebe "já foi preenchido" e continua na lista.
+  - Se a pessoa antecipou, o horário antigo dela vai para a próxima pessoa da lista.
+- **Regras:**
+  - não oferece horários com menos de 3 horas de antecedência;
+  - não manda uma segunda oferta enquanto a primeira está sem resposta, por 12 horas;
+  - respeita os dias do assistente: presencial de segunda a sexta, online também no fim de semana;
+  - as regras de quem combina com cada horário ficam em `js/espera.js`, usado pelo sistema e pelo servidor.
 - Passo a passo: [`supabase/AUTOMACOES.md`](supabase/AUTOMACOES.md).
 
 ## Como abrir

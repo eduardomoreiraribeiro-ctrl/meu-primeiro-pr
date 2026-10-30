@@ -380,6 +380,14 @@ NutriDudu.seed = (function () {
     ];
 
     const agora = new Date().toISOString();
+    // Lista de espera (fictícia).
+    const espera = [
+      { id: 'esp_1', pessoaId: 'pes_7', servicoId: 'srv_2', profissionalId: 'prof_1', modalidade: 'qualquer', dias: [], periodo: 'qualquer', ateDia: null, consultaId: null, observacao: 'Quer adiantar o retorno.', status: 'aguardando', origem: 'equipe', criadoEm: diaHora(-6, '11:00'),
+        ofertas: [{ id: 'ofe_1', profissionalId: 'prof_1', servicoId: 'srv_2', modalidade: 'presencial', inicio: diaHora(2, '10:00'), fim: diaHora(2, '10:40'), em: diaHora(0, '08:30'), ok: true, via: 'modelo', status: 'enviada' }] },
+      { id: 'esp_2', pessoaId: 'pes_6', servicoId: 'srv_1', profissionalId: null, modalidade: 'presencial', dias: [1, 3, 5], periodo: 'manha', ateDia: null, consultaId: null, observacao: '', status: 'aguardando', origem: 'agente', criadoEm: diaHora(-3, '19:20'), ofertas: [] },
+      { id: 'esp_3', pessoaId: 'pes_9', servicoId: 'srv_1', profissionalId: null, modalidade: 'online', dias: [], periodo: 'tarde', ateDia: dia(14), consultaId: null, observacao: 'Mora em outra cidade.', status: 'aguardando', origem: 'equipe', criadoEm: diaHora(-1, '15:00'), ofertas: [] },
+    ];
+
     const comDatas = (lista) => lista.map((x) => ({ criadoEm: agora, atualizadoEm: agora, ...x }));
 
     return {
@@ -398,6 +406,7 @@ NutriDudu.seed = (function () {
       interacoes: comDatas(interacoes),
       conversas: comDatas(conversas),
       mensagens: comDatas(mensagens),
+      espera: comDatas(espera),
     };
   }
 

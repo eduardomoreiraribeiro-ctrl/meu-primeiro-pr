@@ -13,7 +13,7 @@ const IMPORTS = {
   anthropic: "import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';",
   supabase: "import { createClient } from 'npm:@supabase/supabase-js@2.117.2';",
 };
-const COMPARTILHADO = ['js/config.js', 'js/utils.js', 'js/calculos.js', 'js/agenda.js', 'js/alertas.js', 'js/mensagens-automaticas.js', 'supabase/fonte/nucleo.js', 'supabase/fonte/automacoes.js'];
+const COMPARTILHADO = ['js/config.js', 'js/utils.js', 'js/calculos.js', 'js/agenda.js', 'js/alertas.js', 'js/mensagens-automaticas.js', 'js/espera.js', 'supabase/fonte/nucleo.js', 'supabase/fonte/automacoes.js'];
 
 const FUNCOES = {
   'whatsapp-webhook': { imports: ['anthropic', 'supabase'], entrada: 'supabase/fonte/entrada-webhook.js' },

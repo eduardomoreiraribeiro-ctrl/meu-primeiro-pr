@@ -15,6 +15,7 @@ Faça isto depois que o WhatsApp e o Assistente estiverem funcionando ([`WHATSAP
 | **Agradecimento de indicação** | Quando uma pessoa indicada vira cliente. |
 | **Link da consulta online** | Entre 3 horas e 15 minutos antes de cada consulta online, com o link da sala de vídeo do profissional (Configurações › Profissionais › Editar dados). O assistente também envia o link ao agendar online, e a confirmação pelo botão já vai com ele. |
 | **Aviso para a equipe** | Quando uma conversa passa a aguardar a equipe, vai um aviso para os **celulares da equipe** cadastrados em Mensagens automáticas (não para o paciente). Fora do horário de envio, sai no começo do próximo. Só o nome do paciente e o motivo — nada de saúde. |
+| **Horário liberado (lista de espera)** | Quando uma consulta é cancelada ou remarcada, o horário é oferecido a até 3 pessoas da **lista de espera** (Agenda › Lista de espera) que combinam com ele. Vem com os botões **Quero este horário** e **Não posso**. Quem tocar primeiro fica com o horário: a consulta é marcada sozinha. Só horários com pelo menos 3 horas de antecedência. |
 
 Regras:
 - Só recebe quem deu **consentimento de WhatsApp** e não pediu para **PARAR**.
@@ -26,7 +27,8 @@ Regras:
 
 1. No Supabase, abra **SQL Editor** › **New query**.
 2. Cole **todo** o `supabase/schema.sql` atual e clique em **Run**. Deve aparecer "Success".
-   - Isso cria a tabela dos links da pré-anamnese.
+   - Isso cria a tabela dos links da pré-anamnese e a da lista de espera.
+   - Pode rodar de novo sempre que o arquivo mudar: nada é apagado.
 
 ## 2. Atualizar as funções e criar a nova
 
@@ -102,7 +104,9 @@ Fora das 24 horas, o WhatsApp só deixa a clínica escrever usando **modelos apr
    - **Nome:** o nome indicado (ex.: `nutridudu_lembrete_consulta`).
    - **Idioma:** Português (BR).
    - **Corpo:** cole o texto. A Meta mostra as variáveis `{{1}}`, `{{2}}`…; preencha os **exemplos** que o sistema mostra.
-   - **Botões** (só no lembrete): **Resposta rápida** › `Confirmar` e `Remarcar`, nessa ordem.
+   - **Botões:** **Resposta rápida**, nessa ordem:
+     - no lembrete: `Confirmar` e `Remarcar`;
+     - no horário liberado: `Quero este horário` e `Não posso`.
 4. Envie para análise. Costuma ser aprovado em minutos, às vezes em algumas horas.
 5. A Meta pode trocar a categoria (por exemplo, de Utilidade para Marketing). Tudo bem: o sistema funciona igual, só muda o preço.
 

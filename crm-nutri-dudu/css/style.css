@@ -1665,3 +1665,14 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
   .toast-area { left: 1rem; right: 1rem; bottom: 5.5rem; }
 }
 .pre-linha { white-space: pre-line; }
+
+/* ---------- Lista de espera ---------- */
+.page-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.page-actions .contador { display: inline-block; margin-left: 0.35rem; background: var(--alerta-soft); color: var(--alerta); }
+.espera-lista { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; gap: 0.6rem; }
+.espera-item { border: 1px solid var(--border); border-radius: 10px; padding: 0.7rem 0.85rem; background: var(--surface); }
+.espera-item p { margin: 0.25rem 0; }
+.espera-topo { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; }
+.espera-acoes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
+.espera-recentes { margin-top: 0.9rem; }
+.espera-recentes summary { cursor: pointer; font-weight: 600; }

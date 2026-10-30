@@ -29,6 +29,7 @@ NutriDudu.store = (function () {
     interacoes: 'int',
     conversas: 'cvs',
     mensagens: 'msg',
+    espera: 'esp',
   };
 
   const nuvem = () => NutriDudu.nuvem?.ativa();

@@ -9,10 +9,12 @@ NutriDudu.nuvem = (function () {
   const TABELAS = [
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens',
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera',
   ];
   // Campos clínicos guardados à parte (a recepção nem recebe esses dados).
   const CLINICOS = { consultas: { tabela: 'consultas_clinico', campos: ['anotacoes', 'conduta'] } };
+  // Tabelas de fases novas: se ainda não existirem no banco, o sistema abre sem elas.
+  const OPCIONAIS = ['espera'];
   const PAGINA = 1000;
   const BUCKET = 'fotos';
 
@@ -157,7 +159,16 @@ NutriDudu.nuvem = (function () {
   /** Todas as coleções que o perfil pode ver, já no formato do store. */
   async function carregarTudo() {
     const resultado = {};
-    await Promise.all(TABELAS.map(async (t) => { resultado[t] = (await lerTabela(t)).map(paraItem); }));
+    await Promise.all(TABELAS.map(async (t) => {
+      try {
+        resultado[t] = (await lerTabela(t)).map(paraItem);
+      } catch (erro) {
+        // Tabela nova que ainda não foi criada no Supabase (falta rodar o schema.sql): segue sem ela.
+        if (!OPCIONAIS.includes(t)) throw erro;
+        console.warn(`Tabela "${t}" não encontrada: rode o supabase/schema.sql atualizado.`);
+        resultado[t] = [];
+      }
+    }));
     // Junta os campos clínicos às consultas (só chegam para admin e profissional).
     for (const [colecao, { tabela, campos }] of Object.entries(CLINICOS)) {
       const extras = veClinico() ? await lerTabela(tabela) : [];

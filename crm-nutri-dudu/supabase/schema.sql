@@ -145,7 +145,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera'
   ] loop
     execute format($f$
       create table if not exists public.%I (
@@ -170,6 +170,8 @@ create index if not exists interacoes_pessoa on public.interacoes ((dados ->> 'p
 create index if not exists mensagens_conversa on public.mensagens ((dados ->> 'conversaId'));
 create index if not exists mensagens_waid on public.mensagens ((dados ->> 'waId'));
 create index if not exists conversas_pessoa on public.conversas ((dados ->> 'pessoaId'));
+-- Lista de espera: pedidos de uma pessoa.
+create index if not exists espera_pessoa on public.espera ((dados ->> 'pessoaId'));
 
 
 -- ---------------------------------------------------------------------
@@ -183,7 +185,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera'
   ] loop
     execute format('drop policy if exists "ler" on public.%I', t);
     execute format('drop policy if exists "criar" on public.%I', t);
@@ -192,7 +194,7 @@ begin
   end loop;
 
   -- a) Dados do dia a dia: toda a equipe lê e grava.
-  foreach t in array array['pessoas', 'consultas', 'pacotes', 'interacoes', 'conversas', 'mensagens'] loop
+  foreach t in array array['pessoas', 'consultas', 'pacotes', 'interacoes', 'conversas', 'mensagens', 'espera'] loop
     execute format('create policy "ler" on public.%I for select using (public.e_equipe())', t);
     execute format('create policy "criar" on public.%I for insert with check (public.e_equipe())', t);
     execute format('create policy "alterar" on public.%I for update using (public.e_equipe()) with check (public.e_equipe())', t);
@@ -352,7 +354,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);
