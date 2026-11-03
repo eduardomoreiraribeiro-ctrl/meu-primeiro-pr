@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<title>Agendar consulta · Nutri Dudu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f7f6; --surface: #ffffff; --surface-2: #eef2f0; --border: #dce3df; --text: #17211b; --muted: #55625b;
+    --primary: #15803d; --primary-hover: #166534; --primary-soft: #dcfce7; --on-primary: #ffffff;
+    --danger: #b91c1c; --danger-soft: #fee2e2; --info-soft: #e0ecff; --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e1311; --surface: #161d19; --surface-2: #1f2823; --border: #2c3731; --text: #e3eae6; --muted: #a3b0a8;
+      --primary: #22c55e; --primary-hover: #4ade80; --primary-soft: #14301f; --on-primary: #06210f;
+      --danger: #f87171; --danger-soft: #3b1515; --info-soft: #172338;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.5; }
+  main { max-width: 680px; margin: 0 auto; padding: 1.25rem 1rem 4rem; }
+  .marca { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 1rem; font-weight: 700; }
+  .marca span { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 10px; background: var(--primary); color: var(--on-primary); font-size: 0.85rem; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; margin-bottom: 1rem; }
+  h1 { font-size: 1.4rem; margin: 0 0 0.35rem; }
+  h2 { font-size: 1.05rem; margin: 0 0 0.25rem; }
+  p { margin: 0.35rem 0; }
+  .muted { color: var(--muted); }
+  .small { font-size: 0.88rem; }
+  label { display: block; font-weight: 600; margin: 0.75rem 0 0.25rem; }
+  textarea, input[type="text"], select {
+    width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text); font: inherit; font-size: 16px;
+  }
+  textarea { min-height: 96px; resize: vertical; }
+  textarea:focus, input:focus, select:focus { outline: 2px solid var(--primary); outline-offset: 1px; }
+  .linha { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 0.4rem; margin-top: 0.4rem; align-items: center; }
+  .linha.med { grid-template-columns: 2fr 1fr 1fr auto; }
+  .remover { border: 0; background: none; color: var(--muted); font-size: 1.4rem; cursor: pointer; padding: 0 0.4rem; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.7rem 1.1rem; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+  .btn-primario { background: var(--primary); border-color: var(--primary); color: var(--on-primary); width: 100%; font-size: 1.05rem; padding: 0.9rem; }
+  .btn-primario:disabled { opacity: 0.6; cursor: wait; }
+  .btn-link { border: 0; background: none; color: var(--primary); font: inherit; font-weight: 600; padding: 0.4rem 0; cursor: pointer; }
+  .consentimento { display: flex; gap: 0.6rem; align-items: flex-start; font-weight: 500; margin: 0; }
+  .consentimento input { width: 22px; height: 22px; margin-top: 0.1rem; flex: none; accent-color: var(--primary); }
+  .erro { background: var(--danger-soft); color: var(--danger); border-radius: 10px; padding: 0.65rem 0.8rem; margin: 0.75rem 0 0; }
+  .aviso { background: var(--info-soft); border-radius: 10px; padding: 0.65rem 0.8rem; }
+  .centro { text-align: center; padding: 2rem 1.1rem; }
+  .icone-grande { font-size: 2.6rem; }
+  a { color: var(--primary); }
+  [hidden] { display: none !important; }
+  @media (max-width: 520px) {
+    .linha, .linha.med { grid-template-columns: 1fr 1fr auto; }
+    .linha > :first-child { grid-column: 1 / -1; }
+  }
+  input[type="tel"], input[type="email"] {
+    width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--surface); color: var(--text); font: inherit; font-size: 16px;
+  }
+  .opcoes { display: grid; gap: 0.5rem; margin-top: 0.6rem; }
+  .opcao { display: flex; gap: 0.75rem; align-items: flex-start; text-align: left; width: 100%; padding: 0.8rem 0.9rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--text); font: inherit; cursor: pointer; }
+  .opcao:hover { border-color: var(--primary); }
+  .opcao[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); outline: 1px solid var(--primary); }
+  .opcao strong { display: block; }
+  .opcao .preco { margin-left: auto; font-weight: 700; white-space: nowrap; }
+  .segmentos { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+  .segmentos .opcao { width: auto; flex: 1 1 140px; justify-content: center; }
+  .dia { margin-top: 0.9rem; }
+  .dia h3 { font-size: 0.95rem; margin: 0 0 0.4rem; }
+  .horas { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .hora { padding: 0.55rem 0.9rem; border: 1px solid var(--border); border-radius: 999px; background: var(--surface); color: var(--text); font: inherit; font-weight: 600; cursor: pointer; }
+  .hora:hover { border-color: var(--primary); }
+  .hora[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+  .hora small { font-weight: 500; opacity: 0.85; }
+  .passo { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--primary); color: var(--on-primary); font-size: 0.85rem; font-weight: 700; margin-right: 0.4rem; }
+  .resumo-escolha { background: var(--primary-soft); border-radius: 10px; padding: 0.65rem 0.8rem; margin-top: 0.6rem; font-weight: 600; }
+  .btn-whats { background: #25d366; border-color: #25d366; color: #06210f; width: 100%; margin-top: 0.75rem; text-decoration: none; }
+  .escondido { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+</style>
+</head>
+<body>
+<main>
+  <div class="marca"><span>ND</span><div data-clinica>Nutri Dudu</div></div>
+
+  <section class="card centro" data-tela="carregando"><p class="muted">Carregando a agenda…</p></section>
+
+  <section class="card centro" data-tela="erro" hidden>
+    <div class="icone-grande" aria-hidden="true">📅</div>
+    <h1>Agendamento indisponível</h1>
+    <p data-erro-texto class="muted">O agendamento pelo site está fechado no momento.</p>
+    <a class="btn btn-whats" data-whats-erro hidden target="_blank" rel="noopener">Falar com a clínica no WhatsApp</a>
+  </section>
+
+  <section class="card centro" data-tela="pronto" hidden>
+    <div class="icone-grande" aria-hidden="true">✅</div>
+    <h1>Horário reservado!</h1>
+    <p><strong data-pronto-quando></strong></p>
+    <p class="muted" data-pronto-detalhe></p>
+    <p class="aviso small" data-pronto-online hidden></p>
+    <p class="small muted">Você vai receber pelo WhatsApp o lembrete da consulta e, se for a primeira, um formulário rápido para a nutricionista conhecer você antes.</p>
+    <a class="btn btn-whats" data-whats-pronto hidden target="_blank" rel="noopener">Avisar a clínica no WhatsApp</a>
+  </section>
+
+  <div data-tela="agendar" hidden>
+    <section class="card">
+      <h1>Agende sua consulta</h1>
+      <p class="muted" data-mensagem>Escolha o serviço e um dos horários disponíveis. Leva menos de 1 minuto.</p>
+    </section>
+
+    <section class="card">
+      <h2><span class="passo">1</span>Serviço</h2>
+      <div class="opcoes" data-servicos></div>
+    </section>
+
+    <section class="card" data-bloco-modalidade hidden>
+      <h2><span class="passo">2</span>Como prefere?</h2>
+      <div class="segmentos" data-modalidades></div>
+    </section>
+
+    <section class="card" data-bloco-horarios hidden>
+      <h2><span class="passo" data-passo-horario>3</span>Horário</h2>
+      <p class="small muted" data-horarios-ajuda>Separamos os próximos horários livres da agenda.</p>
+      <div data-horarios></div>
+      <button type="button" class="btn-link" data-mais-datas hidden>Ver outras datas →</button>
+    </section>
+
+    <form class="card" data-bloco-dados novalidate hidden>
+      <h2><span class="passo" data-passo-dados>4</span>Seus dados</h2>
+      <div class="resumo-escolha" data-resumo-escolha></div>
+      <label for="nome">Nome completo</label>
+      <input type="text" id="nome" name="nome" autocomplete="name" maxlength="100" required>
+      <label for="telefone">WhatsApp (com DDD)</label>
+      <input type="tel" id="telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(27) 99999-0000" maxlength="20" required>
+      <label for="email">E-mail <span class="muted small">(opcional)</span></label>
+      <input type="email" id="email" name="email" autocomplete="email" maxlength="120">
+      <div class="escondido" aria-hidden="true"><label for="site">Não preencha</label><input type="text" id="site" name="site" tabindex="-1" autocomplete="off"></div>
+      <label class="consentimento" style="margin-top:1rem"><input type="checkbox" name="consentimento"> <span>Concordo que a clínica use estes dados para o meu agendamento e me envie mensagens pelo WhatsApp sobre a consulta (confirmação e lembrete). Posso pedir para parar a qualquer momento. <a href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></span></label>
+      <p class="erro" data-erro-form role="alert" hidden></p>
+      <button type="submit" class="btn btn-primario" style="margin-top:1rem">Confirmar agendamento</button>
+    </form>
+  </div>
+</main>
+<script src="js/nuvem-config.js"></script>
+<script src="js/agendar.js"></script>
+</body>
+</html>

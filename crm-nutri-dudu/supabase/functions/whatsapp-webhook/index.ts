@@ -55,6 +55,7 @@ NutriDudu.config = {
     whatsapp: 'WhatsApp direto',
     indicacao: 'Indicação de cliente',
     presencial: 'Presencial',
+    site: 'Agendamento pelo site',
     outro: 'Outro',
   },
 
@@ -86,6 +87,7 @@ NutriDudu.config = {
     recepcao: 'Recepção',
     profissional: 'Profissional',
     agente: 'Agente de IA',
+    site: 'Paciente, pelo site',
   },
 
   MODALIDADES: {
@@ -153,6 +155,17 @@ NutriDudu.config = {
   },
 
   DIAS_SEMANA: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
+
+  // Agendamento pelo site (página agendar.html). Os dias de atendimento por modalidade
+  // são os mesmos do assistente (Configurações › Assistente do WhatsApp).
+  AGENDAMENTO_SITE_PADRAO: {
+    ativo: false,
+    servicoIds: [],        // serviços que o paciente pode marcar sozinho
+    antecedenciaHoras: 12, // marcar com pelo menos esta antecedência
+    diasFrente: 30,        // até quantos dias à frente
+    whatsappClinica: '',   // número do WhatsApp da clínica (botão "Falar com a clínica")
+    mensagem: '',          // texto de boas-vindas no topo da página
+  },
 };
 
 // ===== js/utils.js =====
@@ -1522,7 +1535,9 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
   }
 
   /** As ferramentas, sempre presas à pessoa desta conversa. */
-  function criarFerramentas({ repo, relogio, pessoa, conversa, dados }) {
+  /** origem: 'agente' (assistente do WhatsApp) ou 'site' (o próprio paciente, pela página de agendamento). */
+  function criarFerramentas({ repo, relogio, pessoa, conversa, dados, origem = 'agente' }) {
+    const quemAgendou = origem === 'site' ? 'Paciente agendou pelo site' : 'Assistente agendou';
     const servicoPorId = Object.fromEntries(dados.servicos.map((s) => [s.id, s]));
     const profPorId = Object.fromEntries(dados.profissionais.map((p) => [p.id, p]));
     const consultasDaPessoa = () => dados.consultas.filter((c) => c.pessoaId === pessoa.id);
@@ -1661,18 +1676,18 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           servicoId: pacote ? pacote.servicoId : servico.id, pacoteId: pacote?.id || null,
           tipo: tipoDaConsulta(servico, modalidade),
           inicio: relogio.deLocal(inicioLocal).toISOString(), fim: relogio.deLocal(fimLocal).toISOString(),
-          status: 'agendada', agendadaPor: 'agente', encaixe: false, descontarFalta: true,
+          status: 'agendada', agendadaPor: origem, encaixe: false, descontarFalta: true,
           avaliacaoId: null, anamneseId: null, fotoIds: [], proximoRetorno: null, observacaoAgenda: '',
           criadoEm: agoraIso, atualizadoEm: agoraIso,
         };
         await repo.cria('consultas', nova);
         dados.consultas.push(nova);
         efeitos.consultasAgendadas.push(nova);
-        await registrar(`Assistente agendou ${servicoPorId[nova.servicoId]?.nome || 'consulta'} para ${relogio.descrever(nova.inicio)} com ${profPorId[profissional_id].nome}${pacote ? ' (pelo pacote)' : ''}.`, 'consulta');
+        await registrar(`${quemAgendou} ${servicoPorId[nova.servicoId]?.nome || 'consulta'} para ${relogio.descrever(nova.inicio)} com ${profPorId[profissional_id].nome}${pacote ? ' (pelo pacote)' : ''}.`, 'consulta');
         if (pessoa.funil === 'comercial' && ['novo', 'contato'].includes(pessoa.etapa)) {
           Object.assign(pessoa, { etapa: 'agendada', etapaDesde: agoraIso, atualizadoEm: agoraIso });
           await repo.grava('pessoas', pessoa);
-          await registrar('Movido(a) para "Consulta agendada" pelo Assistente.', 'etapa');
+          await registrar(origem === 'site' ? 'Movido(a) para "Consulta agendada" (agendou pelo site).' : 'Movido(a) para "Consulta agendada" pelo Assistente.', 'etapa');
         }
         const primeira = !dados.consultas.some((c) => c.pessoaId === pessoa.id && c.status === 'realizada');
         const preAnamnese = primeira && dados.automacoesCfg?.ativas?.preAnamnese
@@ -3147,18 +3162,181 @@ const NutriDuduAutomacoes = (() => {
     return { atender, CORS };
   }
 
+  // =====================================================================
+  // Agendamento pelo site (página pública agendar.html)
+  // =====================================================================
+  const LIMITE_SITE_POR_HORA = 10; // proteção contra abuso: agendamentos pelo site por hora, na clínica toda
+
+  function criarAgendamentoSite({ repo, relogio = S.criarRelogio() }) {
+    const CORS = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'content-type',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    };
+    const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    const PADRAO_SITE = config.AGENDAMENTO_SITE_PADRAO;
+
+    async function carregar() {
+      const dados = await S.carregarContexto(repo);
+      const doc = (await repo.pega('configuracoes', 'agendamento_site')) || {};
+      const cfg = { ...PADRAO_SITE, ...doc };
+      const servicos = dados.servicos.filter((x) => x.ativo !== false && (cfg.servicoIds || []).includes(x.id));
+      return { dados, cfg, servicos };
+    }
+
+    const modalidadesDo = (servico) => (servico.modalidade === 'online' ? ['online'] : servico.modalidade === 'presencial' ? ['presencial'] : ['presencial', 'online']);
+    const limiteInicio = (cfg) => new Date(relogio.agora().getTime() + Number(cfg.antecedenciaHoras || 0) * HORA);
+    const limiteFim = (cfg) => new Date(relogio.agora().getTime() + Number(cfg.diasFrente || 30) * DIA);
+
+    async function catalogo() {
+      const { dados, cfg, servicos } = await carregar();
+      if (!cfg.ativo || !servicos.length) return json({ erro: 'O agendamento pelo site está fechado no momento. Fale com a clínica pelo WhatsApp.' }, 404);
+      return json({
+        ok: true,
+        clinica: dados.geral.nomeClinica || 'Clínica',
+        mensagem: String(cfg.mensagem || '').slice(0, 500),
+        whatsapp: utils.soDigitos(cfg.whatsappClinica || ''),
+        servicos: servicos.map((x) => ({
+          id: x.id, nome: x.nome, descricao: x.descricao || '', valor: utils.moeda(x.valor), duracaoMin: x.duracaoMin || 60,
+          modalidades: modalidadesDo(x),
+        })),
+      });
+    }
+
+    /** Uma "página" de horários: até 6 opções a partir da semana pedida (seleção curta, como a do assistente). */
+    async function horarios(params) {
+      const { dados, cfg, servicos } = await carregar();
+      if (!cfg.ativo) return json({ erro: 'O agendamento pelo site está fechado no momento.' }, 404);
+      const servico = servicos.find((x) => x.id === params.get('servico'));
+      if (!servico) return json({ erro: 'Serviço não encontrado.' }, 404);
+      const modalidade = params.get('modalidade') === 'online' ? 'online' : 'presencial';
+      if (!modalidadesDo(servico).includes(modalidade)) return json({ erro: 'Modalidade indisponível para este serviço.' }, 400);
+      const semana = Math.max(0, Math.min(10, Number(params.get('semana')) || 0));
+      const inicioMin = limiteInicio(cfg);
+      const fimMax = limiteFim(cfg);
+      const deLocal = relogio.paraLocal(new Date(Math.max(inicioMin.getTime(), relogio.agora().getTime() + semana * 7 * DIA)));
+      if (relogio.deLocal(deLocal) > fimMax) return json({ ok: true, horarios: [], temMais: false });
+      const ferramentas = S.criarFerramentas({ repo, relogio, pessoa: { id: '_site' }, conversa: {}, dados });
+      const r = await ferramentas.executar('consultar_horarios_livres', {
+        servico_id: servico.id, data_inicial: utils.isoDia(deLocal), data_final: utils.isoDia(new Date(deLocal.getTime() + 6 * DIA)), modalidade,
+      });
+      if (r.erro) return json({ erro: r.erro }, 400);
+      const lista = (r.horarios || []).filter((h) => {
+        const real = relogio.deLocal(relogio.lerLocal(h.inicio));
+        return real >= inicioMin && real <= fimMax;
+      }).map((h) => ({ inicio: h.inicio, quando: h.quando, profissionalId: h.profissional_id, profissional: h.profissional }));
+      const proxima = relogio.agora().getTime() + (semana + 1) * 7 * DIA;
+      return json({ ok: true, horarios: lista, poucos: Boolean(r.poucos_horarios && lista.length), temMais: proxima < fimMax.getTime() && semana < 10 });
+    }
+
+    async function acharOuCriarPessoa({ nome, telefone, email, consentimento }) {
+      const pessoas = await repo.todos('pessoas');
+      const chave = S.chaveTelefone(telefone);
+      const achada = pessoas.filter((p) => S.chaveTelefone(p.telefone) === chave).sort((a, b) => (a.status === 'lead') - (b.status === 'lead'))[0];
+      const agora = relogio.agora().toISOString();
+      if (achada) {
+        const mudancas = {
+          ...(consentimento && !achada.automacoesDesligadas ? { consentimentos: { ...(achada.consentimentos || {}), whatsapp: true } } : {}),
+          ...(!achada.email && email ? { email } : {}),
+          atualizadoEm: agora,
+        };
+        const atualizada = { ...achada, ...mudancas };
+        await repo.grava('pessoas', atualizada);
+        return atualizada;
+      }
+      const nova = {
+        id: utils.uid('pes'), nome, nomeConfirmado: true, telefone: utils.formatarTelefone(telefone), email: email || '', cpf: '', endereco: '', cidade: '',
+        indicadoPorId: null, profissionalId: null, motivoPerda: null, servicoInteresseId: null, retornoDias: null, observacoes: '', tags: [],
+        origem: 'site', objetivo: '', funil: 'comercial', etapa: 'novo', etapaDesde: agora, status: 'lead', clienteDesde: null,
+        consentimentos: { saude: false, whatsapp: Boolean(consentimento), fotos: false, divulgacao: false }, consentimentoDadosEm: agora,
+        agentePausado: false, criadoEm: agora, atualizadoEm: agora,
+      };
+      await repo.cria('pessoas', nova);
+      return nova;
+    }
+
+    async function agendar(corpo) {
+      if (corpo.site) return json({ ok: true }); // campo escondido preenchido: robô
+      const { dados, cfg, servicos } = await carregar();
+      if (!cfg.ativo) return json({ erro: 'O agendamento pelo site está fechado no momento.' }, 404);
+      const nome = String(corpo.nome || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+      const telefone = utils.soDigitos(corpo.telefone).replace(/^55(?=\d{10,11}$)/, '');
+      const email = String(corpo.email || '').trim().slice(0, 120);
+      if (nome.length < 3 || !/\s/.test(nome)) return json({ erro: 'Informe o seu nome completo.' }, 400);
+      if (!/^\d{2}9\d{8}$/.test(telefone)) return json({ erro: 'Informe um celular com DDD, por exemplo (27) 99999-0000.' }, 400);
+      if (email && !utils.emailValido(email)) return json({ erro: 'E-mail inválido.' }, 400);
+      if (corpo.consentimento !== true) return json({ erro: 'Para agendar, é preciso concordar com o uso dos dados para o agendamento.' }, 400);
+      const servico = servicos.find((x) => x.id === corpo.servicoId);
+      if (!servico) return json({ erro: 'Serviço não encontrado.' }, 404);
+      const modalidade = corpo.modalidade === 'online' ? 'online' : 'presencial';
+      if (!modalidadesDo(servico).includes(modalidade)) return json({ erro: 'Modalidade indisponível para este serviço.' }, 400);
+      const inicioLocal = relogio.lerLocal(corpo.inicio);
+      if (!inicioLocal) return json({ erro: 'Escolha um horário.' }, 400);
+      const inicioReal = relogio.deLocal(inicioLocal);
+      if (inicioReal < limiteInicio(cfg) || inicioReal > limiteFim(cfg)) return json({ erro: 'Este horário não está mais disponível. Escolha outro.' }, 409);
+
+      // Proteção contra abuso: limite por hora na clínica e 1 agendamento futuro pelo site por pessoa.
+      const umaHora = relogio.agora().getTime() - HORA;
+      if (dados.consultas.filter((c) => c.agendadaPor === 'site' && new Date(c.criadoEm).getTime() > umaHora).length >= LIMITE_SITE_POR_HORA) {
+        return json({ erro: 'Muitos agendamentos neste momento. Tente de novo mais tarde ou fale com a clínica pelo WhatsApp.' }, 429);
+      }
+      const chave = S.chaveTelefone(telefone);
+      const idsDoTelefone = new Set((await repo.todos('pessoas')).filter((p) => S.chaveTelefone(p.telefone) === chave).map((p) => p.id));
+      const jaTem = dados.consultas.find((c) => idsDoTelefone.has(c.pessoaId) && c.agendadaPor === 'site' && S.STATUS_FUTURO.includes(c.status) && new Date(c.inicio) > relogio.agora());
+      if (jaTem) {
+        return json({ erro: `Você já tem um horário marcado pelo site: ${relogio.descrever(jaTem.inicio).replace(/^./, (x) => x.toLowerCase())}. Para mudar, fale com a clínica pelo WhatsApp.` }, 409);
+      }
+
+      const pessoa = await acharOuCriarPessoa({ nome, telefone, email, consentimento: corpo.whatsapp !== false });
+      const ferramentas = S.criarFerramentas({ repo, relogio, pessoa, conversa: {}, dados, origem: 'site' });
+      const r = await ferramentas.executar('agendar_consulta', {
+        servico_id: servico.id, profissional_id: String(corpo.profissionalId || ''), inicio: relogio.localISO(inicioLocal), modalidade,
+      });
+      if (r.erro) return json({ erro: 'Este horário acabou de ser preenchido ou não está mais disponível. Escolha outro.' }, 409);
+      const link = /^https:\/\//.test(r.consulta.link_videochamada || '') ? r.consulta.link_videochamada : null;
+      return json({
+        ok: true, quando: r.consulta.quando, profissional: r.consulta.profissional, servico: r.consulta.servico, modalidade,
+        ...(link ? { linkOnline: link } : {}),
+        whatsapp: utils.soDigitos(cfg.whatsappClinica || ''),
+        clinica: dados.geral.nomeClinica || 'Clínica',
+      });
+    }
+
+    async function atender(req, corpo = null) {
+      if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+      try {
+        if (req.method === 'GET') {
+          const params = new URL(req.url).searchParams;
+          if (params.get('site') === 'catalogo') return await catalogo();
+          if (params.get('site') === 'horarios') return await horarios(params);
+          return json({ erro: 'Pedido inválido.' }, 400);
+        }
+        if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405);
+        if (!corpo) { try { corpo = await req.json(); } catch (e) { return json({ erro: 'Pedido inválido.' }, 400); } }
+        if (JSON.stringify(corpo).length > 5000) return json({ erro: 'Pedido grande demais.' }, 413);
+        return await agendar(corpo);
+      } catch (erro) {
+        console.error('Agendamento pelo site:', erro);
+        return json({ erro: 'Não foi possível agendar agora. Tente de novo em instantes ou fale com a clínica pelo WhatsApp.' }, 500);
+      }
+    }
+    return { atender };
+  }
+
   /**
    * Função "whatsapp-automacoes": recebe o agendamento (cron) e o formulário de pré-anamnese.
    * - POST { acao: 'rodar' } com o cabeçalho x-chave-automacoes → roda as automações;
    * - GET ?t=… / POST { acao: 'pre-anamnese', t, … } → formulário.
    */
-  function criarServidor({ automacoes, preAnamnese, chave }) {
+  function criarServidor({ automacoes, preAnamnese, site = null, chave }) {
     return async function atender(req) {
+      if (req.method === 'GET' && site && new URL(req.url).searchParams.has('site')) return site.atender(req);
       if (req.method === 'OPTIONS' || req.method === 'GET') return preAnamnese.atender(req);
       if (req.method !== 'POST') return new Response('Método não permitido', { status: 405 });
       let corpo;
       try { corpo = await req.json(); } catch (e) { corpo = {}; }
       if (corpo.acao === 'pre-anamnese') return preAnamnese.atender(req, corpo);
+      if (corpo.acao === 'agendar-site') return site ? site.atender(req, corpo) : new Response(JSON.stringify({ erro: 'Agendamento pelo site indisponível.' }), { status: 404 });
       if (!chave) return new Response(JSON.stringify({ erro: 'AUTOMACOES_CHAVE não configurada.' }), { status: 500 });
       if (req.headers.get('x-chave-automacoes') !== chave) return new Response(JSON.stringify({ erro: 'Chave inválida.' }), { status: 401 });
       const relatorio = await automacoes.rodar();
@@ -3166,7 +3344,7 @@ const NutriDuduAutomacoes = (() => {
     };
   }
 
-  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarServidor, tempoDesde, resumo };
+  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarAgendamentoSite, criarServidor, tempoDesde, resumo };
 })();
 
 // ---- Entrada da função whatsapp-webhook (Deno, Supabase Edge Functions) ----

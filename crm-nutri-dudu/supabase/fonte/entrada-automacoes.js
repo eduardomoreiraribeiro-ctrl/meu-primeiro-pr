@@ -16,6 +16,7 @@ const relogio = NutriDuduServidor.criarRelogio({ offsetClinicaMin: Number(variav
 const servidor = NutriDuduAutomacoes.criarServidor({
   automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', '') }),
   preAnamnese: NutriDuduAutomacoes.criarPreAnamnese({ repo, relogio }),
+  site: NutriDuduAutomacoes.criarAgendamentoSite({ repo, relogio }),
   chave: variavel('AUTOMACOES_CHAVE'),
 });
 

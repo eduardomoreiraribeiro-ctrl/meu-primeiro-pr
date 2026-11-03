@@ -437,7 +437,9 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
   }
 
   /** As ferramentas, sempre presas à pessoa desta conversa. */
-  function criarFerramentas({ repo, relogio, pessoa, conversa, dados }) {
+  /** origem: 'agente' (assistente do WhatsApp) ou 'site' (o próprio paciente, pela página de agendamento). */
+  function criarFerramentas({ repo, relogio, pessoa, conversa, dados, origem = 'agente' }) {
+    const quemAgendou = origem === 'site' ? 'Paciente agendou pelo site' : 'Assistente agendou';
     const servicoPorId = Object.fromEntries(dados.servicos.map((s) => [s.id, s]));
     const profPorId = Object.fromEntries(dados.profissionais.map((p) => [p.id, p]));
     const consultasDaPessoa = () => dados.consultas.filter((c) => c.pessoaId === pessoa.id);
@@ -576,18 +578,18 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           servicoId: pacote ? pacote.servicoId : servico.id, pacoteId: pacote?.id || null,
           tipo: tipoDaConsulta(servico, modalidade),
           inicio: relogio.deLocal(inicioLocal).toISOString(), fim: relogio.deLocal(fimLocal).toISOString(),
-          status: 'agendada', agendadaPor: 'agente', encaixe: false, descontarFalta: true,
+          status: 'agendada', agendadaPor: origem, encaixe: false, descontarFalta: true,
           avaliacaoId: null, anamneseId: null, fotoIds: [], proximoRetorno: null, observacaoAgenda: '',
           criadoEm: agoraIso, atualizadoEm: agoraIso,
         };
         await repo.cria('consultas', nova);
         dados.consultas.push(nova);
         efeitos.consultasAgendadas.push(nova);
-        await registrar(`Assistente agendou ${servicoPorId[nova.servicoId]?.nome || 'consulta'} para ${relogio.descrever(nova.inicio)} com ${profPorId[profissional_id].nome}${pacote ? ' (pelo pacote)' : ''}.`, 'consulta');
+        await registrar(`${quemAgendou} ${servicoPorId[nova.servicoId]?.nome || 'consulta'} para ${relogio.descrever(nova.inicio)} com ${profPorId[profissional_id].nome}${pacote ? ' (pelo pacote)' : ''}.`, 'consulta');
         if (pessoa.funil === 'comercial' && ['novo', 'contato'].includes(pessoa.etapa)) {
           Object.assign(pessoa, { etapa: 'agendada', etapaDesde: agoraIso, atualizadoEm: agoraIso });
           await repo.grava('pessoas', pessoa);
-          await registrar('Movido(a) para "Consulta agendada" pelo Assistente.', 'etapa');
+          await registrar(origem === 'site' ? 'Movido(a) para "Consulta agendada" (agendou pelo site).' : 'Movido(a) para "Consulta agendada" pelo Assistente.', 'etapa');
         }
         const primeira = !dados.consultas.some((c) => c.pessoaId === pessoa.id && c.status === 'realizada');
         const preAnamnese = primeira && dados.automacoesCfg?.ativas?.preAnamnese

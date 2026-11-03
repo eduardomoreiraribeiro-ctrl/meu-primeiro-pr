@@ -149,3 +149,14 @@ Depois disso, o Supabase verifica sozinho a cada 30 minutos.
   - as respostas vão direto para o banco e só a nutricionista vê;
   - o assistente nunca lê as respostas.
 - **Alterar os textos:** se mudar um texto no código (`js/mensagens-automaticas.js`), cadastre o modelo de novo na Meta com o texto novo.
+
+## Agendamento pelo site
+
+A página `agendar.html` usa a mesma função `whatsapp-automacoes`. Basta ela estar publicada com o código atual, com o **Verify JWT desligado**.
+
+1. No sistema, abra **Configurações › Agendamento pelo site › Editar**.
+2. Marque **Página aberta para agendamentos** e escolha os serviços (por exemplo, Consulta inicial e Retorno).
+3. Se quiser, informe o WhatsApp da clínica e uma mensagem de boas-vindas. Salve.
+4. Toque em **Copiar o link** e coloque na bio do Instagram.
+   - O link é `https://eduardomoreiraribeiro-ctrl.github.io/meu-primeiro-pr/crm-nutri-dudu/agendar.html`.
+

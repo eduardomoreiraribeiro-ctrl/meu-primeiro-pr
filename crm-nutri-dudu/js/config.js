@@ -44,6 +44,7 @@ NutriDudu.config = {
     whatsapp: 'WhatsApp direto',
     indicacao: 'Indicação de cliente',
     presencial: 'Presencial',
+    site: 'Agendamento pelo site',
     outro: 'Outro',
   },
 
@@ -75,6 +76,7 @@ NutriDudu.config = {
     recepcao: 'Recepção',
     profissional: 'Profissional',
     agente: 'Agente de IA',
+    site: 'Paciente, pelo site',
   },
 
   MODALIDADES: {
@@ -142,4 +144,15 @@ NutriDudu.config = {
   },
 
   DIAS_SEMANA: ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'],
+
+  // Agendamento pelo site (página agendar.html). Os dias de atendimento por modalidade
+  // são os mesmos do assistente (Configurações › Assistente do WhatsApp).
+  AGENDAMENTO_SITE_PADRAO: {
+    ativo: false,
+    servicoIds: [],        // serviços que o paciente pode marcar sozinho
+    antecedenciaHoras: 12, // marcar com pelo menos esta antecedência
+    diasFrente: 30,        // até quantos dias à frente
+    whatsappClinica: '',   // número do WhatsApp da clínica (botão "Falar com a clínica")
+    mensagem: '',          // texto de boas-vindas no topo da página
+  },
 };

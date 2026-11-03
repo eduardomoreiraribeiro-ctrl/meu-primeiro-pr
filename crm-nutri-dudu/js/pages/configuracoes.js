@@ -668,6 +668,78 @@ NutriDudu.pages.configuracoes = (function () {
     }));
   }
 
+  // ---------------- Agendamento pelo site ----------------
+
+  const linkSite = () => `${enderecoAtual()}/agendar.html`;
+
+  function blocoSite(cfg, servicos, agenteCfg) {
+    const { utils, ui, permissoes } = NutriDudu;
+    const pode = permissoes.pode('configurarAgente');
+    const nomes = servicos.filter((x) => (cfg.servicoIds || []).includes(x.id) && x.ativo !== false).map((x) => x.nome);
+    const dias = (lista) => [...lista].sort((a, b) => a - b).map((d) => ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][d]).join(', ');
+    return `
+      <section class="card" data-bloco-site>
+        <div class="secao-cabecalho">
+          <h2 class="card-title">Agendamento pelo site</h2>
+          ${ui.badge(cfg.ativo ? 'Aberto' : 'Fechado', cfg.ativo ? 'sucesso' : 'neutro')}
+        </div>
+        <p class="muted small card-sub">Uma página em que o paciente escolhe o serviço e um horário livre sozinho (para a bio do Instagram, o Google ou o WhatsApp). Mostra só uma seleção curta dos próximos horários, como o assistente. A consulta entra na agenda como "agendada pelo site", e o paciente recebe o lembrete e a pré-anamnese pelo WhatsApp.</p>
+        <p class="small"><strong>Link da página:</strong> <a href="${utils.escapeHtml(linkSite())}" target="_blank" rel="noopener">${utils.escapeHtml(linkSite())}</a></p>
+        <p class="small"><strong>Serviços:</strong> ${nomes.length ? utils.escapeHtml(nomes.join(', ')) : '<span class="muted">nenhum escolhido (Editar)</span>'}</p>
+        <p class="small"><strong>Regras:</strong> com pelo menos ${Number(cfg.antecedenciaHoras)} h de antecedência, até ${Number(cfg.diasFrente)} dias à frente · presencial: ${utils.escapeHtml(dias(agenteCfg.diasPresencial || agenteCfg.diasAgenda || [1, 2, 3, 4, 5]))} · online: ${utils.escapeHtml(dias(agenteCfg.diasOnline || [0, 1, 2, 3, 4, 5, 6]))} <span class="muted">(os mesmos dias do assistente)</span></p>
+        ${pode ? `
+          <div class="acoes-linha">
+            <button type="button" class="btn btn-pequeno btn-primary" data-editar-site>Editar</button>
+            <button type="button" class="btn btn-pequeno" data-copiar-site>Copiar o link</button>
+            <a class="btn btn-pequeno" href="agendar.html#demo" target="_blank" rel="noopener">Ver demonstração</a>
+          </div>` : '<p class="muted small">Só o administrador altera o agendamento pelo site.</p>'}
+      </section>`;
+  }
+
+  function abrirSite(cfg, servicos) {
+    const { form: f, modal, store, ui, permissoes } = NutriDudu;
+    if (!permissoes.exigir('configurarAgente')) return;
+    const opcoes = servicos.filter((x) => x.ativo !== false).map((x) => [x.id, `${x.nome} (${NutriDudu.utils.moeda(x.valor)})`]);
+    modal.formulario({
+      titulo: 'Agendamento pelo site',
+      largo: true,
+      corpo: `
+        ${f.chave('ativo', 'Página aberta para agendamentos', cfg.ativo, { ajuda: 'Fechada, a página mostra "agendamento indisponível" e o botão do WhatsApp da clínica.' })}
+        ${f.marcadores('servicoIds', 'Serviços que o paciente pode marcar sozinho', opcoes, cfg.servicoIds || [], { ajuda: 'Normalmente a consulta inicial e o retorno. Pacotes costumam ser combinados com a equipe.' })}
+        <div class="grade-2">
+          ${f.texto('antecedenciaHoras', 'Antecedência mínima (horas)', cfg.antecedenciaHoras, { tipo: 'number', atributos: 'min="1" max="72" step="1"' })}
+          ${f.texto('diasFrente', 'Até quantos dias à frente', cfg.diasFrente, { tipo: 'number', atributos: 'min="3" max="90" step="1"' })}
+        </div>
+        ${f.texto('whatsappClinica', 'WhatsApp da clínica (para o botão "Falar com a clínica")', cfg.whatsappClinica, { placeholder: '(27) 99999-0000', ajuda: 'O número em que os pacientes falam com a clínica. Pode deixar em branco.' })}
+        ${f.areaTexto('mensagem', 'Mensagem no topo da página (opcional)', cfg.mensagem, { ajuda: 'Ex.: "Consultas presenciais de segunda a sexta e online também aos sábados."' })}
+        <p class="muted small">Os dias de atendimento presencial e online são os mesmos do assistente (Configurações › Assistente do WhatsApp › Editar).</p>`,
+      ler: (form) => ({
+        ativo: f.marcado(form, 'ativo'),
+        servicoIds: f.marcadosDe(form, 'servicoIds'),
+        antecedenciaHoras: f.numero(form, 'antecedenciaHoras'),
+        diasFrente: f.numero(form, 'diasFrente'),
+        whatsappClinica: f.valor(form, 'whatsappClinica'),
+        mensagem: f.valor(form, 'mensagem').slice(0, 500),
+      }),
+      validar: (d) => {
+        const erros = {};
+        if (d.ativo && !d.servicoIds.length) erros.servicoIds = 'Escolha pelo menos um serviço.';
+        if (!(Number.isInteger(d.antecedenciaHoras) && d.antecedenciaHoras >= 1 && d.antecedenciaHoras <= 72)) erros.antecedenciaHoras = 'Entre 1 e 72 horas.';
+        if (!(Number.isInteger(d.diasFrente) && d.diasFrente >= 3 && d.diasFrente <= 90)) erros.diasFrente = 'Entre 3 e 90 dias.';
+        const dig = NutriDudu.utils.soDigitos(d.whatsappClinica);
+        if (d.whatsappClinica && !(dig.length >= 10 && dig.length <= 13)) erros.whatsappClinica = 'Informe o número com DDD.';
+        return erros;
+      },
+      salvar: async (d) => {
+        const dig = NutriDudu.utils.soDigitos(d.whatsappClinica);
+        const dados = { ...d, whatsappClinica: dig ? (dig.length <= 11 ? `55${dig}` : dig) : '' };
+        if (await store.get('configuracoes', 'agendamento_site')) await store.update('configuracoes', 'agendamento_site', dados);
+        else await store.create('configuracoes', dados, { id: 'agendamento_site' });
+        ui.toast(d.ativo ? 'Agendamento pelo site aberto.' : 'Agendamento pelo site atualizado.');
+      },
+    });
+  }
+
   /** Prévia do "Resumo do dia" com os dados de agora (o mesmo texto que o servidor envia). */
   async function verResumo() {
     const { store, modal, utils } = NutriDudu;
@@ -789,6 +861,7 @@ NutriDudu.pages.configuracoes = (function () {
     const agenteCfg = { ...PADRAO_AGENTE, ...((await store.get('configuracoes', 'agente')) || {}) };
     const automacoesCfg = NutriDudu.mensagensAutomaticas.configuracao((await store.get('configuracoes', 'automacoes')) || {});
     const automacoesStatus = await store.get('configuracoes', 'automacoes_status');
+    const siteCfg = { ...config.AGENDAMENTO_SITE_PADRAO, ...((await store.get('configuracoes', 'agendamento_site')) || {}) };
     const podeProf = permissoes.pode('editarProfissionais');
     const nomeProf = Object.fromEntries(profissionais.map((p) => [p.id, p.nome]));
     const naNuvem = NutriDudu.nuvem.ativa();
@@ -916,6 +989,7 @@ NutriDudu.pages.configuracoes = (function () {
 
       ${blocoAgente(agenteCfg)}
       ${blocoAutomacoes(automacoesCfg, automacoesStatus, geral)}
+      ${blocoSite(siteCfg, servicos, agenteCfg)}
     `;
 
     const porId = (lista, id) => lista.find((x) => x.id === id);
@@ -940,6 +1014,15 @@ NutriDudu.pages.configuracoes = (function () {
     container.querySelector('[data-rodar-automacoes]')?.addEventListener('click', (e) => rodarAutomacoes(e.currentTarget));
     container.querySelector('[data-ver-resumo]')?.addEventListener('click', () => verResumo());
     container.querySelectorAll('[data-ver-modelo]').forEach((b) => b.addEventListener('click', () => verModelo(b.dataset.verModelo, automacoesCfg, geral)));
+    container.querySelector('[data-editar-site]')?.addEventListener('click', () => abrirSite(siteCfg, servicos));
+    container.querySelector('[data-copiar-site]')?.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(linkSite());
+        ui.toast('Link copiado!');
+      } catch (erro) {
+        ui.toast('Não deu para copiar automaticamente. Selecione o link e copie.', 'info');
+      }
+    });
     container.querySelectorAll('[data-salvar-perfil]').forEach((b) => b.addEventListener('click', () => salvarPerfil(b.closest('[data-conta]'))));
   }
 

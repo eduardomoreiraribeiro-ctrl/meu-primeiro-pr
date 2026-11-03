@@ -144,6 +144,27 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
   - **Conversas:** as mensagens automáticas aparecem com ⏰.
 - **Servidor:** nova função `supabase/functions/whatsapp-automacoes`, chamada a cada 30 minutos pelo agendamento do Supabase (Cron) e usada pelo formulário. Os textos dos modelos ficam em `js/mensagens-automaticas.js`, compartilhado entre o sistema e o servidor.
 
+### Agendamento pelo site
+
+- Página pública **`agendar.html`**, para a bio do Instagram, o Google ou o WhatsApp. O paciente:
+  1. escolhe o serviço (com preço e duração);
+  2. escolhe presencial ou online;
+  3. escolhe um dos próximos horários livres (seleção curta, até 6 por vez, com "Ver outras datas");
+  4. informa nome, WhatsApp e e-mail (opcional) e concorda com o uso dos dados.
+- A consulta entra na agenda como **"agendada pelo site"**. Quem ainda não tem cadastro vira **lead** com origem "Agendamento pelo site", na etapa "Consulta agendada". Depois, o lembrete e a pré-anamnese saem pelo WhatsApp, como sempre.
+- **Regras** (Configurações › Agendamento pelo site):
+  - página aberta ou fechada e quais serviços aparecem;
+  - antecedência mínima (padrão: 12 horas) e até quantos dias à frente (padrão: 30);
+  - botão do WhatsApp da clínica;
+  - os dias de presencial e online são os mesmos do assistente.
+- **Proteções:**
+  - 1 agendamento futuro pelo site por celular;
+  - no máximo 10 agendamentos pelo site por hora na clínica toda;
+  - campo escondido contra robôs;
+  - o horário é conferido de novo na hora de salvar;
+  - a página nunca mostra nomes de outros pacientes.
+- Demonstração sem a nuvem: `agendar.html#demo`.
+
 ### Resumo do dia
 
 - Toda manhã, de segunda a sábado, os **celulares da equipe** recebem pelo WhatsApp o resumo do dia:
