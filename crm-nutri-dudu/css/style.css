@@ -1676,3 +1676,11 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
 .espera-acoes { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; }
 .espera-recentes { margin-top: 0.9rem; }
 .espera-recentes summary { cursor: pointer; font-weight: 600; }
+
+/* ---------- Importar pacientes de planilha ---------- */
+.import-titulo { font-size: 1rem; margin: 1.1rem 0 0.4rem; }
+.import-colunas { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 0.6rem; margin-top: 0.5rem; }
+.import-coluna { display: grid; gap: 0.25rem; padding: 0.55rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+.import-coluna select { width: 100%; }
+.import-exemplo { overflow-wrap: anywhere; }
+.erro-texto { color: var(--perigo); }

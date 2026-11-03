@@ -144,6 +144,14 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
   - **Conversas:** as mensagens automáticas aparecem com ⏰.
 - **Servidor:** nova função `supabase/functions/whatsapp-automacoes`, chamada a cada 30 minutos pelo agendamento do Supabase (Cron) e usada pelo formulário. Os textos dos modelos ficam em `js/mensagens-automaticas.js`, compartilhado entre o sistema e o servidor.
 
+### Importar pacientes de uma planilha
+
+- Em **Clientes › Importar planilha** (só o administrador): copie as linhas da planilha (Excel, Numbers, Google Planilhas, exportação do WebDiet) e cole, ou abra um arquivo CSV.
+- O sistema reconhece as colunas pelos títulos (Nome, Celular/WhatsApp, E-mail, Nascimento, CPF, Sexo, Cidade, Observações) ou pelo conteúdo. Você confere e pode trocar.
+- A prévia mostra quem é novo, quem **já está cadastrado** (mesmo celular ou CPF: não duplica) e quem tem problema (sem nome ou sem celular), com o motivo.
+- Escolha se entram como **clientes** ou **leads**, a origem, e se já autorizaram mensagens pelo WhatsApp (sem isso, nenhuma mensagem automática é enviada para eles).
+- Importar a mesma planilha de novo é seguro: só entram os que faltam.
+
 ### Agendamento pelo site
 
 - Página pública **`agendar.html`**, para a bio do Instagram, o Google ou o WhatsApp. O paciente:
@@ -164,6 +172,12 @@ CRM da clínica de nutrição **Nutri Dudu**. O planejamento completo está em [
   - o horário é conferido de novo na hora de salvar;
   - a página nunca mostra nomes de outros pacientes.
 - Demonstração sem a nuvem: `agendar.html#demo`.
+
+### Nome do consultório
+
+- Em **Configurações › Regras gerais › Nome do consultório**. É o nome que os pacientes veem:
+  - o assistente se apresenta como "Assistente <nome>";
+  - aparece na página de agendamento, na pré-anamnese e na política de privacidade.
 
 ### Resumo do dia
 

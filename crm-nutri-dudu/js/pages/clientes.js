@@ -300,7 +300,7 @@ NutriDudu.pages.clientes = (function () {
 
     container.innerHTML = `
       ${ui.cabecalho('Clientes', '', `
-        ${permissoes.pode('gerenciarDados') ? '<button type="button" class="btn" data-exportar>Exportar CSV</button>' : ''}
+        ${permissoes.pode('gerenciarDados') ? '<button type="button" class="btn" data-importar>Importar planilha</button><button type="button" class="btn" data-exportar>Exportar CSV</button>' : ''}
         <button type="button" class="btn" data-novo="lead">+ Lead</button>
         <button type="button" class="btn btn-primary" data-novo="cliente">+ Cliente</button>`)}
 
@@ -370,6 +370,7 @@ NutriDudu.pages.clientes = (function () {
         aoSalvar: (p) => { location.hash = `#/clientes/${encodeURIComponent(p.id)}`; },
       });
     }));
+    container.querySelector('[data-importar]')?.addEventListener('click', () => NutriDudu.importarPessoas.abrir());
     container.querySelector('[data-exportar]')?.addEventListener('click', () => {
       exportarCsv(filtradas);
       ui.toast(`${filtradas.length} cadastro(s) exportado(s).`);
