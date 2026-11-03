@@ -14,11 +14,21 @@ NutriDudu.importarPessoas = (function () {
     cpf: 'CPF',
     sexo: 'Sexo',
     cidade: 'Cidade',
+    objetivo: 'Objetivo',
+    inicio: 'Início do acompanhamento',
+    ultimaConsulta: 'Data da última consulta',
+    proximoRetorno: 'Próximo retorno previsto',
+    status: 'Status (ativo / pausado)',
     observacoes: 'Observações',
   };
   // Palavras dos títulos de coluna → campo.
   const TITULOS = [
-    [/^(nome|nome completo|paciente|cliente)$/, 'nome'],
+    [/^(nome|paciente|cliente)\b/, 'nome'],
+    [/(proxim[oa]).*(retorno|consulta)/, 'proximoRetorno'],
+    [/(ultim[oa]).*(retorno|consulta|atendimento)/, 'ultimaConsulta'],
+    [/(inicio|desde|entrada)/, 'inicio'],
+    [/^objetivo/, 'objetivo'],
+    [/^(status|situacao)/, 'status'],
     [/(celular|whats|telefone|fone|^tel)/, 'telefone'],
     [/(e-?mail)/, 'email'],
     [/(nasc|aniversario|^dn$)/, 'dataNascimento'],
@@ -104,6 +114,17 @@ NutriDudu.importarPessoas = (function () {
   }
 
   /** "14/03/1991", "14-03-91", "1991-03-14" → "1991-03-14" (ou null). */
+  function lerDataQualquer(v) {
+    const t = String(v || '').trim();
+    const m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/.exec(t);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(t)) return t;
+    if (!m) return null;
+    let a = Number(m[3]);
+    if (a < 100) a += 2000;
+    const data = new Date(a, Number(m[2]) - 1, Number(m[1]));
+    return Number.isNaN(data.getTime()) || data.getMonth() !== Number(m[2]) - 1 ? null : NutriDudu.utils.isoDia(data);
+  }
+
   function lerData(v) {
     const t = String(v || '').trim();
     let d;
@@ -119,6 +140,23 @@ NutriDudu.importarPessoas = (function () {
     const data = new Date(a, m - 1, d);
     if (Number.isNaN(data.getTime()) || data.getMonth() !== m - 1 || data > new Date() || a < 1900) return null;
     return NutriDudu.utils.isoDia(data);
+  }
+
+  /** "Emagrecimento" → emagrecimento; "Ganho de Massa" → hipertrofia… Outros textos ficam como etiqueta. */
+  function lerObjetivo(v) {
+    const t = NutriDudu.utils.normalizar(v).trim();
+    if (!t) return { objetivo: null, etiqueta: null };
+    const mapa = [[/emagrec|perda de peso|perder peso/, 'emagrecimento'], [/massa|hipertrof|ganho/, 'hipertrofia'], [/perform|esport|atleta|desempenho/, 'esportiva'], [/gestan|gravid/, 'gestante'], [/^saude|saude/, 'saude']];
+    const achado = mapa.find(([re]) => re.test(t));
+    if (achado) return { objetivo: achado[1], etiqueta: null };
+    return { objetivo: 'outro', etiqueta: String(v).trim().slice(0, 40) };
+  }
+
+  /** "Ativo" → ativo; "Pausado", "Inativo", "Parou" → inativo. */
+  function lerStatus(v) {
+    const t = NutriDudu.utils.normalizar(v).trim();
+    if (/^(pausad|inativ|parou|encerrad|desistiu|cancel)/.test(t)) return 'inativo';
+    return 'ativo';
   }
 
   function lerSexo(v) {
@@ -150,6 +188,11 @@ NutriDudu.importarPessoas = (function () {
         sexo: lerSexo(valor('sexo')),
         cidade: valor('cidade').slice(0, 80),
         observacoes: valor('observacoes').slice(0, 1000),
+        ...lerObjetivo(valor('objetivo')),
+        inicio: valor('inicio') ? lerData(valor('inicio')) : null,
+        ultimaConsulta: valor('ultimaConsulta') ? lerData(valor('ultimaConsulta')) : null,
+        proximoRetorno: valor('proximoRetorno') ? lerDataQualquer(valor('proximoRetorno')) : null,
+        status: lerStatus(valor('status')),
       };
       const avisos = [];
       if (r.nome.length < 3) return { ...r, situacao: 'erro', motivo: 'sem nome' };
@@ -205,17 +248,37 @@ NutriDudu.importarPessoas = (function () {
         const agora = new Date().toISOString();
         const hoje = utils.isoDia(new Date());
         const botao = dialog.querySelector('[type="submit"]');
+        const [profissionais, servicos] = await Promise.all([store.list('profissionais'), store.list('servicos')]);
+        const prof = profissionais.find((x) => x.ativo !== false) || profissionais[0];
+        const servico = servicos.find((x) => x.ativo !== false && x.categoria === 'retorno') || servicos.find((x) => x.ativo !== false && x.categoria !== 'pacote') || servicos[0];
         let feitos = 0;
         for (const r of novos) {
           const salvo = await store.create('pessoas', {
             nome: r.nome, telefone: utils.formatarTelefone(r.telefone), email: r.email, dataNascimento: r.dataNascimento,
             cpf: r.cpf ? utils.formatarCpf(r.cpf) : '', sexo: r.sexo, cidade: r.cidade, endereco: '', observacoes: r.observacoes,
-            origem: op.origem, indicadoPorId: null, objetivo: null, profissionalId: null, servicoInteresseId: null, retornoDias: null, tags: [],
+            origem: op.origem, indicadoPorId: null, objetivo: r.objetivo, profissionalId: prof?.id || null, servicoInteresseId: null, retornoDias: null,
+            tags: r.etiqueta ? [r.etiqueta] : [],
             consentimentos: { saude: false, whatsapp: op.whatsapp, fotos: false, divulgacao: false },
-            funil: ehCliente ? 'acompanhamento' : 'comercial', etapa: ehCliente ? 'tratamento' : 'novo', etapaDesde: agora,
-            status: ehCliente ? 'ativo' : 'lead', clienteDesde: ehCliente ? hoje : null, motivoPerda: null, agentePausado: false,
+            funil: ehCliente ? 'acompanhamento' : 'comercial',
+            etapa: ehCliente ? (r.status === 'inativo' ? 'encerrado' : 'tratamento') : 'novo', etapaDesde: agora,
+            status: ehCliente ? r.status : 'lead', clienteDesde: ehCliente ? (r.inicio || hoje) : null, motivoPerda: null, agentePausado: false,
             importadoEm: agora,
           });
+          // Última consulta da planilha: entra como consulta realizada (para os alertas de retorno).
+          if (ehCliente && r.ultimaConsulta && prof && servico) {
+            const inicio = new Date(`${r.ultimaConsulta}T12:00:00`);
+            await store.create('consultas', {
+              pessoaId: salvo.id, profissionalId: prof.id, servicoId: servico.id, pacoteId: null, tipo: 'retorno',
+              inicio: inicio.toISOString(), fim: new Date(inicio.getTime() + (servico.duracaoMin || 60) * 60000).toISOString(),
+              status: 'realizada', agendadaPor: 'profissional', encaixe: false, descontarFalta: true,
+              avaliacaoId: null, anamneseId: null, fotoIds: [], anotacoes: '', conduta: '',
+              proximoRetorno: r.proximoRetorno || null,
+              observacaoAgenda: 'Importada da planilha (data da última consulta; horário aproximado).',
+              importada: true,
+              // Não manda "Como foi a sua consulta?" para uma consulta antiga.
+              automacoes: { posConsulta: { em: agora, ok: true, importada: true } },
+            });
+          }
           await store.create('interacoes', {
             pessoaId: salvo.id, dataHora: agora, tipo: 'nota', autor: permissoes.atual(), automatico: true,
             descricao: `Importado(a) de planilha como ${ehCliente ? 'cliente' : 'lead'}.`,
@@ -256,7 +319,8 @@ NutriDudu.importarPessoas = (function () {
       const linhaPrevia = (r) => `<tr>
           <td>${utils.escapeHtml(r.nome || '—')}</td>
           <td>${utils.escapeHtml(r.telefone ? utils.formatarTelefone(r.telefone) : '—')}</td>
-          <td>${r.dataNascimento ? utils.data(r.dataNascimento) : '—'}</td>
+          <td>${r.status === 'inativo' ? 'Pausado' : 'Ativo'}</td>
+          <td>${r.ultimaConsulta ? utils.data(r.ultimaConsulta) : '—'}${r.proximoRetorno ? `<span class="muted small bloco">próximo: ${utils.data(r.proximoRetorno)}</span>` : ''}</td>
           <td>${r.situacao === 'novo' ? ui.badge('Novo', 'sucesso') : r.situacao === 'existe' ? ui.badge('Já cadastrado', 'neutro') : ui.badge(r.motivo, 'perigo')}${r.avisos?.length ? ` <span class="muted small">${utils.escapeHtml(r.avisos.join('; '))}</span>` : ''}</td>
         </tr>`;
       const amostra = [...novos.slice(0, 5), ...erros.slice(0, 5), ...existentes.slice(0, 3)];
@@ -266,13 +330,14 @@ NutriDudu.importarPessoas = (function () {
         <div class="import-colunas">${colunas}</div>
         <h3 class="import-titulo">2. Prévia</h3>
         <p class="small"><strong>${novos.length}</strong> ${novos.length === 1 ? 'paciente novo' : 'pacientes novos'}${existentes.length ? ` · ${existentes.length} já ${existentes.length === 1 ? 'cadastrado' : 'cadastrados'} (não serão duplicados)` : ''}${erros.length ? ` · <span class="texto-perigo">${erros.length} com problema (não serão importados)</span>` : ''}</p>
-        <div class="tabela-rolagem"><table class="tabela-simples small"><thead><tr><th>Nome</th><th>Celular</th><th>Nascimento</th><th>Situação</th></tr></thead><tbody>${amostra.map(linhaPrevia).join('')}</tbody></table></div>
+        <div class="tabela-rolagem"><table class="tabela-simples small"><thead><tr><th>Nome</th><th>Celular</th><th>Status</th><th>Última consulta</th><th>Situação</th></tr></thead><tbody>${amostra.map(linhaPrevia).join('')}</tbody></table></div>
         ${erros.length ? `<details class="small"><summary>Ver os ${erros.length} com problema</summary><ul>${erros.map((r) => `<li>${utils.escapeHtml(r.nome || '(sem nome)')} — ${utils.escapeHtml(r.motivo)}</li>`).join('')}</ul><p class="muted">Corrija na planilha e importe de novo: quem já entrou não é duplicado.</p></details>` : ''}
         <h3 class="import-titulo">3. Como cadastrar</h3>
         <div class="grade-2">
           ${f.selecao('tipoImport', 'Cadastrar como', { cliente: 'Clientes (já são pacientes)', lead: 'Leads (interessados)' }, 'cliente')}
           ${f.selecao('origemImport', 'Como conheceram a clínica', config.ORIGENS, 'outro')}
         </div>
+        ${estado.campos.includes('ultimaConsulta') ? '<p class="muted small">A "Data da última consulta" entra no histórico como uma consulta realizada (horário aproximado: 12h), para os alertas de retorno funcionarem. O "Próximo retorno previsto" fica ligado a ela.</p>' : ''}
         ${f.chave('consWhatsappImport', 'Estes pacientes autorizaram receber mensagens da clínica pelo WhatsApp (lembretes e avisos)', false, { ajuda: 'Marque só se eles já autorizaram. Sem isso, o sistema não manda mensagens automáticas para eles; dá para marcar depois, um por um, no cadastro.' })}`;
       botaoSalvar.disabled = !novos.length;
       botaoSalvar.textContent = novos.length ? `Importar ${novos.length} ${novos.length === 1 ? 'paciente' : 'pacientes'}` : 'Importar';
@@ -312,5 +377,5 @@ NutriDudu.importarPessoas = (function () {
     });
   }
 
-  return { abrir, lerTabela, adivinharColunas, temTitulos, montarRegistros, lerData };
+  return { abrir, lerTabela, adivinharColunas, temTitulos, montarRegistros, lerData, lerObjetivo, lerStatus };
 })();
