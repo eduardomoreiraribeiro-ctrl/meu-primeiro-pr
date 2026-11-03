@@ -64,7 +64,10 @@ NutriDudu.financeiro = (function () {
         ${f.texto('primeiroVencimento', '1º vencimento', hoje, { tipo: 'date', obrigatorio: true, ajuda: 'As demais vencem no mesmo dia dos meses seguintes.' })}
         ${f.selecao('formaPagamento', 'Forma de pagamento', config.FORMAS_PAGAMENTO, 'pix')}
       </div>
-      ${podeReceber ? f.chave('primeiraPaga', '1ª parcela paga agora', true) : '<p class="campo-ajuda">As parcelas ficam pendentes; a recepção registra os pagamentos.</p>'}
+      <div class="grade-2">
+        ${podeReceber ? f.texto('jaPagas', 'Parcelas já pagas', renovarDe ? 0 : 1, { tipo: 'number', atributos: 'step="1" min="0" max="24"', ajuda: 'Ex.: 1 se pagou a primeira agora; num plano que já começou, quantas já foram pagas.' }) : '<p class="campo-ajuda">As parcelas ficam pendentes; a recepção registra os pagamentos.</p>'}
+        ${f.texto('usadasAntes', 'Consultas já usadas', 0, { tipo: 'number', atributos: 'step="1" min="0" max="99"', ajuda: 'Só para um plano que já tinha começado antes do sistema. Num plano novo, deixe 0.' })}
+      </div>
       <p class="campo-ajuda" data-resumo-parcelas></p>`;
 
     modal.formulario({
@@ -80,7 +83,8 @@ NutriDudu.financeiro = (function () {
         parcelas: f.numero(form, 'parcelas'),
         primeiroVencimento: f.valor(form, 'primeiroVencimento'),
         formaPagamento: f.valor(form, 'formaPagamento'),
-        primeiraPaga: f.marcado(form, 'primeiraPaga'),
+        jaPagas: podeReceber ? (f.numero(form, 'jaPagas') ?? 0) : 0,
+        usadasAntes: f.numero(form, 'usadasAntes') ?? 0,
       }),
       validar: (d) => {
         const erros = {};
@@ -94,7 +98,9 @@ NutriDudu.financeiro = (function () {
         else if (d.valor > 100000) erros.valor = 'Valor alto demais — confira.';
         if (!Number.isInteger(d.parcelas) || d.parcelas < 1 || d.parcelas > 24) erros.parcelas = 'De 1 a 24 parcelas.';
         if (!d.primeiroVencimento) erros.primeiroVencimento = 'Informe o vencimento.';
-        if (d.primeiraPaga && d.primeiroVencimento > hoje) erros.primeiroVencimento = 'Parcela paga agora não pode vencer no futuro — ajuste a data ou desmarque "paga agora".';
+        if (!Number.isInteger(d.jaPagas) || d.jaPagas < 0 || (Number.isInteger(d.parcelas) && d.jaPagas > d.parcelas)) erros.jaPagas = 'De 0 até o número de parcelas.';
+        const qtd = servicos.find((s) => s.id === d.servicoId)?.qtdConsultas || 0;
+        if (!Number.isInteger(d.usadasAntes) || d.usadasAntes < 0 || d.usadasAntes >= qtd) erros.usadasAntes = `De 0 a ${Math.max(0, qtd - 1)}.`;
         return erros;
       },
       salvar: async (d) => {
@@ -103,20 +109,21 @@ NutriDudu.financeiro = (function () {
         const pacote = await store.create('pacotes', {
           pessoaId: alvo.id, servicoId: servico.id, inicio: d.inicio, validade: servico.semPrazo ? null : d.validade, semPrazo: Boolean(servico.semPrazo),
           qtdConsultas: servico.qtdConsultas, frequencia: servico.frequencia, valorNegociado: d.valor,
-          parcelas: d.parcelas, status: 'ativo', renovacaoDe: renovarDe?.id || null,
+          parcelas: d.parcelas, status: 'ativo', renovacaoDe: renovarDe?.id || null, usadasAntes: d.usadasAntes || 0,
         });
         const valores = dividir(d.valor, d.parcelas);
         for (let i = 0; i < d.parcelas; i++) {
-          const paga = i === 0 && d.primeiraPaga;
+          const paga = i < d.jaPagas;
           await store.create('lancamentos', {
             pessoaId: alvo.id, servicoId: servico.id, pacoteId: pacote.id, consultaId: null,
             profissionalId: alvo.profissionalId || null,
             descricao: d.parcelas > 1 ? `${servico.nome} — parcela ${i + 1}/${d.parcelas}` : servico.nome,
             valor: valores[i], desconto: 0, vencimento: somarMeses(d.primeiroVencimento, i),
-            status: paga ? 'pago' : 'pendente', dataPagamento: paga ? hoje : null, formaPagamento: paga ? d.formaPagamento : null,
+            // Parcela já paga: a data do pagamento é o vencimento (ou hoje, se ainda não venceu).
+            status: paga ? 'pago' : 'pendente', dataPagamento: paga ? [somarMeses(d.primeiroVencimento, i), hoje].sort()[0] : null, formaPagamento: paga ? d.formaPagamento : null,
           });
         }
-        await registrar(alvo.id, `${renovarDe ? 'Renovou' : 'Contratou'} ${servico.nome}: ${utils.moeda(d.valor)}${d.parcelas > 1 ? ` em ${d.parcelas} parcelas` : ''}${servico.semPrazo ? ', sem prazo de validade' : `, válido até ${utils.data(d.validade)}`}.`, 'pacote');
+        await registrar(alvo.id, `${renovarDe ? 'Renovou' : 'Contratou'} ${servico.nome}: ${utils.moeda(d.valor)}${d.parcelas > 1 ? ` em ${d.parcelas} parcelas` : ''}${servico.semPrazo ? ', sem prazo de validade' : `, válido até ${utils.data(d.validade)}`}${d.usadasAntes ? ` (plano já começado: ${d.usadasAntes} consulta(s) usada(s) antes do sistema)` : ''}.`, 'pacote');
 
         // Funis: lead que contrata vira cliente; cliente que renova vai para "Renovado".
         const agora = new Date().toISOString();

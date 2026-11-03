@@ -358,7 +358,8 @@ NutriDudu.calculos = (function () {
 
   /** Quantas consultas do pacote já foram usadas (realizadas + faltas que descontam) e quantas estão reservadas. */
   function usoDoPacote(pacote, consultasDoPacote) {
-    const usadas = consultasDoPacote.filter((c) =>
+    // usadasAntes: consultas de um plano que já tinha começado antes de entrar no sistema.
+    const usadas = (Number(pacote.usadasAntes) || 0) + consultasDoPacote.filter((c) =>
       c.status === 'realizada' || (c.status === 'faltou' && c.descontarFalta !== false)).length;
     const reservadas = consultasDoPacote.filter((c) => STATUS_FUTURO.includes(c.status)).length;
     return { usadas, reservadas, total: pacote.qtdConsultas, saldo: Math.max(0, pacote.qtdConsultas - usadas) };
