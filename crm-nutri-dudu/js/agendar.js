@@ -127,6 +127,7 @@
     const lugar = $('[data-horarios]');
     lugar.innerHTML = '<p class="muted small">Procurando horários…</p>';
     $('[data-mais-datas]').hidden = true;
+    $('[data-datas-anteriores]').hidden = true;
     let r;
     if (demo) {
       r = demoHorarios(semana);
@@ -181,10 +182,15 @@
       });
       lugar.appendChild(grupo);
     });
-    const mais = $('[data-mais-datas]');
-    mais.hidden = !r.temMais;
+    $('[data-mais-datas]').hidden = !r.temMais;
+    $('[data-datas-anteriores]').hidden = semana === 0;
   }
-  $('[data-mais-datas]').addEventListener('click', () => carregarHorarios(estado.semana + 1));
+  const irParaHorarios = (semana) => {
+    carregarHorarios(semana);
+    $('[data-bloco-horarios]').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  $('[data-mais-datas]').addEventListener('click', () => irParaHorarios(estado.semana + 1));
+  $('[data-datas-anteriores]').addEventListener('click', () => irParaHorarios(Math.max(0, estado.semana - 1)));
 
   // ---------- Passo 4: dados ----------
   function abrirDados() {

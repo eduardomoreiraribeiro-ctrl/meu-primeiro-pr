@@ -79,6 +79,8 @@
   .passo { display: inline-grid; place-items: center; width: 1.6rem; height: 1.6rem; border-radius: 50%; background: var(--primary); color: var(--on-primary); font-size: 0.85rem; font-weight: 700; margin-right: 0.4rem; }
   .resumo-escolha { background: var(--primary-soft); border-radius: 10px; padding: 0.65rem 0.8rem; margin-top: 0.6rem; font-weight: 600; }
   .btn-whats { background: #25d366; border-color: #25d366; color: #06210f; width: 100%; margin-top: 0.75rem; text-decoration: none; }
+  .navegar-datas { display: flex; justify-content: space-between; gap: 1rem; margin-top: 0.6rem; }
+  .navegar-datas [data-mais-datas] { margin-left: auto; }
   .escondido { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
 </style>
 </head>
@@ -125,7 +127,10 @@
       <h2><span class="passo" data-passo-horario>3</span>Horário</h2>
       <p class="small muted" data-horarios-ajuda>Separamos os próximos horários livres da agenda.</p>
       <div data-horarios></div>
-      <button type="button" class="btn-link" data-mais-datas hidden>Ver outras datas →</button>
+      <div class="navegar-datas">
+        <button type="button" class="btn-link" data-datas-anteriores hidden>← Datas anteriores</button>
+        <button type="button" class="btn-link" data-mais-datas hidden>Ver outras datas →</button>
+      </div>
     </section>
 
     <form class="card" data-bloco-dados novalidate hidden>
