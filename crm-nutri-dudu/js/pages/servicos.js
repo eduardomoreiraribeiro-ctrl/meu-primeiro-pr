@@ -33,13 +33,15 @@ NutriDudu.pages.servicos = (function () {
       if (dados.qtdConsultas === null || !inteiro(dados.qtdConsultas)) erros.qtdConsultas = 'Informe quantas consultas o pacote inclui.';
       else if (dados.qtdConsultas < 2 || dados.qtdConsultas > 100) erros.qtdConsultas = 'Um pacote tem de 2 a 100 consultas.';
 
-      if (dados.validadeDias === null || !inteiro(dados.validadeDias)) erros.validadeDias = 'Informe a validade em dias.';
+      if (dados.semPrazo) { /* sem validade nem ritmo */ }
+      else if (dados.validadeDias === null || !inteiro(dados.validadeDias)) erros.validadeDias = 'Informe a validade em dias.';
       else if (dados.validadeDias < 1 || dados.validadeDias > 1095) erros.validadeDias = 'A validade deve ficar entre 1 e 1095 dias (3 anos).';
 
       if (!dados.frequencia) erros.frequencia = 'Escolha a frequência prevista.';
 
       const passo = DIAS_FREQUENCIA[dados.frequencia] || 0;
-      if (!erros.qtdConsultas && !erros.validadeDias && passo) {
+      if (dados.parcelasSugeridas !== null && (!inteiro(dados.parcelasSugeridas) || dados.parcelasSugeridas < 1 || dados.parcelasSugeridas > 24)) erros.parcelasSugeridas = 'De 1 a 24 parcelas.';
+      if (!dados.semPrazo && !erros.qtdConsultas && !erros.validadeDias && passo) {
         const minimo = passo * (dados.qtdConsultas - 1) + 1;
         if (dados.validadeDias < minimo) {
           erros.validadeDias = `Com ${dados.qtdConsultas} consultas (${NutriDudu.config.FREQUENCIAS[dados.frequencia].toLowerCase()}), a validade precisa de pelo menos ${minimo} dias.`;
@@ -63,8 +65,11 @@ NutriDudu.pages.servicos = (function () {
       modalidade: f.valor(form, 'modalidade') || 'ambos',
       profissionalIds: f.marcadosDe(form, 'profissionalIds'),
       qtdConsultas: ehPacote ? f.numero(form, 'qtdConsultas') : null,
-      validadeDias: ehPacote ? f.numero(form, 'validadeDias') : null,
-      frequencia: ehPacote ? (f.valor(form, 'frequencia') || null) : null,
+      semPrazo: ehPacote && f.marcado(form, 'semPrazo'),
+      validadeDias: ehPacote && !f.marcado(form, 'semPrazo') ? f.numero(form, 'validadeDias') : null,
+      // Sem prazo: sem ritmo previsto (não gera alerta de "pacote atrasado").
+      frequencia: ehPacote ? (f.marcado(form, 'semPrazo') ? 'livre' : (f.valor(form, 'frequencia') || null)) : null,
+      parcelasSugeridas: ehPacote ? f.numero(form, 'parcelasSugeridas') : null,
     };
   }
 
@@ -93,7 +98,11 @@ NutriDudu.pages.servicos = (function () {
         <legend>Pacote</legend>
         <div class="grade-3">
           ${f.texto('qtdConsultas', 'Consultas incluídas', s.qtdConsultas ?? '', { tipo: 'number', obrigatorio: true, atributos: 'min="2" max="100" step="1"' })}
-          ${f.selecao('frequencia', 'Frequência prevista', config.FREQUENCIAS, s.frequencia || 'mensal', { obrigatorio: true })}
+          ${f.texto('parcelasSugeridas', 'Parcelas sugeridas na venda', s.parcelasSugeridas ?? '', { tipo: 'number', atributos: 'min="1" max="24" step="1"', ajuda: 'Ex.: 3 para "3x de R$ 330". Pode mudar na hora de vender.' })}
+        </div>
+        ${f.chave('semPrazo', 'Sem prazo de validade (vale até usar todas as consultas)', Boolean(s.semPrazo), { ajuda: 'O pacote só termina quando as consultas acabam. O sistema avisa quando faltar 1 consulta, para oferecer a renovação.' })}
+        <div class="grade-2" data-prazo>
+          ${f.selecao('frequencia', 'Frequência prevista', config.FREQUENCIAS, s.frequencia && s.frequencia !== 'livre' ? s.frequencia : 'mensal', { obrigatorio: true })}
           ${f.texto('validadeDias', 'Validade (dias)', s.validadeDias ?? '', { tipo: 'number', obrigatorio: true, atributos: 'min="1" max="1095" step="1"' })}
         </div>
         <p class="campo-ajuda" data-resumo-pacote></p>
@@ -123,6 +132,7 @@ NutriDudu.pages.servicos = (function () {
           const ehPacote = f.valor(form, 'categoria') === 'pacote';
           blocoPacote.hidden = !ehPacote;
           if (!ehPacote) return;
+          form.querySelector('[data-prazo]').hidden = f.marcado(form, 'semPrazo');
 
           const qtd = f.numero(form, 'qtdConsultas');
           const freq = f.valor(form, 'frequencia');
@@ -199,7 +209,7 @@ NutriDudu.pages.servicos = (function () {
     const cartao = (s) => {
       const u = uso(s);
       const pacoteInfo = s.categoria === 'pacote'
-        ? `<p class="muted small">${s.qtdConsultas} consultas · ${utils.escapeHtml((config.FREQUENCIAS[s.frequencia] || '').toLowerCase())} · validade de ${s.validadeDias} dias · ${utils.moeda(s.valor / s.qtdConsultas)} por consulta</p>`
+        ? `<p class="muted small">${s.qtdConsultas} consultas · ${s.semPrazo ? 'sem prazo de validade' : `${utils.escapeHtml((config.FREQUENCIAS[s.frequencia] || '').toLowerCase())} · validade de ${s.validadeDias} dias`}${s.parcelasSugeridas > 1 ? ` · ${s.parcelasSugeridas}x de ${utils.moeda(s.valor / s.parcelasSugeridas)}` : ''} · ${utils.moeda(s.valor / s.qtdConsultas)} por consulta</p>`
         : '';
       const uso1 = s.categoria === 'pacote'
         ? `${u.contratados} ${u.contratados === 1 ? 'contratado' : 'contratados'}`

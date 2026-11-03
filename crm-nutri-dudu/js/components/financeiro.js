@@ -57,7 +57,8 @@ NutriDudu.financeiro = (function () {
       ${f.selecao('servicoId', 'Pacote', servicos.map((s) => [s.id, `${s.nome} — ${s.qtdConsultas} consultas, ${utils.moeda(s.valor)}`]), inicial.id, { obrigatorio: true })}
       <div class="grade-2">
         ${f.texto('inicio', 'Início', hoje, { tipo: 'date', obrigatorio: true })}
-        ${f.texto('validade', 'Válido até', '', { tipo: 'date', obrigatorio: true, ajuda: 'Sugerida pela validade do serviço.' })}
+        <div data-campo-validade>${f.texto('validade', 'Válido até', '', { tipo: 'date', obrigatorio: true, ajuda: 'Sugerida pela validade do serviço.' })}</div>
+        <p class="campo-ajuda" data-sem-prazo hidden>Sem prazo de validade: vale até usar todas as consultas.</p>
         ${f.texto('valor', 'Valor negociado (R$)', inicial.valor, { tipo: 'number', obrigatorio: true, atributos: 'step="0.01" min="0"' })}
         ${f.texto('parcelas', 'Parcelas', 1, { tipo: 'number', obrigatorio: true, atributos: 'step="1" min="1" max="24"' })}
         ${f.texto('primeiroVencimento', '1º vencimento', hoje, { tipo: 'date', obrigatorio: true, ajuda: 'As demais vencem no mesmo dia dos meses seguintes.' })}
@@ -85,7 +86,9 @@ NutriDudu.financeiro = (function () {
         const erros = {};
         if (!d.pessoaId) erros.pessoaId = 'Escolha o paciente.';
         if (!d.inicio) erros.inicio = 'Informe o início.';
-        if (!d.validade) erros.validade = 'Informe a validade.';
+        const semPrazo = servicos.find((s) => s.id === d.servicoId)?.semPrazo;
+        if (semPrazo) { /* sem validade */ }
+        else if (!d.validade) erros.validade = 'Informe a validade.';
         else if (d.inicio && d.validade <= d.inicio) erros.validade = 'A validade precisa ser depois do início.';
         if (d.valor === null || d.valor < 0) erros.valor = 'Informe o valor.';
         else if (d.valor > 100000) erros.valor = 'Valor alto demais — confira.';
@@ -98,7 +101,7 @@ NutriDudu.financeiro = (function () {
         const servico = servicos.find((s) => s.id === d.servicoId);
         const alvo = pessoa || await store.get('pessoas', d.pessoaId);
         const pacote = await store.create('pacotes', {
-          pessoaId: alvo.id, servicoId: servico.id, inicio: d.inicio, validade: d.validade,
+          pessoaId: alvo.id, servicoId: servico.id, inicio: d.inicio, validade: servico.semPrazo ? null : d.validade, semPrazo: Boolean(servico.semPrazo),
           qtdConsultas: servico.qtdConsultas, frequencia: servico.frequencia, valorNegociado: d.valor,
           parcelas: d.parcelas, status: 'ativo', renovacaoDe: renovarDe?.id || null,
         });
@@ -113,7 +116,7 @@ NutriDudu.financeiro = (function () {
             status: paga ? 'pago' : 'pendente', dataPagamento: paga ? hoje : null, formaPagamento: paga ? d.formaPagamento : null,
           });
         }
-        await registrar(alvo.id, `${renovarDe ? 'Renovou' : 'Contratou'} ${servico.nome}: ${utils.moeda(d.valor)}${d.parcelas > 1 ? ` em ${d.parcelas} parcelas` : ''}, válido até ${utils.data(d.validade)}.`, 'pacote');
+        await registrar(alvo.id, `${renovarDe ? 'Renovou' : 'Contratou'} ${servico.nome}: ${utils.moeda(d.valor)}${d.parcelas > 1 ? ` em ${d.parcelas} parcelas` : ''}${servico.semPrazo ? ', sem prazo de validade' : `, válido até ${utils.data(d.validade)}`}.`, 'pacote');
 
         // Funis: lead que contrata vira cliente; cliente que renova vai para "Renovado".
         const agora = new Date().toISOString();
@@ -131,6 +134,9 @@ NutriDudu.financeiro = (function () {
         const atualizar = (origem) => {
           const servico = servicos.find((s) => s.id === f.valor(form, 'servicoId'));
           if (origem === 'servicoId') form.elements.valor.value = servico.valor;
+          if (['servicoId', undefined].includes(origem) && servico.parcelasSugeridas) form.elements.parcelas.value = servico.parcelasSugeridas;
+          form.querySelector('[data-campo-validade]').hidden = Boolean(servico.semPrazo);
+          form.querySelector('[data-sem-prazo]').hidden = !servico.semPrazo;
           if (['servicoId', 'inicio', undefined].includes(origem) && f.valor(form, 'inicio')) {
             form.elements.validade.value = somarDias(f.valor(form, 'inicio'), servico.validadeDias || 90);
           }

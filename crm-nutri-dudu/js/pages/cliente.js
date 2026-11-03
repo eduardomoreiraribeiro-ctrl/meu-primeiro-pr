@@ -278,7 +278,7 @@ NutriDudu.pages.cliente = (function () {
     const ultimo = lista[0];
     // Renovar aparece sem pacote ativo ou quando o ativo está acabando (saldo ≤ 1 ou vence em até 15 dias).
     const usoAtivo = ativo && calculos.usoDoPacote(ativo, c.consultas.filter((x) => x.pacoteId === ativo.id));
-    const acabando = ativo && (usoAtivo.saldo <= 1 || utils.diasEntre(new Date(), ativo.validade) <= 15);
+    const acabando = ativo && (usoAtivo.saldo <= 1 || calculos.diasParaVencer(ativo) <= 15);
     const renovar = ultimo && (!ativo || acabando);
     const cartoes = lista.map((p) => {
       const servico = c.servicoPorId[p.servicoId];
@@ -289,7 +289,7 @@ NutriDudu.pages.cliente = (function () {
       const ritmo = status === 'ativo' ? calculos.ritmoPacote(p, uso) : null;
       const pctUsado = Math.round((uso.usadas / uso.total) * 100);
       const pctReservado = Math.round((uso.reservadas / uso.total) * 100);
-      const diasParaVencer = utils.diasEntre(new Date(), p.validade);
+      const diasParaVencer = calculos.diasParaVencer(p);
       const parcelas = c.lancamentos.filter((l) => l.pacoteId === p.id && l.status !== 'cancelado');
       const pago = parcelas.filter((l) => l.status === 'pago').reduce((t, l) => t + calculos.valorLiquido(l), 0);
       return `
@@ -302,12 +302,14 @@ NutriDudu.pages.cliente = (function () {
             <span class="usado" style="width:${pctUsado}%"></span><span class="reservado" style="width:${pctReservado}%"></span>
           </div>
           <p><strong>${uso.usadas} de ${uso.total}</strong> consultas usadas${uso.reservadas ? ` · ${uso.reservadas} agendada(s)` : ''} · saldo ${uso.saldo}</p>
-          <p class="small muted">${utils.data(p.inicio)} a ${utils.data(p.validade)}${status === 'ativo' ? ` (vence em ${utils.dias(diasParaVencer)})` : ''} · ${utils.escapeHtml((config.FREQUENCIAS[p.frequencia] || '').toLowerCase())}</p>
+          <p class="small muted">${p.validade
+            ? `${utils.data(p.inicio)} a ${utils.data(p.validade)}${status === 'ativo' ? ` (vence em ${utils.dias(diasParaVencer)})` : ''}`
+            : `Desde ${utils.data(p.inicio)} · sem prazo de validade`}${p.frequencia && p.frequencia !== 'livre' ? ` · ${utils.escapeHtml((config.FREQUENCIAS[p.frequencia] || '').toLowerCase())}` : ''}</p>
           ${ritmo ? `<p class="small ${ritmo.atrasadas ? 'texto-alerta' : 'muted'}">${ritmo.atrasadas ? `⚠ ${ritmo.atrasadas} consulta(s) atrasada(s) no ritmo previsto` : 'Em dia com o ritmo previsto'} (esperadas até hoje: ${ritmo.esperadas}).</p>` : ''}
           <p class="small">${utils.moeda(p.valorNegociado)}${p.parcelas > 1 ? ` em ${p.parcelas}×` : ''} · ${utils.moeda(pago)} pago</p>
           ${p.motivoCancelamento ? `<p class="small muted">Cancelado: ${utils.escapeHtml(p.motivoCancelamento)}</p>` : ''}
           <div class="acoes-linha">
-            ${['ativo', 'vencido'].includes(status) && permissoes.pode('editarRegras') ? `<button type="button" class="btn btn-pequeno" data-prorrogar="${p.id}">Prorrogar</button>` : ''}
+            ${['ativo', 'vencido'].includes(status) && p.validade && permissoes.pode('editarRegras') ? `<button type="button" class="btn btn-pequeno" data-prorrogar="${p.id}">Prorrogar</button>` : ''}
             ${status === 'ativo' && permissoes.pode('darBaixaPagamento') ? `<button type="button" class="btn btn-pequeno btn-texto-perigo" data-cancelar-pacote="${p.id}">Cancelar</button>` : ''}
           </div>
         </article>`;
@@ -542,7 +544,7 @@ NutriDudu.pages.cliente = (function () {
         ${ui.kpi('Última consulta', resumo.ultima ? utils.data(resumo.ultima.inicio) : '—', resumo.ultima ? utils.haDias(resumo.diasSemConsulta) : '')}
         ${ui.kpi('Próximo agendamento', resumo.proxima ? `${utils.data(resumo.proxima.inicio)} ${utils.hora(resumo.proxima.inicio)}` : 'Nenhum')}
         ${ui.kpi('Pacote', resumo.pacote ? `${resumo.pacote.usadas} de ${resumo.pacote.total} usadas` : 'Nenhum ativo',
-          resumo.pacote ? `${c.servicoPorId[resumo.pacote.servicoId]?.nome || 'Pacote'} · vence ${utils.data(resumo.pacote.validade)}` : '')}
+          resumo.pacote ? `${c.servicoPorId[resumo.pacote.servicoId]?.nome || 'Pacote'} · ${resumo.pacote.validade ? `vence ${utils.data(resumo.pacote.validade)}` : `saldo de ${resumo.pacote.saldo}`}` : '')}
         ${ui.kpi('Em aberto', utils.moeda(resumo.emAberto), resumo.atrasado ? `${utils.moeda(resumo.atrasado)} atrasado` : '')}
       </section>
 

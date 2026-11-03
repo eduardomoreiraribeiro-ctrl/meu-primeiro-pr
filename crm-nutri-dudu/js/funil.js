@@ -43,7 +43,7 @@ NutriDudu.funil = (function () {
       const usouONovo = realizadas.some((c) => c.pacoteId === ativo.id);
       if (renovou && !usouONovo) return { etapa: 'renovado', motivo: 'renovou e ainda não usou o novo pacote' };
       const uso = calculos.usoDoPacote(ativo, consultas.filter((c) => c.pacoteId === ativo.id));
-      const dias = utils.diasEntre(agora, ativo.validade);
+      const dias = calculos.diasParaVencer(ativo, agora);
       if (uso.saldo <= 1) return { etapa: 'renovacao', motivo: uso.saldo ? 'resta 1 consulta no pacote' : 'pacote sem saldo' };
       if (dias <= DIAS_AVISO_PACOTE) return { etapa: 'renovacao', motivo: `o pacote vence em ${utils.dias(dias)}` };
     } else if (porInicio.length && ['vencido', 'concluido'].includes(calculos.statusPacote(porInicio[0], agora))) {

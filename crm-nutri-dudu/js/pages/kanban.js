@@ -201,7 +201,7 @@ NutriDudu.pages.kanban = (function () {
           ${linha('Origem', `${utils.escapeHtml(config.ORIGENS[p.origem] || '—')}${l.indicadoPor ? ` (indicação de ${utils.escapeHtml(l.indicadoPor.nome)})` : ''}`)}
           ${linha('Objetivo', utils.escapeHtml(config.OBJETIVOS[p.objetivo] || ''))}
           ${p.status === 'lead' ? linha('Interesse', l.interesse ? `${utils.escapeHtml(l.interesse.nome)} · ${utils.moeda(l.interesse.valor)}` : '') : ''}
-          ${linha('Pacote', r.pacote ? `${utils.escapeHtml(l.pacoteServico?.nome || 'Pacote')}: ${r.pacote.usadas} de ${r.pacote.total} usadas, vence ${utils.data(r.pacote.validade)}` : '')}
+          ${linha('Pacote', r.pacote ? `${utils.escapeHtml(l.pacoteServico?.nome || 'Pacote')}: ${r.pacote.usadas} de ${r.pacote.total} usadas${r.pacote.validade ? `, vence ${utils.data(r.pacote.validade)}` : ''}` : '')}
           ${linha('Última consulta', r.ultima ? `${utils.data(r.ultima.inicio)} (${utils.haDias(r.diasSemConsulta)})` : '')}
           ${linha('Próxima consulta', r.proxima ? `${utils.data(r.proxima.inicio)} às ${utils.hora(r.proxima.inicio)}` : '')}
           ${linha('Em aberto', r.emAberto > 0 ? `${utils.moeda(r.emAberto)}${r.atrasado > 0 ? ` (${utils.moeda(r.atrasado)} atrasado)` : ''}` : '')}

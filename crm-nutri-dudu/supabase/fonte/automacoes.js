@@ -376,7 +376,7 @@ const NutriDuduAutomacoes = (() => {
         const pessoa = pessoaPor[pac.pessoaId];
         if (!pessoa || pessoa.status !== 'ativo' || calculos.statusPacote(pac, relogio.agoraLocal()) !== 'ativo') continue;
         const uso = calculos.usoDoPacote(pac, consultasDe(pessoa.id).filter((c) => c.pacoteId === pac.id));
-        const diasVence = utils.diasEntre(relogio.agoraLocal(), pac.validade);
+        const diasVence = calculos.diasParaVencer(pac, relogio.agoraLocal());
         const ritmo = calculos.ritmoPacote(pac, uso, relogio.agoraLocal());
         let situacao = null;
         let texto = '';

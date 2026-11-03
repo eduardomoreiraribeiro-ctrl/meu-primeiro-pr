@@ -386,10 +386,10 @@ NutriDudu.calculos = (function () {
     let pacote = null;
     if (ativo) {
       const uso = usoDoPacote(ativo, consultas.filter((c) => c.pacoteId === ativo.id));
-      const diasParaVencer = diasEntre(agora, ativo.validade);
+      const dias = diasParaVencer(ativo, agora);
       pacote = {
-        ...uso, id: ativo.id, servicoId: ativo.servicoId, validade: ativo.validade, diasParaVencer,
-        acabando: uso.saldo <= 1 || diasParaVencer <= DIAS_AVISO_VENCIMENTO,
+        ...uso, id: ativo.id, servicoId: ativo.servicoId, validade: ativo.validade || null, diasParaVencer: dias,
+        acabando: uso.saldo <= 1 || dias <= DIAS_AVISO_VENCIMENTO,
       };
     }
 
@@ -417,8 +417,14 @@ NutriDudu.calculos = (function () {
   const DIAS_FREQUENCIA = { semanal: 7, quinzenal: 15, mensal: 30 };
 
   /** Status de verdade do pacote: um "ativo" com validade vencida é "vencido". */
+  /** Dias até a validade; sem prazo de validade: Infinity (nunca "vence em breve"). */
+  function diasParaVencer(pacote, hoje = new Date()) {
+    return pacote?.validade ? diasEntre(hoje, pacote.validade) : Infinity;
+  }
+
   function statusPacote(pacote, hoje = new Date()) {
-    if (pacote.status === 'ativo' && paraData(pacote.validade) < inicioDoDia(hoje)) return 'vencido';
+    // Pacote sem prazo de validade (validade vazia) nunca vence: termina quando acabam as consultas.
+    if (pacote.status === 'ativo' && pacote.validade && paraData(pacote.validade) < inicioDoDia(hoje)) return 'vencido';
     return pacote.status;
   }
 
@@ -436,7 +442,7 @@ NutriDudu.calculos = (function () {
   }
 
   return {
-    valorLiquido, lancamentoAtrasado, usoDoPacote, resumoPessoa, agruparPorPessoa, statusPacote, ritmoPacote, DIAS_FREQUENCIA,
+    valorLiquido, lancamentoAtrasado, usoDoPacote, resumoPessoa, agruparPorPessoa, statusPacote, ritmoPacote, diasParaVencer, DIAS_FREQUENCIA,
   };
 })();
 
@@ -1780,7 +1786,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         return {
           pacote_ativo: true, pacote: servicoPorId[ativo.servicoId]?.nome || 'Pacote',
           consultas_usadas: uso.usadas, consultas_agendadas: uso.reservadas, total: uso.total, saldo: uso.saldo,
-          valido_ate: utils.data(ativo.validade),
+          valido_ate: ativo.validade ? utils.data(ativo.validade) : 'sem prazo de validade (vale até usar todas as consultas)',
           ...(ritmo?.atrasadas ? { observacao: `${ritmo.atrasadas} consulta(s) atrás do ritmo previsto do pacote.` } : {}),
         };
       },
@@ -2729,7 +2735,7 @@ const NutriDuduAutomacoes = (() => {
         const pessoa = pessoaPor[pac.pessoaId];
         if (!pessoa || pessoa.status !== 'ativo' || calculos.statusPacote(pac, relogio.agoraLocal()) !== 'ativo') continue;
         const uso = calculos.usoDoPacote(pac, consultasDe(pessoa.id).filter((c) => c.pacoteId === pac.id));
-        const diasVence = utils.diasEntre(relogio.agoraLocal(), pac.validade);
+        const diasVence = calculos.diasParaVencer(pac, relogio.agoraLocal());
         const ritmo = calculos.ritmoPacote(pac, uso, relogio.agoraLocal());
         let situacao = null;
         let texto = '';

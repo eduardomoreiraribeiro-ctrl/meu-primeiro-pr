@@ -682,7 +682,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         return {
           pacote_ativo: true, pacote: servicoPorId[ativo.servicoId]?.nome || 'Pacote',
           consultas_usadas: uso.usadas, consultas_agendadas: uso.reservadas, total: uso.total, saldo: uso.saldo,
-          valido_ate: utils.data(ativo.validade),
+          valido_ate: ativo.validade ? utils.data(ativo.validade) : 'sem prazo de validade (vale até usar todas as consultas)',
           ...(ritmo?.atrasadas ? { observacao: `${ritmo.atrasadas} consulta(s) atrás do ritmo previsto do pacote.` } : {}),
         };
       },

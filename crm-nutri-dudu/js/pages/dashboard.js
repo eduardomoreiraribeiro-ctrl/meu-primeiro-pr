@@ -146,12 +146,12 @@ NutriDudu.pages.dashboard = (function () {
       const motivos = [];
       if (status === 'ativo') {
         const uso = calculos.usoDoPacote(ultimo, d.consultasDe(p.id).filter((c) => c.pacoteId === ultimo.id));
-        const dias = utils.diasEntre(agora, ultimo.validade);
+        const dias = calculos.diasParaVencer(ultimo, agora);
         if (uso.saldo <= 1) motivos.push(uso.saldo ? 'resta 1 consulta' : 'sem saldo');
         if (dias <= 15) motivos.push(`vence em ${utils.dias(dias)}`);
         const ritmo = calculos.ritmoPacote(ultimo, uso, agora);
         if (ritmo?.atrasadas) motivos.push(`${ritmo.atrasadas} consulta(s) atrasada(s) no ritmo`);
-      } else if (['vencido', 'concluido'].includes(status) && utils.diasEntre(ultimo.validade, agora) <= 60) {
+      } else if (['vencido', 'concluido'].includes(status) && (!ultimo.validade || utils.diasEntre(ultimo.validade, agora) <= 60)) {
         motivos.push(status === 'vencido' ? `venceu em ${utils.data(ultimo.validade)}` : 'concluído, sem renovação');
       }
       if (motivos.length) {

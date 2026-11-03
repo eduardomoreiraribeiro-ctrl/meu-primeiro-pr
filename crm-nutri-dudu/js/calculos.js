@@ -45,10 +45,10 @@ NutriDudu.calculos = (function () {
     let pacote = null;
     if (ativo) {
       const uso = usoDoPacote(ativo, consultas.filter((c) => c.pacoteId === ativo.id));
-      const diasParaVencer = diasEntre(agora, ativo.validade);
+      const dias = diasParaVencer(ativo, agora);
       pacote = {
-        ...uso, id: ativo.id, servicoId: ativo.servicoId, validade: ativo.validade, diasParaVencer,
-        acabando: uso.saldo <= 1 || diasParaVencer <= DIAS_AVISO_VENCIMENTO,
+        ...uso, id: ativo.id, servicoId: ativo.servicoId, validade: ativo.validade || null, diasParaVencer: dias,
+        acabando: uso.saldo <= 1 || dias <= DIAS_AVISO_VENCIMENTO,
       };
     }
 
@@ -76,8 +76,14 @@ NutriDudu.calculos = (function () {
   const DIAS_FREQUENCIA = { semanal: 7, quinzenal: 15, mensal: 30 };
 
   /** Status de verdade do pacote: um "ativo" com validade vencida é "vencido". */
+  /** Dias até a validade; sem prazo de validade: Infinity (nunca "vence em breve"). */
+  function diasParaVencer(pacote, hoje = new Date()) {
+    return pacote?.validade ? diasEntre(hoje, pacote.validade) : Infinity;
+  }
+
   function statusPacote(pacote, hoje = new Date()) {
-    if (pacote.status === 'ativo' && paraData(pacote.validade) < inicioDoDia(hoje)) return 'vencido';
+    // Pacote sem prazo de validade (validade vazia) nunca vence: termina quando acabam as consultas.
+    if (pacote.status === 'ativo' && pacote.validade && paraData(pacote.validade) < inicioDoDia(hoje)) return 'vencido';
     return pacote.status;
   }
 
@@ -95,6 +101,6 @@ NutriDudu.calculos = (function () {
   }
 
   return {
-    valorLiquido, lancamentoAtrasado, usoDoPacote, resumoPessoa, agruparPorPessoa, statusPacote, ritmoPacote, DIAS_FREQUENCIA,
+    valorLiquido, lancamentoAtrasado, usoDoPacote, resumoPessoa, agruparPorPessoa, statusPacote, ritmoPacote, diasParaVencer, DIAS_FREQUENCIA,
   };
 })();
