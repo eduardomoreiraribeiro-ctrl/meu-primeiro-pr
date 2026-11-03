@@ -425,6 +425,37 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
     },
   ];
 
+  /**
+   * Escolhe até `limite` horários, um por dia (os dias mais próximos primeiro), variando a hora
+   * de um dia para o outro (manhã, tarde, meio da manhã…), sem repetir o mesmo horário.
+   * Se faltar dia, volta aos mesmos dias pegando um horário bem diferente do já escolhido.
+   * dias: [[{ inicio: 'AAAA-MM-DDTHH:MM', … }, …], …] em ordem.
+   */
+  const ALVOS_HORA = [9, 14, 10.5, 16, 8.5, 15, 11, 17];
+  function selecionarVariados(dias, limite = 6) {
+    const minutos = (h) => Number(h.inicio.slice(11, 13)) * 60 + Number(h.inicio.slice(14, 16));
+    const usadas = new Set();
+    const escolhidos = new Set();
+    const selecao = [];
+    let alvo = 0;
+    for (let rodada = 0; selecao.length < limite && rodada < 3; rodada++) {
+      for (const lista of dias) {
+        if (selecao.length >= limite) break;
+        const doDia = selecao.filter((h) => h.inicio.slice(0, 10) === lista[0]?.inicio.slice(0, 10));
+        const candidatos = lista.filter((h) => !escolhidos.has(h)
+          && doDia.every((x) => Math.abs(minutos(x) - minutos(h)) >= 120)); // no mesmo dia, bem separados
+        if (!candidatos.length) continue;
+        const meta = ALVOS_HORA[alvo++ % ALVOS_HORA.length] * 60;
+        const pontuar = (h) => Math.abs(minutos(h) - meta) + (usadas.has(h.inicio.slice(11, 16)) ? 600 : 0) + (minutos(h) % 30 ? 45 : 0); // prefere horas redondas
+        const melhor = candidatos.reduce((a, b) => (pontuar(b) < pontuar(a) ? b : a));
+        selecao.push(melhor);
+        escolhidos.add(melhor);
+        usadas.add(melhor.inicio.slice(11, 16));
+      }
+    }
+    return selecao.sort((a, b) => a.inicio.localeCompare(b.inicio));
+  }
+
   /** Carrega o que as ferramentas precisam (sem nenhum dado clínico). */
   async function carregarContexto(repo) {
     const [servicos, profissionais, horarios, bloqueios, consultas, pacotes, lancamentos, configuracoes] = await Promise.all(
@@ -539,11 +570,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         // diferentes) e nunca a quantidade total de vagas.
         const porDia = new Map();
         livres.forEach((h) => { const d = h.inicio.slice(0, 10); if (!porDia.has(d)) porDia.set(d, []); porDia.get(d).push(h); });
-        const selecao = [];
-        for (let rodada = 0; selecao.length < 6 && rodada < 6; rodada++) {
-          for (const lista of porDia.values()) if (lista[rodada] && selecao.length < 6) selecao.push(lista[rodada]);
-        }
-        selecao.sort((a, b) => a.inicio.localeCompare(b.inicio));
+        const selecao = selecionarVariados([...porDia.values()], 6);
         const dias = Math.max(1, Math.round((fim - inicio) / 86400000) + 1);
         const poucos = livres.length > 0 && livres.length <= Math.max(3, dias / 2);
         return {
