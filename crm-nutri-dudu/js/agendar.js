@@ -26,6 +26,16 @@
     if (whatsapp) a.href = linkWhats(whatsapp, 'Olá! Gostaria de agendar uma consulta.');
     mostrar('erro');
   }
+  // Iniciais do logo: "Nutricionista Eduardo Ribeiro" → "ER" (ignora títulos como Nutricionista, Nutri, Dra.).
+  function iniciais(nome) {
+    const palavras = String(nome || '').split(/\s+/).filter((p) => p && !/^(nutricionista|nutri|dra?\.?|clínica|clinica|consultório|consultorio|de|da|do|das|dos|e)$/i.test(p));
+    const letras = (palavras.length > 1 ? [palavras[0], palavras[palavras.length - 1]] : palavras).map((p) => p[0].toUpperCase()).join('');
+    return letras || 'N';
+  }
+  function mostrarNome(nome) {
+    $$('[data-clinica]').forEach((el) => { el.textContent = nome; });
+    $$('[data-iniciais]').forEach((el) => { el.textContent = iniciais(nome); });
+  }
   const minusculo = (t) => String(t || '').replace(/^./, (c) => c.toLowerCase());
 
   // ---------- Dados de demonstração (sem a nuvem) ----------
@@ -271,7 +281,7 @@
       if (!endereco) { erro('O sistema da clínica ainda não está configurado.'); return; }
       try {
         const resp = await pedir('?site=catalogo');
-        if (!resp.ok) { erro(resp.corpo.erro || 'O agendamento pelo site está fechado no momento.', resp.corpo.whatsapp); return; }
+        if (!resp.ok) { if (resp.corpo.clinica) mostrarNome(resp.corpo.clinica); erro(resp.corpo.erro || 'O agendamento pelo site está fechado no momento.', resp.corpo.whatsapp); return; }
         catalogo = resp.corpo;
       } catch (e) {
         erro('Sem conexão com a clínica agora. Confira a internet e tente de novo.');
@@ -279,8 +289,8 @@
       }
     }
     estado.catalogo = catalogo;
-    $$('[data-clinica]').forEach((el) => { el.textContent = catalogo.clinica || 'Nutri Dudu'; });
-    document.title = `Agendar consulta · ${catalogo.clinica || 'Nutri Dudu'}`;
+    mostrarNome(catalogo.clinica || 'Consultório de nutrição');
+    if (catalogo.clinica) document.title = `Agendar consulta · ${catalogo.clinica}`;
     if (catalogo.mensagem) $('[data-mensagem]').textContent = catalogo.mensagem;
     desenharServicos();
     mostrar('agendar');

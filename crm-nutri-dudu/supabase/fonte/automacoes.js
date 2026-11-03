@@ -865,7 +865,7 @@ const NutriDuduAutomacoes = (() => {
 
     async function catalogo() {
       const { dados, cfg, servicos } = await carregar();
-      if (!cfg.ativo || !servicos.length) return json({ erro: 'O agendamento pelo site está fechado no momento. Fale com a clínica pelo WhatsApp.' }, 404);
+      if (!cfg.ativo || !servicos.length) return json({ erro: 'O agendamento pelo site está fechado no momento. Fale com a clínica pelo WhatsApp.', clinica: dados.geral.nomeClinica || '', whatsapp: utils.soDigitos(cfg.whatsappClinica || '') }, 404);
       return json({
         ok: true,
         clinica: dados.geral.nomeClinica || 'Clínica',
@@ -983,6 +983,8 @@ const NutriDuduAutomacoes = (() => {
         if (req.method === 'GET') {
           const params = new URL(req.url).searchParams;
           if (params.get('site') === 'catalogo') return await catalogo();
+          // Só o nome do consultório (política de privacidade e cabeçalho das páginas).
+          if (params.get('site') === 'nome') return json({ ok: true, clinica: ((await repo.pega('configuracoes', 'geral')) || {}).nomeClinica || '' });
           if (params.get('site') === 'horarios') return await horarios(params);
           return json({ erro: 'Pedido inválido.' }, 400);
         }

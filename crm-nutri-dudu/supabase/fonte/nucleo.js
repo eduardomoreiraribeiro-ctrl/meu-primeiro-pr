@@ -240,7 +240,8 @@ const NutriDuduServidor = (() => {
   // Assistente Nutri Dudu: instruções, ferramentas e o laço com o Claude
   // ---------------------------------------------------------------------
   function instrucoes(geral, agenteCfg) {
-    return `Você é o Assistente Nutri Dudu, o assistente virtual da clínica de nutrição ${geral.nomeClinica || 'Nutri Dudu'}, e conversa com pacientes e interessados pelo WhatsApp.
+    const nome = String(geral.nomeClinica || 'Nutri Dudu').trim();
+    return `Você é o Assistente ${nome}, o assistente virtual de ${nome} (atendimento de nutrição), e conversa com pacientes e interessados pelo WhatsApp. Ao se apresentar, use exatamente o nome "Assistente ${nome}".
 
 Quem você é
 - Você é homem: concorde no masculino ("Obrigado!", "Fico feliz em ajudar").

@@ -332,6 +332,10 @@ NutriDudu.pages.configuracoes = (function () {
   function abrirRegras(geral) {
     const { form: f, modal, store, ui } = NutriDudu;
     const corpo = `
+      ${f.texto('nomeClinica', 'Nome do consultório (como os pacientes veem)', geral.nomeClinica || '', {
+        obrigatorio: true, placeholder: 'Ex.: Nutricionista Eduardo Ribeiro',
+        ajuda: 'Aparece no WhatsApp ("Assistente …"), na página de agendamento, na pré-anamnese e na política de privacidade.',
+      })}
       ${f.texto('diasRetornoPadrao', 'Alerta de retorno após (dias)', geral.diasRetornoPadrao, {
         tipo: 'number', obrigatorio: true, atributos: 'min="7" max="365" step="1"',
         ajuda: 'Cliente ativo sem consulta há mais que isso e sem retorno marcado gera alerta. Cada cliente pode ter uma periodicidade própria no cadastro.',
@@ -359,6 +363,7 @@ NutriDudu.pages.configuracoes = (function () {
       titulo: 'Regras gerais',
       corpo,
       ler: (form) => ({
+        nomeClinica: f.valor(form, 'nomeClinica').replace(/\s+/g, ' ').slice(0, 60),
         diasRetornoPadrao: f.numero(form, 'diasRetornoPadrao'),
         diasClienteSumido: f.numero(form, 'diasClienteSumido'),
         diasFaltaRemarcar: f.numero(form, 'diasFaltaRemarcar'),
@@ -369,6 +374,7 @@ NutriDudu.pages.configuracoes = (function () {
       validar: (d) => {
         const erros = {};
         const faixa = (v, min, max) => Number.isInteger(v) && v >= min && v <= max;
+        if (d.nomeClinica.length < 3) erros.nomeClinica = 'Informe o nome (pelo menos 3 letras).';
         if (!faixa(d.diasRetornoPadrao, 7, 365)) erros.diasRetornoPadrao = 'Use um número inteiro entre 7 e 365.';
         if (!faixa(d.diasClienteSumido, 8, 730)) erros.diasClienteSumido = 'Use um número inteiro entre 8 e 730.';
         else if (!erros.diasRetornoPadrao && d.diasClienteSumido <= d.diasRetornoPadrao) {
@@ -954,6 +960,7 @@ NutriDudu.pages.configuracoes = (function () {
           ${permissoes.pode('editarRegras') ? '<button type="button" class="btn btn-pequeno" data-editar-regras>Editar</button>' : ''}
         </div>
         <table class="tabela-simples">
+          <tr><th scope="row">Nome do consultório</th><td>${geral?.nomeClinica ? utils.escapeHtml(geral.nomeClinica) : '<span class="muted">não informado (Editar)</span>'}</td></tr>
           <tr><th scope="row">Alerta de retorno após</th><td>${geral?.diasRetornoPadrao ?? '—'} dias sem consulta e sem retorno marcado</td></tr>
           <tr><th scope="row">Cliente sumido após</th><td>${geral?.diasClienteSumido ?? '—'} dias</td></tr>
           <tr><th scope="row">Falta sem remarcação</th><td>alerta após ${geral?.diasFaltaRemarcar ?? 7} dias</td></tr>

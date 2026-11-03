@@ -1337,7 +1337,8 @@ const NutriDuduServidor = (() => {
   // Assistente Nutri Dudu: instruções, ferramentas e o laço com o Claude
   // ---------------------------------------------------------------------
   function instrucoes(geral, agenteCfg) {
-    return `Você é o Assistente Nutri Dudu, o assistente virtual da clínica de nutrição ${geral.nomeClinica || 'Nutri Dudu'}, e conversa com pacientes e interessados pelo WhatsApp.
+    const nome = String(geral.nomeClinica || 'Nutri Dudu').trim();
+    return `Você é o Assistente ${nome}, o assistente virtual de ${nome} (atendimento de nutrição), e conversa com pacientes e interessados pelo WhatsApp. Ao se apresentar, use exatamente o nome "Assistente ${nome}".
 
 Quem você é
 - Você é homem: concorde no masculino ("Obrigado!", "Fico feliz em ajudar").
@@ -3216,7 +3217,7 @@ const NutriDuduAutomacoes = (() => {
 
     async function catalogo() {
       const { dados, cfg, servicos } = await carregar();
-      if (!cfg.ativo || !servicos.length) return json({ erro: 'O agendamento pelo site está fechado no momento. Fale com a clínica pelo WhatsApp.' }, 404);
+      if (!cfg.ativo || !servicos.length) return json({ erro: 'O agendamento pelo site está fechado no momento. Fale com a clínica pelo WhatsApp.', clinica: dados.geral.nomeClinica || '', whatsapp: utils.soDigitos(cfg.whatsappClinica || '') }, 404);
       return json({
         ok: true,
         clinica: dados.geral.nomeClinica || 'Clínica',
@@ -3334,6 +3335,8 @@ const NutriDuduAutomacoes = (() => {
         if (req.method === 'GET') {
           const params = new URL(req.url).searchParams;
           if (params.get('site') === 'catalogo') return await catalogo();
+          // Só o nome do consultório (política de privacidade e cabeçalho das páginas).
+          if (params.get('site') === 'nome') return json({ ok: true, clinica: ((await repo.pega('configuracoes', 'geral')) || {}).nomeClinica || '' });
           if (params.get('site') === 'horarios') return await horarios(params);
           return json({ erro: 'Pedido inválido.' }, 400);
         }

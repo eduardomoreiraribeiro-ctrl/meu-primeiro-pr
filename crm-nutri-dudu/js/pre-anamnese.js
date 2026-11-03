@@ -12,6 +12,16 @@
   const $$ = (sel) => [...document.querySelectorAll(sel)];
   const form = $('form');
 
+  // Iniciais do logo: "Nutricionista Eduardo Ribeiro" → "ER" (ignora títulos como Nutricionista, Nutri, Dra.).
+  function iniciais(nome) {
+    const palavras = String(nome || '').split(/\s+/).filter((p) => p && !/^(nutricionista|nutri|dra?\.?|clínica|clinica|consultório|consultorio|de|da|do|das|dos|e)$/i.test(p));
+    const letras = (palavras.length > 1 ? [palavras[0], palavras[palavras.length - 1]] : palavras).map((p) => p[0].toUpperCase()).join('');
+    return letras || 'N';
+  }
+  function mostrarNome(nome) {
+    $$('[data-clinica]').forEach((el) => { el.textContent = nome; });
+    $$('[data-iniciais]').forEach((el) => { el.textContent = iniciais(nome); });
+  }
   function mostrar(tela) {
     $$('[data-tela]').forEach((el) => { el.hidden = el.dataset.tela !== tela; });
     window.scrollTo(0, 0);
@@ -111,8 +121,8 @@
         return;
       }
     }
-    $$('[data-clinica]').forEach((el) => { el.textContent = info.clinica || 'Nutri Dudu'; });
-    document.title = `Pré-anamnese · ${info.clinica || 'Nutri Dudu'}`;
+    mostrarNome(info.clinica || 'o consultório');
+    if (info.clinica) document.title = `Pré-anamnese · ${info.clinica}`;
     $('[data-nome]').textContent = info.nome || '';
     $('[data-consulta]').textContent = String(info.consulta || '').replace(/^./, (c) => c.toLowerCase());
     $('[data-profissional]').textContent = info.profissional ? ` com ${info.profissional}` : '';

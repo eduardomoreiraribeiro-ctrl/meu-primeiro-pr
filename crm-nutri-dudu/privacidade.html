@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Política de Privacidade · Nutri Dudu</title>
+<title>Política de Privacidade</title>
 <style>
   :root { --bg: #f5f7f6; --texto: #17211b; --suave: #4b5a52; --link: #15803d; }
   @media (prefers-color-scheme: dark) { :root { --bg: #0e1311; --texto: #e3eae6; --suave: #a9b6ae; --link: #4ade80; } }
@@ -19,9 +19,9 @@
 <body>
 <main>
   <h1>Política de Privacidade</h1>
-  <p class="suave">Nutri Dudu — clínica de nutrição · Atualizada em 27 de outubro de 2026</p>
+  <p class="suave"><span data-clinica>Consultório de nutrição</span> · Atualizada em 3 de novembro de 2026</p>
 
-  <p>Esta política explica como a clínica Nutri Dudu trata os dados pessoais de pacientes e de pessoas que entram em contato, inclusive pelo WhatsApp, de acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).</p>
+  <p>Esta política explica como <strong data-clinica>este consultório de nutrição</strong> trata os dados pessoais de pacientes e de pessoas que entram em contato, inclusive pelo WhatsApp, de acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018 — LGPD).</p>
 
   <h2>1. Quais dados coletamos</h2>
   <ul>
@@ -64,7 +64,24 @@
   </ul>
 
   <h2>8. Contato</h2>
-  <p>Dúvidas sobre esta política ou sobre os seus dados: fale com a clínica Nutri Dudu pelo WhatsApp oficial ou na recepção.</p>
+  <p>Dúvidas sobre esta política ou sobre os seus dados: fale com <span data-clinica>o consultório</span> pelo WhatsApp oficial ou na recepção.</p>
 </main>
+<script src="js/nuvem-config.js"></script>
+<script>
+  // Mostra o nome do consultório cadastrado no sistema (Configurações › Regras gerais).
+  (function () {
+    var cfg = (window.NutriDudu && window.NutriDudu.NUVEM) || {};
+    if (!cfg.url) return;
+    var base = cfg.url.replace(/[/]+$/, '');
+    fetch(base + '/functions/v1/whatsapp-automacoes?site=nome', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.clinica) return;
+        document.querySelectorAll('[data-clinica]').forEach(function (el) { el.textContent = d.clinica; });
+        document.title = 'Política de Privacidade · ' + d.clinica;
+      })
+      .catch(function () { /* sem conexão: fica o texto genérico */ });
+  })();
+</script>
 </body>
 </html>
