@@ -79,10 +79,9 @@
       b.type = 'button';
       b.className = 'opcao';
       b.setAttribute('aria-pressed', String(estado.servico?.id === s.id));
-      // Só o nome e a descrição: o preço não aparece na página (a nutricionista conversa sobre valores).
-      b.innerHTML = '<div><strong></strong><span class="small muted"></span></div>';
+      // Só o nome do serviço: preço e descrição (que pode citar valores) não aparecem na página.
+      b.innerHTML = '<div><strong></strong></div>';
       b.querySelector('strong').textContent = s.nome;
-      b.querySelector('.small').textContent = s.descricao || '';
       b.addEventListener('click', () => escolherServico(s));
       lugar.appendChild(b);
     });
