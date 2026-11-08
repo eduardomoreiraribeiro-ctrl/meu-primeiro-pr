@@ -66,7 +66,8 @@
   .opcao:hover { border-color: var(--primary); }
   .opcao[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-soft); outline: 1px solid var(--primary); }
   .opcao strong { display: block; }
-  .opcao .preco { margin-left: auto; font-weight: 700; white-space: nowrap; }
+  .opcao .preco { margin-left: auto; font-weight: 700; white-space: nowrap; text-align: right; }
+  .opcao .preco small { display: block; font-weight: 500; color: var(--muted); }
   .segmentos { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
   .segmentos .opcao { width: auto; flex: 1 1 140px; justify-content: center; }
   .dia { margin-top: 0.9rem; }
@@ -107,14 +108,24 @@
     <a class="btn btn-whats" data-whats-pronto hidden target="_blank" rel="noopener">Avisar a clínica no WhatsApp</a>
   </section>
 
+  <form class="card" data-tela="cadastro" data-form-cadastro novalidate hidden>
+    <h1>Agende sua consulta</h1>
+    <p class="muted" data-mensagem>Comece com um cadastro rápido. Em seguida, você vê os planos e escolhe o melhor horário.</p>
+    <label for="nome">Nome completo</label>
+    <input type="text" id="nome" name="nome" autocomplete="name" maxlength="100" required>
+    <label for="telefone">WhatsApp (com DDD)</label>
+    <input type="tel" id="telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(27) 99999-0000" maxlength="20" required>
+    <label for="email">E-mail <span class="muted small">(opcional)</span></label>
+    <input type="email" id="email" name="email" autocomplete="email" maxlength="120">
+    <div class="escondido" aria-hidden="true"><label for="site">Não preencha</label><input type="text" id="site" name="site" tabindex="-1" autocomplete="off"></div>
+    <label class="consentimento" style="margin-top:1rem"><input type="checkbox" name="consentimento"> <span>Concordo que <span data-clinica>o consultório</span> use estes dados para o meu atendimento e me envie mensagens pelo WhatsApp (confirmação e lembrete da consulta). Posso pedir para parar a qualquer momento. <a href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></span></label>
+    <p class="erro" data-erro-cadastro role="alert" hidden></p>
+    <button type="submit" class="btn btn-primario" style="margin-top:1rem">Continuar</button>
+  </form>
+
   <div data-tela="agendar" hidden>
     <section class="card">
-      <h1>Agende sua consulta</h1>
-      <p class="muted" data-mensagem>Escolha o serviço e um dos horários disponíveis. Leva menos de 1 minuto.</p>
-    </section>
-
-    <section class="card">
-      <h2><span class="passo">1</span>Serviço</h2>
+      <h2><span class="passo">1</span><span data-ola>Escolha o seu plano</span></h2>
       <div class="opcoes" data-servicos></div>
     </section>
 
@@ -133,23 +144,15 @@
       </div>
     </section>
 
-    <form class="card" data-bloco-dados novalidate hidden>
-      <h2><span class="passo" data-passo-dados>4</span>Seus dados</h2>
+    <section class="card" data-bloco-confirmar hidden>
+      <h2><span class="passo" data-passo-confirmar>4</span>Confirme</h2>
       <div class="resumo-escolha" data-resumo-escolha></div>
-      <label for="nome">Nome completo</label>
-      <input type="text" id="nome" name="nome" autocomplete="name" maxlength="100" required>
-      <label for="telefone">WhatsApp (com DDD)</label>
-      <input type="tel" id="telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(27) 99999-0000" maxlength="20" required>
-      <label for="email">E-mail <span class="muted small">(opcional)</span></label>
-      <input type="email" id="email" name="email" autocomplete="email" maxlength="120">
-      <div class="escondido" aria-hidden="true"><label for="site">Não preencha</label><input type="text" id="site" name="site" tabindex="-1" autocomplete="off"></div>
-      <label class="consentimento" style="margin-top:1rem"><input type="checkbox" name="consentimento"> <span>Concordo que a clínica use estes dados para o meu agendamento e me envie mensagens pelo WhatsApp sobre a consulta (confirmação e lembrete). Posso pedir para parar a qualquer momento. <a href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></span></label>
       <p class="erro" data-erro-form role="alert" hidden></p>
-      <button type="submit" class="btn btn-primario" style="margin-top:1rem">Confirmar agendamento</button>
-    </form>
+      <button type="button" class="btn btn-primario" style="margin-top:1rem" data-confirmar>Confirmar agendamento</button>
+    </section>
   </div>
 </main>
 <script src="js/nuvem-config.js"></script>
-<script src="js/agendar.js?v=4"></script>
+<script src="js/agendar.js?v=5"></script>
 </body>
 </html>

@@ -1041,6 +1041,8 @@ NutriDudu.resumoDia = (function () {
     const totalAtrasado = atrasados.reduce((t, l) => t + calculos.valorLiquido(l), 0);
     const naEspera = (dados.espera || []).filter((e) => NutriDudu.espera?.ativo(e, hoje));
     const mesDia = hoje.slice(5);
+    // Cadastros novos pela página de agendamento nas últimas 24 h (para a equipe chamar quem não agendou).
+    const leadsSite = (dados.pessoas || []).filter((p) => p.origem === 'site' && p.status === 'lead' && p.criadoEm && agora - new Date(p.criadoEm) < 24 * 3600 * 1000);
     const aniversarios = (dados.pessoas || []).filter((p) => p.status !== 'lead' && p.dataNascimento && String(p.dataNascimento).slice(5, 10) === mesDia);
 
     const descreverConsulta = (c, curto = false) => {
@@ -1072,6 +1074,7 @@ NutriDudu.resumoDia = (function () {
     if (aguardando.length) avisos.push(`💬 Conversas aguardando a equipe: ${aguardando.length}`);
     if (atrasados.length) avisos.push(`💰 Pagamentos atrasados: ${atrasados.length} (${utils.moeda(totalAtrasado)})`);
     if (naEspera.length) avisos.push(`⏳ Lista de espera: ${naEspera.length} ${naEspera.length === 1 ? 'pessoa' : 'pessoas'}`);
+    if (leadsSite.length) avisos.push(`🆕 Cadastros novos pelo site: ${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (aniversarios.length) avisos.push(`🎂 Aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (avisos.length) linhas.push('', ...avisos);
     linhas.push('', 'Abra o sistema para ver os detalhes.');
@@ -1086,6 +1089,7 @@ NutriDudu.resumoDia = (function () {
     if (aguardando.length) partes.push(`${aguardando.length} ${aguardando.length === 1 ? 'conversa aguardando' : 'conversas aguardando'} a equipe`);
     if (atrasados.length) partes.push(`${atrasados.length} ${atrasados.length === 1 ? 'pagamento atrasado' : 'pagamentos atrasados'} (${utils.moeda(totalAtrasado)})`);
     if (naEspera.length) partes.push(`${naEspera.length} na lista de espera`);
+    if (leadsSite.length) partes.push(`${leadsSite.length} ${leadsSite.length === 1 ? 'cadastro novo' : 'cadastros novos'} pelo site (${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')})`);
     if (aniversarios.length) partes.push(`aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     let resumo = partes.join('; ').replace(/\s+/g, ' ').trim();
     if (resumo.length > MAX_PARAMETRO) resumo = `${resumo.slice(0, MAX_PARAMETRO - 1)}…`;
@@ -3199,7 +3203,9 @@ const NutriDuduAutomacoes = (() => {
   // =====================================================================
   // Agendamento pelo site (página pública agendar.html)
   // =====================================================================
-  const LIMITE_SITE_POR_HORA = 10; // proteção contra abuso: agendamentos pelo site por hora, na clínica toda
+  // Proteção contra abuso, na clínica toda, por hora: agendamentos e cadastros novos (leads) pela página.
+  const LIMITE_SITE_POR_HORA = 10;
+  const LIMITE_CADASTROS_SITE_POR_HORA = 20;
 
   function criarAgendamentoSite({ repo, relogio = S.criarRelogio() }) {
     const CORS = {
@@ -3230,11 +3236,58 @@ const NutriDuduAutomacoes = (() => {
         clinica: dados.geral.nomeClinica || 'Clínica',
         mensagem: String(cfg.mensagem || '').slice(0, 500),
         whatsapp: utils.soDigitos(cfg.whatsappClinica || ''),
-        servicos: servicos.map((x) => ({
-          id: x.id, nome: x.nome, descricao: x.descricao || '', valor: utils.moeda(x.valor), duracaoMin: x.duracaoMin || 60,
-          modalidades: modalidadesDo(x),
-        })),
+        servicos: servicos.map((x) => ({ id: x.id, nome: x.nome, modalidades: modalidadesDo(x) })),
       });
+    }
+
+    /** Serviços com preço (só para quem já fez o cadastro). Pacotes: total, parcelas e consultas. */
+    function comPrecos(servicos) {
+      return servicos.map((x) => {
+        const parcelas = x.categoria === 'pacote' && x.parcelasSugeridas > 1 ? x.parcelasSugeridas : 1;
+        return {
+          id: x.id, nome: x.nome, descricao: x.descricao || '', categoria: x.categoria, modalidades: modalidadesDo(x),
+          valor: utils.moeda(x.valor),
+          ...(parcelas > 1 ? { parcelas, valorParcela: utils.moeda(x.valor / parcelas) } : {}),
+          ...(x.categoria === 'pacote' ? { consultas: x.qtdConsultas } : {}),
+        };
+      });
+    }
+
+    /** Lê e confere nome, celular e e-mail do formulário. Devolve { nome, telefone, email } ou { erro }. */
+    function lerContato(corpo) {
+      const nome = String(corpo.nome || '').replace(/\s+/g, ' ').trim().slice(0, 100);
+      const telefone = utils.soDigitos(corpo.telefone).replace(/^55(?=\d{10,11}$)/, '');
+      const email = String(corpo.email || '').trim().slice(0, 120);
+      if (nome.length < 3 || !/\s/.test(nome)) return { erro: 'Informe o seu nome completo.' };
+      if (!/^\d{2}9\d{8}$/.test(telefone)) return { erro: 'Informe um celular com DDD, por exemplo (27) 99999-0000.' };
+      if (email && !utils.emailValido(email)) return { erro: 'E-mail inválido.' };
+      if (corpo.consentimento !== true) return { erro: 'Para continuar, é preciso concordar com o uso dos dados.' };
+      return { nome, telefone, email };
+    }
+
+    /** Passo 1 da página: cadastro simples. A pessoa vira lead na hora e recebe os planos com os preços. */
+    async function cadastro(corpo) {
+      const { dados, cfg, servicos } = await carregar();
+      if (!cfg.ativo || !servicos.length) return json({ erro: 'O agendamento pelo site está fechado no momento.' }, 404);
+      if (corpo.site) return json({ ok: true, nome: '', servicos: comPrecos(servicos) }); // campo escondido preenchido: robô
+      const c = lerContato(corpo);
+      if (c.erro) return json({ erro: c.erro }, 400);
+      // Proteção contra abuso: no máximo LIMITE_CADASTROS_SITE_POR_HORA cadastros novos pelo site por hora.
+      const pessoas = await repo.todos('pessoas');
+      const umaHora = relogio.agora().getTime() - HORA;
+      const existe = pessoas.some((p) => S.chaveTelefone(p.telefone) === S.chaveTelefone(c.telefone));
+      if (!existe && pessoas.filter((p) => p.origem === 'site' && new Date(p.criadoEm).getTime() > umaHora).length >= LIMITE_CADASTROS_SITE_POR_HORA) {
+        return json({ erro: 'Muitos cadastros neste momento. Tente de novo mais tarde ou fale com a clínica pelo WhatsApp.' }, 429);
+      }
+      const pessoa = await acharOuCriarPessoa({ ...c, consentimento: true });
+      if (!existe) {
+        const agora = relogio.agora().toISOString();
+        await repo.cria('interacoes', {
+          id: utils.uid('int'), pessoaId: pessoa.id, dataHora: agora, tipo: 'nota', autor: 'paciente', automatico: true,
+          descricao: 'Cadastrou-se pela página de agendamento do site (novo lead).', criadoEm: agora, atualizadoEm: agora,
+        });
+      }
+      return json({ ok: true, nome: primeiroNome(pessoa.nome), servicos: comPrecos(servicos) });
     }
 
     /** Uma "página" de horários: até 6 opções a partir da semana pedida (seleção curta, como a do assistente). */
@@ -3293,13 +3346,9 @@ const NutriDuduAutomacoes = (() => {
       if (corpo.site) return json({ ok: true }); // campo escondido preenchido: robô
       const { dados, cfg, servicos } = await carregar();
       if (!cfg.ativo) return json({ erro: 'O agendamento pelo site está fechado no momento.' }, 404);
-      const nome = String(corpo.nome || '').replace(/\s+/g, ' ').trim().slice(0, 100);
-      const telefone = utils.soDigitos(corpo.telefone).replace(/^55(?=\d{10,11}$)/, '');
-      const email = String(corpo.email || '').trim().slice(0, 120);
-      if (nome.length < 3 || !/\s/.test(nome)) return json({ erro: 'Informe o seu nome completo.' }, 400);
-      if (!/^\d{2}9\d{8}$/.test(telefone)) return json({ erro: 'Informe um celular com DDD, por exemplo (27) 99999-0000.' }, 400);
-      if (email && !utils.emailValido(email)) return json({ erro: 'E-mail inválido.' }, 400);
-      if (corpo.consentimento !== true) return json({ erro: 'Para agendar, é preciso concordar com o uso dos dados para o agendamento.' }, 400);
+      const contato = lerContato(corpo);
+      if (contato.erro) return json({ erro: contato.erro }, 400);
+      const { nome, telefone, email } = contato;
       const servico = servicos.find((x) => x.id === corpo.servicoId);
       if (!servico) return json({ erro: 'Serviço não encontrado.' }, 404);
       const modalidade = corpo.modalidade === 'online' ? 'online' : 'presencial';
@@ -3322,6 +3371,11 @@ const NutriDuduAutomacoes = (() => {
       }
 
       const pessoa = await acharOuCriarPessoa({ nome, telefone, email, consentimento: corpo.whatsapp !== false });
+      // O plano escolhido fica como interesse no cadastro.
+      if (pessoa.servicoInteresseId !== servico.id) {
+        pessoa.servicoInteresseId = servico.id;
+        await repo.grava('pessoas', { ...pessoa, atualizadoEm: relogio.agora().toISOString() });
+      }
       const ferramentas = S.criarFerramentas({ repo, relogio, pessoa, conversa: {}, dados, origem: 'site' });
       const r = await ferramentas.executar('agendar_consulta', {
         servico_id: servico.id, profissional_id: String(corpo.profissionalId || ''), inicio: relogio.localISO(inicioLocal), modalidade,
@@ -3350,6 +3404,7 @@ const NutriDuduAutomacoes = (() => {
         if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405);
         if (!corpo) { try { corpo = await req.json(); } catch (e) { return json({ erro: 'Pedido inválido.' }, 400); } }
         if (JSON.stringify(corpo).length > 5000) return json({ erro: 'Pedido grande demais.' }, 413);
+        if (corpo.acao === 'cadastro-site') return await cadastro(corpo);
         return await agendar(corpo);
       } catch (erro) {
         console.error('Agendamento pelo site:', erro);
@@ -3372,7 +3427,7 @@ const NutriDuduAutomacoes = (() => {
       let corpo;
       try { corpo = await req.json(); } catch (e) { corpo = {}; }
       if (corpo.acao === 'pre-anamnese') return preAnamnese.atender(req, corpo);
-      if (corpo.acao === 'agendar-site') return site ? site.atender(req, corpo) : new Response(JSON.stringify({ erro: 'Agendamento pelo site indisponível.' }), { status: 404 });
+      if (corpo.acao === 'agendar-site' || corpo.acao === 'cadastro-site') return site ? site.atender(req, corpo) : new Response(JSON.stringify({ erro: 'Agendamento pelo site indisponível.' }), { status: 404 });
       if (!chave) return new Response(JSON.stringify({ erro: 'AUTOMACOES_CHAVE não configurada.' }), { status: 500 });
       if (req.headers.get('x-chave-automacoes') !== chave) return new Response(JSON.stringify({ erro: 'Chave inválida.' }), { status: 401 });
       const relatorio = await automacoes.rodar();
