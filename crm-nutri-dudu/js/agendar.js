@@ -79,10 +79,10 @@
       b.type = 'button';
       b.className = 'opcao';
       b.setAttribute('aria-pressed', String(estado.servico?.id === s.id));
-      b.innerHTML = '<div><strong></strong><span class="small muted"></span></div><span class="preco"></span>';
+      // Só o nome e a descrição: o preço não aparece na página (a nutricionista conversa sobre valores).
+      b.innerHTML = '<div><strong></strong><span class="small muted"></span></div>';
       b.querySelector('strong').textContent = s.nome;
-      b.querySelector('.small').textContent = `${s.duracaoMin} min${s.descricao ? ` · ${s.descricao}` : ''}`;
-      b.querySelector('.preco').textContent = s.valor;
+      b.querySelector('.small').textContent = s.descricao || '';
       b.addEventListener('click', () => escolherServico(s));
       lugar.appendChild(b);
     });
