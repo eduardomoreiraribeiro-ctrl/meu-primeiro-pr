@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Copiar funções</title>
+<style>
+  :root { --bg: #f5f7f6; --cartao: #ffffff; --texto: #17211b; --suave: #4b5a52; --borda: #d9e1dc; --verde: #15803d; --verde-texto: #ffffff; --ok: #15803d; --erro: #b91c1c; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1311; --cartao: #161d19; --texto: #e3eae6; --suave: #a9b6ae; --borda: #2a3530; --verde: #22c55e; --verde-texto: #06210f; --ok: #4ade80; --erro: #f87171; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--texto); font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.5; }
+  main { max-width: 640px; margin: 0 auto; padding: 1.5rem 16px 3rem; }
+  h1 { font-size: 1.4rem; margin: 0 0 0.25rem; }
+  .suave { color: var(--suave); margin: 0 0 1.25rem; }
+  .cartao { background: var(--cartao); border: 1px solid var(--borda); border-radius: 14px; padding: 1rem; margin-bottom: 1rem; }
+  .cartao h2 { font-size: 1.05rem; margin: 0 0 0.25rem; font-family: ui-monospace, Menlo, monospace; word-break: break-all; }
+  .cartao p { margin: 0 0 0.75rem; color: var(--suave); font-size: 0.95rem; }
+  button { width: 100%; border: 0; border-radius: 10px; padding: 0.9rem; font-size: 1.05rem; font-weight: 600; background: var(--verde); color: var(--verde-texto); cursor: pointer; }
+  button:disabled { opacity: 0.5; }
+  .status { margin-top: 0.5rem; font-size: 0.95rem; min-height: 1.4em; }
+  .status.ok { color: var(--ok); }
+  .status.erro { color: var(--erro); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Copiar código das funções</h1>
+  <p class="suave">Toque em <strong>Copiar código</strong> e depois cole no editor do Supabase.</p>
+  <div id="lista"></div>
+</main>
+<script>
+  // Página de apoio: copia o código das Edge Functions com um toque (sem selecionar texto no Safari).
+  const FUNCOES = [
+    { nome: 'whatsapp-webhook', jwt: 'Verify JWT: DESLIGADO' },
+    { nome: 'whatsapp-enviar', jwt: 'Verify JWT: LIGADO' },
+    { nome: 'whatsapp-automacoes', jwt: 'Verify JWT: DESLIGADO' },
+  ];
+  const codigos = {};
+  const lista = document.getElementById('lista');
+
+  FUNCOES.forEach(({ nome, jwt }) => {
+    const cartao = document.createElement('section');
+    cartao.className = 'cartao';
+    cartao.innerHTML = `<h2>${nome}</h2><p>${jwt}</p><button type="button" disabled>Carregando…</button><div class="status" role="status"></div>`;
+    lista.appendChild(cartao);
+    const botao = cartao.querySelector('button');
+    const status = cartao.querySelector('.status');
+
+    // Baixa antes, para a cópia acontecer na hora do toque (o Safari exige isso).
+    fetch(`supabase/functions/${nome}/index.ts?v=${Date.now()}`, { cache: 'no-store' })
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then((texto) => { codigos[nome] = texto; botao.disabled = false; botao.textContent = 'Copiar código'; })
+      .catch(() => { botao.textContent = 'Não carregou'; status.className = 'status erro'; status.textContent = 'Recarregue a página e tente de novo.'; });
+
+    botao.addEventListener('click', () => {
+      const texto = codigos[nome];
+      const pronto = () => { status.className = 'status ok'; status.textContent = `✓ Copiado (${texto.split('\n').length} linhas). Agora cole no Supabase.`; };
+      const reserva = () => {
+        // Plano B: copia por uma caixa de texto escondida.
+        const caixa = document.createElement('textarea');
+        caixa.value = texto;
+        caixa.setAttribute('readonly', '');
+        caixa.style.position = 'fixed'; caixa.style.opacity = '0';
+        document.body.appendChild(caixa);
+        caixa.select(); caixa.setSelectionRange(0, texto.length);
+        const ok = document.execCommand('copy');
+        caixa.remove();
+        if (ok) pronto(); else { status.className = 'status erro'; status.textContent = 'Não consegui copiar. Tente de novo.'; }
+      };
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(texto).then(pronto, reserva);
+      else reserva();
+    });
+  });
+</script>
+</body>
+</html>
