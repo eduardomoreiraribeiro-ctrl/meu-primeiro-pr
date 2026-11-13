@@ -1,6 +1,7 @@
 // Edge Function "whatsapp-automacoes" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
+// Versão: 27bd1d
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 

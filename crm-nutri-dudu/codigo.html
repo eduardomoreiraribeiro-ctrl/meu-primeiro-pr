@@ -36,6 +36,7 @@
     { nome: 'whatsapp-enviar', jwt: 'Verify JWT: LIGADO' },
     { nome: 'whatsapp-automacoes', jwt: 'Verify JWT: DESLIGADO' },
   ];
+  const RAW = 'https://raw.githubusercontent.com/eduardomoreiraribeiro-ctrl/meu-primeiro-pr/claude/zen-brown-jt56am/crm-nutri-dudu';
   const codigos = {};
   const lista = document.getElementById('lista');
 
@@ -48,9 +49,16 @@
     const status = cartao.querySelector('.status');
 
     // Baixa antes, para a cópia acontecer na hora do toque (o Safari exige isso).
-    fetch(`supabase/functions/${nome}/index.ts?v=${Date.now()}`, { cache: 'no-store' })
-      .then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); })
-      .then((texto) => { codigos[nome] = texto; botao.disabled = false; botao.textContent = 'Copiar código'; })
+    // Primeiro direto do GitHub (atualiza em poucos minutos); se falhar, a cópia publicada junto com esta página.
+    const caminho = `supabase/functions/${nome}/index.ts`;
+    const baixar = (url) => fetch(url, { cache: 'no-store' }).then((r) => { if (!r.ok) throw new Error(r.status); return r.text(); });
+    baixar(`${RAW}/${caminho}?v=${Date.now()}`)
+      .catch(() => baixar(`${caminho}?v=${Date.now()}`))
+      .then((texto) => {
+        codigos[nome] = texto;
+        const versao = (texto.match(/^\/\/ Versão: (\w+)/m) || [])[1];
+        botao.disabled = false; botao.textContent = versao ? `Copiar código (versão ${versao})` : 'Copiar código';
+      })
       .catch(() => { botao.textContent = 'Não carregou'; status.className = 'status erro'; status.textContent = 'Recarregue a página e tente de novo.'; });
 
     botao.addEventListener('click', () => {

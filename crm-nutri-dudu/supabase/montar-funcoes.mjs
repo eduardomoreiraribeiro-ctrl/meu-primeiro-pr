@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), '..');
 const ler = (caminho) => readFileSync(join(raiz, caminho), 'utf8');
@@ -35,8 +36,11 @@ for (const [nome, f] of Object.entries(FUNCOES)) {
     ...COMPARTILHADO.map((arq) => `// ===== ${arq} =====\n${ler(arq)}`),
     ler(f.entrada),
   ];
+  // Versão = resumo do conteúdo: a página codigo.html mostra, para conferir que copiou o código novo.
+  const versao = createHash('sha1').update(partes.join('\n')).digest('hex').slice(0, 6);
+  partes.splice(3, 0, `// Versão: ${versao}`);
   const destino = join(raiz, 'supabase/functions', nome, 'index.ts');
   mkdirSync(dirname(destino), { recursive: true });
   writeFileSync(destino, partes.join('\n'));
-  console.log(`ok: supabase/functions/${nome}/index.ts`);
+  console.log(`ok: supabase/functions/${nome}/index.ts (versão ${versao})`);
 }
