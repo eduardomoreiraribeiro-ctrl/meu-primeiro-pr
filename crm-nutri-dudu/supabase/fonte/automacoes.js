@@ -302,6 +302,8 @@ const NutriDuduAutomacoes = (() => {
             cfg, automacao: 'lembrete', pessoa, dados, conversas,
             valores: [primeiroNome(pessoa.nome), utils.diaPorExtenso(quando).toLowerCase(), utils.hora(quando), nomeProf(c.profissionalId)],
             botoes: [`confirmar:${c.id}`, `remarcar:${c.id}`],
+            // Dentro das 24 h vai como mensagem comum: com botões de verdade, senão o texto pede um botão que não existe.
+            botoesLivres: [{ id: `confirmar:${c.id}`, titulo: 'Confirmar' }, { id: `remarcar:${c.id}`, titulo: 'Remarcar' }],
           });
           await marcar('consultas', c.id, 'lembrete', { em: agoraIso(), ok: r.ok, ...(r.via ? { via: r.via } : {}), ...(r.ok ? {} : { erro: r.motivo }) });
           return r;
