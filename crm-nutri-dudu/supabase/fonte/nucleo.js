@@ -176,7 +176,12 @@ const NutriDuduServidor = (() => {
     }
 
     /** Descobre a conta do WhatsApp Business dona deste número (pelas permissões do próprio token). */
-    async function descobrirConta() {
+    async function descobrirConta(sugerida = null) {
+      // ID informado na configuração do sistema: confere se o número é mesmo dessa conta.
+      if (sugerida) {
+        const nums = await graph(`${sugerida}/phone_numbers?fields=id&limit=50`);
+        if ((nums.data || []).some((n) => String(n.id) === String(phoneNumberId))) return String(sugerida);
+      }
       const info = await graph(`debug_token?input_token=${encodeURIComponent(token)}`);
       const escopos = info?.data?.granular_scopes || [];
       const ids = [...new Set(escopos.filter((e) => /whatsapp_business_(management|messaging)/.test(e.scope)).flatMap((e) => e.target_ids || []))];
@@ -1238,12 +1243,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
      * Situação de cada modelo do sistema na Meta e, se pedido, cria os que faltam
      * (texto, categoria, exemplo e botões iguais aos de js/mensagens-automaticas.js).
      */
-    async function modelosMeta({ criar = [] }) {
+    async function modelosMeta({ criar = [], conta: contaSugerida = null }) {
       const MA = NutriDudu.mensagensAutomaticas;
       const configuracoes = await repo.todos('configuracoes');
       const cfg = MA.configuracao(configuracoes.find((c) => c.id === 'automacoes'));
       const clinica = configuracoes.find((c) => c.id === 'geral')?.nomeClinica || 'clínica';
-      const conta = await whatsapp.descobrirConta();
+      const conta = await whatsapp.descobrirConta(contaSugerida && /^\d{6,25}$/.test(contaSugerida) ? contaSugerida : null);
       if (!conta) throw new Error('não encontrei a conta do WhatsApp deste número com o token atual');
       const criados = [];
       for (const id of criar) {
@@ -1285,7 +1290,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador gerencia os modelos.' }, 403);
         if (!whatsapp.descobrirConta) return json({ erro: 'Indisponível nesta função.' }, 500);
         try {
-          return json({ ok: true, ...(await modelosMeta({ criar: Array.isArray(corpo.criar) ? corpo.criar.map(String) : [] })) });
+          return json({ ok: true, ...(await modelosMeta({ criar: Array.isArray(corpo.criar) ? corpo.criar.map(String) : [], conta: corpo.conta ? String(corpo.conta) : null })) });
         } catch (erro) {
           return json({ erro: `A Meta recusou: ${erro.message}` }, 502);
         }

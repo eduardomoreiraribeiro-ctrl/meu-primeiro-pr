@@ -8,5 +8,7 @@ window.NutriDudu = window.NutriDudu || {};
 
 NutriDudu.NUVEM = {
   url: 'https://guhukcsadxbebtqdvuzm.supabase.co',
+  // ID da conta do WhatsApp Business (Gerenciador do WhatsApp). Não é segredo: só diz onde ficam os modelos.
+  whatsappContaId: '1033074579822713',
   chaveAnon: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1aHVrY3NhZHhiZWJ0cWR2dXptIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTE0MTMwNTAsImV4cCI6MjEwNjk4OTA1MH0.CXQl0V2Zivk2mSBfs4428-M8eKwht6p4NOTEfIl2_iU',
 };

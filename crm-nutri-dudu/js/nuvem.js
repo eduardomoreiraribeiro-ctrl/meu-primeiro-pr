@@ -372,7 +372,7 @@ NutriDudu.nuvem = (function () {
 
   /** Modelos de mensagem na Meta: situação de cada um; `criar` = ids dos que devem ser criados agora. */
   async function modelosMeta(criar = []) {
-    const { data, error } = await obterCliente().functions.invoke('whatsapp-enviar', { body: { acao: 'modelos-meta', criar } });
+    const { data, error } = await obterCliente().functions.invoke('whatsapp-enviar', { body: { acao: 'modelos-meta', criar, conta: NutriDudu.NUVEM?.whatsappContaId || null } });
     if (error) {
       let msg = '';
       try { msg = (await error.context?.json())?.erro || ''; } catch (e) { /* sem JSON */ }
