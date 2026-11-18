@@ -40,11 +40,12 @@ NutriDudu.mensagensAutomaticas = (function () {
     retorno: {
       titulo: 'Retorno pendente',
       quando: 'Cliente sem retorno marcado depois do prazo (regras de retorno); no máximo 1 a cada 30 dias.',
-      nomePadrao: 'nutridudu_retorno',
+      nomePadrao: 'nutridudu_retorno_v2',
       categoria: 'MARKETING',
-      corpo: () => 'Olá, {{1}}! Já faz {{2}} desde a sua última consulta com {{3}}. Que tal marcar o seu retorno? Responda esta mensagem que a gente encontra um horário para você.',
-      variaveis: ['primeiro nome', 'tempo (ex.: 2 meses)', 'profissional'],
-      exemplo: ['Fernanda', '2 meses', 'Dra. Ana Lima'],
+      // Em primeira pessoa, do nutricionista (versão 2: a 1ª ficou impessoal).
+      corpo: () => 'Oi, {{1}}! Aqui é o Eduardo, seu nutricionista. Já faz {{2}} desde a nossa última consulta. Que tal marcarmos o seu retorno para ajustar o plano? É só responder esta mensagem que eu encontro um horário para você.',
+      variaveis: ['primeiro nome', 'tempo (ex.: 2 meses)'],
+      exemplo: ['Fernanda', '2 meses'],
     },
     pacote: {
       titulo: 'Pacote acabando ou vencendo',
@@ -58,18 +59,18 @@ NutriDudu.mensagensAutomaticas = (function () {
     reativacao: {
       titulo: 'Reativação',
       quando: 'Cliente sumido (sem consulta há mais do que o prazo de "cliente sumido"); no máximo 1 a cada 90 dias.',
-      nomePadrao: 'nutridudu_reativacao',
+      nomePadrao: 'nutridudu_reativacao_v2',
       categoria: 'MARKETING',
-      corpo: (clinica) => `Olá, {{1}}! Sentimos sua falta aqui na ${clinica}. Que tal retomar o seu acompanhamento? Responda esta mensagem e a gente encontra um horário para você.`,
+      corpo: () => 'Oi, {{1}}! Aqui é o Eduardo, seu nutricionista. Faz um tempinho que a gente não se vê e lembrei de você. Como você está? Se quiser retomar o acompanhamento, é só responder esta mensagem que eu encontro um horário para você.',
       variaveis: ['primeiro nome'],
       exemplo: ['Thiago'],
     },
     indicacao: {
       titulo: 'Agradecimento de indicação',
       quando: 'Quando uma pessoa indicada vira cliente (até 30 dias depois); agradece a quem indicou, uma vez.',
-      nomePadrao: 'nutridudu_agradecimento_indicacao',
+      nomePadrao: 'nutridudu_agradecimento_indicacao_v2',
       categoria: 'MARKETING',
-      corpo: (clinica) => `Olá, {{1}}! Passando para agradecer por ter indicado {{2}} para a ${clinica}. Sua confiança significa muito para nós!`,
+      corpo: () => 'Oi, {{1}}! Aqui é o Eduardo, seu nutricionista. Passando para agradecer por ter indicado o meu trabalho para {{2}}. Sua confiança significa muito para mim!',
       variaveis: ['primeiro nome de quem indicou', 'primeiro nome de quem foi indicado'],
       exemplo: ['Mariana', 'Rafael'],
     },
@@ -145,10 +146,17 @@ NutriDudu.mensagensAutomaticas = (function () {
       .map((d) => (d.length >= 12 && d.startsWith('55') ? d : `55${d}`)))];
   }
 
+  // Modelos substituídos por uma versão nova: quem ainda usa o nome antigo passa para o novo.
+  const RENOMEADOS = {
+    nutridudu_retorno: 'nutridudu_retorno_v2',
+    nutridudu_reativacao: 'nutridudu_reativacao_v2',
+    nutridudu_agradecimento_indicacao: 'nutridudu_agradecimento_indicacao_v2',
+  };
+
   const configuracao = (doc = {}) => ({
     ...PADRAO, ...doc,
     ativas: { ...PADRAO.ativas, ...(doc.ativas || {}) },
-    modelos: { ...PADRAO.modelos, ...(doc.modelos || {}) },
+    modelos: Object.fromEntries(Object.entries({ ...PADRAO.modelos, ...(doc.modelos || {}) }).map(([k, v]) => [k, RENOMEADOS[v] || v])),
   });
 
   const preencher = (texto, valores) => texto.replace(/\{\{(\d+)\}\}/g, (_, n) => String(valores[Number(n) - 1] ?? ''));

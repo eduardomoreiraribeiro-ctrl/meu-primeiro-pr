@@ -100,7 +100,7 @@ NutriDudu.enviarGrupo = (function () {
     function desenhar() {
       const membros = grupos[grupo];
       const m = MA.MODELOS[grupo];
-      const exemplo = grupo === 'retorno' ? ['Mariana', '2 meses', 'Nutri Eduardo Ribeiro'] : ['Mariana'];
+      const exemplo = grupo === 'retorno' ? ['Mariana', '2 meses'] : ['Mariana'];
       const linhas = membros.map(({ pessoa, situacao }) => {
         const motivo = bloqueio(pessoa, grupo);
         return `<tr${motivo ? ' class="muted"' : ''}>

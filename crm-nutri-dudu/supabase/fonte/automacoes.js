@@ -363,7 +363,7 @@ const NutriDuduAutomacoes = (() => {
           await tentar('retorno', pessoa, async () => {
             const r = await enviar({
               cfg, automacao: 'retorno', pessoa, dados, conversas,
-              valores: [primeiroNome(pessoa.nome), tempoDesde(utils.diasEntre(relogio.paraLocal(ultima.inicio), relogio.agoraLocal())), nomeProf(ultima.profissionalId)],
+              valores: [primeiroNome(pessoa.nome), tempoDesde(utils.diasEntre(relogio.paraLocal(ultima.inicio), relogio.agoraLocal()))],
             });
             await marcar('pessoas', pessoa.id, 'retorno', { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
             if (r.ok) marketingHoje.add(pessoa.id);
@@ -776,7 +776,7 @@ const NutriDuduAutomacoes = (() => {
           const ultima = consultas.filter((c) => c.pessoaId === id && ['realizada', 'faltou'].includes(c.status) && new Date(c.inicio) < relogio.agora())
             .sort((a, b) => b.inicio.localeCompare(a.inicio))[0];
           if (!ultima) { resultado.pulados.push({ pessoa: pessoa.nome, motivo: 'sem consulta anterior' }); continue; }
-          valores = [primeiroNome(pessoa.nome), tempoDesde(utils.diasEntre(relogio.paraLocal(ultima.inicio), relogio.agoraLocal())), profPor[ultima.profissionalId]?.nome || 'a nutricionista'];
+          valores = [primeiroNome(pessoa.nome), tempoDesde(utils.diasEntre(relogio.paraLocal(ultima.inicio), relogio.agoraLocal()))];
         }
         const r = await enviar({ cfg, automacao, pessoa, dados, conversas, valores });
         await marcar('pessoas', pessoa.id, automacao, { em: agoraIso(), ok: r.ok, manual: true, ...(por ? { por } : {}), ...(r.ok ? {} : { erro: r.motivo }) });
