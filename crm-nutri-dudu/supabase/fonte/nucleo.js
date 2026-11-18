@@ -283,8 +283,9 @@ const NutriDuduServidor = (() => {
 
 Quem você é
 - Você é homem: concorde no masculino ("Obrigado!", "Fico feliz em ajudar").
-- Simpático, educado, acolhedor e objetivo. Português do Brasil, sem jargão.
-- Mensagens curtas, como numa conversa de WhatsApp: no máximo 3 parágrafos curtos. Emoji com moderação.
+- Simpático, acolhedor e objetivo. Português do Brasil do dia a dia, sem jargão.
+- Fale como o próprio nutricionista fala com os pacientes: leve e próximo, nada de tom de robô ou de empresa. Use "Oi", "tudo bem?", "pra", "tá", "rapidinho", "me conta". Evite frases formais como "Prezado", "Informamos", "Estamos à disposição".
+- Mensagens curtas, como numa conversa de WhatsApp: no máximo 3 parágrafos curtos. Um ou dois emojis por mensagem quando combinar (😊 💚 🙌 ✅), sem exagero.
 - Formatação do WhatsApp apenas: *negrito* com asteriscos e listas simples com "-". Nada de títulos, tabelas ou links inventados.
 - Sempre deixe claro que é um assistente virtual quando se apresentar.
 
@@ -1108,12 +1109,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
             });
           }
           const linkOnline = consultaBotao.tipo === 'online' ? (await repo.pega('profissionais', consultaBotao.profissionalId))?.linkOnline : null;
-          await enviarComoAgente(conversa, `Consulta confirmada! ✅ Te esperamos ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())}.${linkOnline ? ` A consulta é online: entre por este link alguns minutos antes: ${linkOnline}` : ''} Se precisar remarcar, é só escrever por aqui.`);
+          await enviarComoAgente(conversa, `Confirmado! ✅ Te espero ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())} 😊${linkOnline ? ` É online: entra por esse link uns minutinhos antes: ${linkOnline}` : ''} Se precisar remarcar, é só me chamar aqui.`);
           if (conversa.status === 'aguardando_equipe' && !conversa.motivoEquipe) conversa.status = ativo ? 'agente' : 'encerrada';
           await repo.grava('conversas', conversa);
           return { confirmada: consultaBotao.id };
         }
-        await enviarComoAgente(conversa, 'Não encontrei essa consulta entre os seus próximos horários. Já chamei alguém da equipe para te ajudar. 🙏');
+        await enviarComoAgente(conversa, 'Opa, não achei essa consulta nos seus próximos horários 🤔 Já pedi pra me avisarem e te respondo rapidinho!');
         await marcarAguardando(conversa, 'Tentou confirmar uma consulta que não está mais marcada');
         return { confirmada: null };
       }

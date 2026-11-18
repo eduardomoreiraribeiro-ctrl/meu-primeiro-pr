@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-automacoes" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 60584e
+// Versão: 354380
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -768,19 +768,20 @@ NutriDudu.mensagensAutomaticas = (function () {
     lembrete: {
       titulo: 'Lembrete de consulta',
       quando: 'Até 40 horas antes da consulta (uma vez). Os botões confirmam a consulta ou pedem para remarcar.',
-      nomePadrao: 'nutridudu_lembrete_consulta',
+      nomePadrao: 'nutridudu_lembrete_v2',
       categoria: 'UTILITY',
-      corpo: (clinica) => `Olá, {{1}}! Lembrete da sua consulta na ${clinica}: {{2}}, às {{3}}, com {{4}}. Toque em um botão abaixo para confirmar ou remarcar.`,
-      variaveis: ['primeiro nome', 'dia (ex.: quinta-feira, 29/10)', 'hora (ex.: 16:00)', 'profissional'],
-      exemplo: ['Mariana', 'quinta-feira, 29/10', '16:00', 'Dra. Ana Lima'],
+      // Textos dos pacientes no jeito do Eduardo falar: leve, próximo, com emoji (versão 2).
+      corpo: () => 'Oi, {{1}}! Tudo bem? 😊 Passando pra lembrar da nossa consulta {{2}}, às {{3}}. Consegue confirmar pra mim? É só tocar num botão aqui embaixo 👇',
+      variaveis: ['primeiro nome', 'dia (ex.: quinta-feira, 29/10)', 'hora (ex.: 16:00)'],
+      exemplo: ['Mariana', 'quinta-feira, 29/10', '16:00'],
       botoes: ['Confirmar', 'Remarcar'],
     },
     preAnamnese: {
       titulo: 'Pré-anamnese',
       quando: 'Ao agendar a primeira consulta, e um lembrete 2 dias antes se ainda não foi preenchida.',
-      nomePadrao: 'nutridudu_pre_anamnese',
+      nomePadrao: 'nutridudu_pre_anamnese_v2',
       categoria: 'UTILITY',
-      corpo: () => 'Olá, {{1}}! Para aproveitarmos melhor a sua consulta de {{2}}, preencha este formulário rápido (cerca de 5 minutos): {{3}} Suas respostas são vistas só pela nutricionista.',
+      corpo: () => 'Oi, {{1}}! Que bom que você vai começar comigo 💚 Pra nossa consulta de {{2}} render ao máximo, preenche esse formulário rapidinho (uns 5 minutos): {{3}} Só eu vejo suas respostas, tá?',
       variaveis: ['primeiro nome', 'dia e hora da consulta', 'link do formulário'],
       exemplo: ['Mariana', 'quinta-feira, 29/10 às 16:00', 'https://exemplo.com/pre-anamnese.html#abc123'],
     },
@@ -799,16 +800,16 @@ NutriDudu.mensagensAutomaticas = (function () {
       nomePadrao: 'nutridudu_retorno_v2',
       categoria: 'MARKETING',
       // Em primeira pessoa, do nutricionista (versão 2: a 1ª ficou impessoal).
-      corpo: () => 'Oi, {{1}}! Aqui é o Eduardo, seu nutricionista. Já faz {{2}} desde a nossa última consulta. Que tal marcarmos o seu retorno para ajustar o plano? É só responder esta mensagem que eu encontro um horário para você.',
+      corpo: () => 'Oi, {{1}}! Tudo bem? Já faz {{2}} desde a nossa última consulta e fiquei curioso pra saber como você está 😊 Bora marcar o retorno pra gente ajustar o plano? Me responde aqui que eu vejo um horário pra você 💚',
       variaveis: ['primeiro nome', 'tempo (ex.: 2 meses)'],
       exemplo: ['Fernanda', '2 meses'],
     },
     pacote: {
       titulo: 'Pacote acabando ou vencendo',
       quando: 'Pacote com 1 consulta restante, vencendo em até 15 dias ou atrasado no ritmo; 1 aviso para cada situação.',
-      nomePadrao: 'nutridudu_pacote',
+      nomePadrao: 'nutridudu_pacote_v2',
       categoria: 'UTILITY',
-      corpo: () => 'Olá, {{1}}! Uma atualização sobre o seu {{2}}: {{3}}. Quer agendar a próxima consulta ou conversar sobre a renovação? É só responder esta mensagem.',
+      corpo: () => 'Oi, {{1}}! Passando pra te dar um toque sobre o seu {{2}}: {{3}} 😊 Quer que eu já veja o próximo horário pra você? É só me responder aqui.',
       variaveis: ['primeiro nome', 'nome do pacote', 'situação (ex.: resta 1 consulta)'],
       exemplo: ['Diego', 'Pacote trimestral', 'resta 1 consulta e ele vence em 10/11'],
     },
@@ -817,7 +818,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       quando: 'Cliente sumido (sem consulta há mais do que o prazo de "cliente sumido"); no máximo 1 a cada 90 dias.',
       nomePadrao: 'nutridudu_reativacao_v2',
       categoria: 'MARKETING',
-      corpo: () => 'Oi, {{1}}! Aqui é o Eduardo, seu nutricionista. Faz um tempinho que a gente não se vê e lembrei de você. Como você está? Se quiser retomar o acompanhamento, é só responder esta mensagem que eu encontro um horário para você.',
+      corpo: () => 'Oi, {{1}}! Quanto tempo! Lembrei de você por aqui e quis saber como estão as coisas 😊 Se bater vontade de retomar o acompanhamento, me responde aqui que a gente acha um horário que funcione pra você 💚',
       variaveis: ['primeiro nome'],
       exemplo: ['Thiago'],
     },
@@ -826,18 +827,18 @@ NutriDudu.mensagensAutomaticas = (function () {
       quando: 'Quando uma pessoa indicada vira cliente (até 30 dias depois); agradece a quem indicou, uma vez.',
       nomePadrao: 'nutridudu_agradecimento_indicacao_v2',
       categoria: 'MARKETING',
-      corpo: () => 'Oi, {{1}}! Aqui é o Eduardo, seu nutricionista. Passando para agradecer por ter indicado o meu trabalho para {{2}}. Sua confiança significa muito para mim!',
+      corpo: () => 'Oi, {{1}}! Passando pra te agradecer de coração por ter me indicado pra {{2}} 💚 Isso significa muito pra mim. Obrigado pela confiança!',
       variaveis: ['primeiro nome de quem indicou', 'primeiro nome de quem foi indicado'],
       exemplo: ['Mariana', 'Rafael'],
     },
     linkOnline: {
       titulo: 'Link da consulta online',
       quando: 'Entre 3 horas e 15 minutos antes de cada consulta online, com o link da sala de vídeo do profissional (cadastrado em Profissionais › Editar dados).',
-      nomePadrao: 'nutridudu_link_online',
+      nomePadrao: 'nutridudu_link_online_v2',
       categoria: 'UTILITY',
-      corpo: () => 'Olá, {{1}}! Sua consulta online com {{2}} começa às {{3}}. Entre pela videochamada neste link: {{4}} Até já!',
-      variaveis: ['primeiro nome', 'profissional', 'hora (ex.: 16:00)', 'link da videochamada'],
-      exemplo: ['Mariana', 'Dra. Ana Lima', '16:00', 'https://meet.google.com/abc-defg-hij'],
+      corpo: () => 'Oi, {{1}}! Nossa consulta online começa às {{2}} 😊 É só entrar por esse link uns minutinhos antes: {{3}} Te espero lá!',
+      variaveis: ['primeiro nome', 'hora (ex.: 16:00)', 'link da videochamada'],
+      exemplo: ['Mariana', '16:00', 'https://meet.google.com/abc-defg-hij'],
     },
     avisoEquipe: {
       titulo: 'Aviso para a equipe',
@@ -852,23 +853,23 @@ NutriDudu.mensagensAutomaticas = (function () {
     vagaEspera: {
       titulo: 'Horário liberado (lista de espera)',
       quando: 'Quando um horário é cancelado ou remarcado, ele é oferecido a até 3 pessoas da lista de espera que combinam com ele (por ordem de chegada na lista). Quem tocar primeiro em "Quero este horário" fica com ele.',
-      nomePadrao: 'nutridudu_vaga_disponivel',
+      nomePadrao: 'nutridudu_vaga_v2',
       // A Meta classifica oferta de horário como Marketing (como Utilidade, rejeita).
       categoria: 'MARKETING',
-      corpo: () => 'Olá, {{1}}! Abriu um horário na agenda de {{2}}: {{3}}. Como você está na nossa lista de espera, estamos avisando você primeiro. O horário fica com quem confirmar antes. Quer ficar com ele?',
-      variaveis: ['primeiro nome', 'profissional', 'dia e hora (ex.: terça, 03/11 às 10:00)'],
-      exemplo: ['Mariana', 'Dra. Ana Lima', 'terça-feira, 03/11 às 10:00'],
+      corpo: () => 'Oi, {{1}}! Abriu um horário na minha agenda: {{2}} 🙌 Como você está na lista de espera, quis te avisar primeiro. Fica com quem confirmar antes, tá? Quer esse horário?',
+      variaveis: ['primeiro nome', 'dia e hora (ex.: terça, 03/11 às 10:00)'],
+      exemplo: ['Mariana', 'terça-feira, 03/11 às 10:00'],
       botoes: ['Quero este horário', 'Não posso'],
     },
     posConsulta: {
       titulo: 'Depois da consulta',
       quando: 'No dia seguinte à consulta realizada (até 4 dias depois), no máximo 1 a cada 30 dias por pessoa. "Ótima" agradece e pede uma avaliação no Google (se o link estiver informado); "Poderia ser melhor" avisa a equipe.',
-      nomePadrao: 'nutridudu_pos_consulta',
+      nomePadrao: 'nutridudu_pos_consulta_v2',
       // Pedido de opinião que leva à avaliação no Google: a Meta trata como Marketing.
       categoria: 'MARKETING',
-      corpo: () => 'Olá, {{1}}! Como foi a sua consulta com {{2}}? Sua opinião ajuda a gente a cuidar cada vez melhor de você. Toque em uma opção abaixo.',
-      variaveis: ['primeiro nome', 'profissional'],
-      exemplo: ['Mariana', 'Dra. Ana Lima'],
+      corpo: () => 'Oi, {{1}}! Foi muito bom te atender 💚 Me conta: o que você achou da nossa consulta? Toca numa opção aqui embaixo 👇',
+      variaveis: ['primeiro nome'],
+      exemplo: ['Mariana'],
       botoes: ['Ótima', 'Boa', 'Poderia ser melhor'],
     },
     resumoDia: {
@@ -904,6 +905,12 @@ NutriDudu.mensagensAutomaticas = (function () {
 
   // Modelos substituídos por uma versão nova: quem ainda usa o nome antigo passa para o novo.
   const RENOMEADOS = {
+    nutridudu_lembrete_consulta: 'nutridudu_lembrete_v2',
+    nutridudu_pre_anamnese: 'nutridudu_pre_anamnese_v2',
+    nutridudu_link_online: 'nutridudu_link_online_v2',
+    nutridudu_vaga_disponivel: 'nutridudu_vaga_v2',
+    nutridudu_pos_consulta: 'nutridudu_pos_consulta_v2',
+    nutridudu_pacote: 'nutridudu_pacote_v2',
     nutridudu_retorno: 'nutridudu_retorno_v2',
     nutridudu_reativacao: 'nutridudu_reativacao_v2',
     nutridudu_agradecimento_indicacao: 'nutridudu_agradecimento_indicacao_v2',
@@ -1400,8 +1407,9 @@ const NutriDuduServidor = (() => {
 
 Quem você é
 - Você é homem: concorde no masculino ("Obrigado!", "Fico feliz em ajudar").
-- Simpático, educado, acolhedor e objetivo. Português do Brasil, sem jargão.
-- Mensagens curtas, como numa conversa de WhatsApp: no máximo 3 parágrafos curtos. Emoji com moderação.
+- Simpático, acolhedor e objetivo. Português do Brasil do dia a dia, sem jargão.
+- Fale como o próprio nutricionista fala com os pacientes: leve e próximo, nada de tom de robô ou de empresa. Use "Oi", "tudo bem?", "pra", "tá", "rapidinho", "me conta". Evite frases formais como "Prezado", "Informamos", "Estamos à disposição".
+- Mensagens curtas, como numa conversa de WhatsApp: no máximo 3 parágrafos curtos. Um ou dois emojis por mensagem quando combinar (😊 💚 🙌 ✅), sem exagero.
 - Formatação do WhatsApp apenas: *negrito* com asteriscos e listas simples com "-". Nada de títulos, tabelas ou links inventados.
 - Sempre deixe claro que é um assistente virtual quando se apresentar.
 
@@ -2225,12 +2233,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
             });
           }
           const linkOnline = consultaBotao.tipo === 'online' ? (await repo.pega('profissionais', consultaBotao.profissionalId))?.linkOnline : null;
-          await enviarComoAgente(conversa, `Consulta confirmada! ✅ Te esperamos ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())}.${linkOnline ? ` A consulta é online: entre por este link alguns minutos antes: ${linkOnline}` : ''} Se precisar remarcar, é só escrever por aqui.`);
+          await enviarComoAgente(conversa, `Confirmado! ✅ Te espero ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())} 😊${linkOnline ? ` É online: entra por esse link uns minutinhos antes: ${linkOnline}` : ''} Se precisar remarcar, é só me chamar aqui.`);
           if (conversa.status === 'aguardando_equipe' && !conversa.motivoEquipe) conversa.status = ativo ? 'agente' : 'encerrada';
           await repo.grava('conversas', conversa);
           return { confirmada: consultaBotao.id };
         }
-        await enviarComoAgente(conversa, 'Não encontrei essa consulta entre os seus próximos horários. Já chamei alguém da equipe para te ajudar. 🙏');
+        await enviarComoAgente(conversa, 'Opa, não achei essa consulta nos seus próximos horários 🤔 Já pedi pra me avisarem e te respondo rapidinho!');
         await marcarAguardando(conversa, 'Tentou confirmar uma consulta que não está mais marcada');
         return { confirmada: null };
       }
@@ -2747,7 +2755,6 @@ const NutriDuduAutomacoes = (() => {
         else if (r.erro) relatorio.erros.push({ automacao, pessoa: pessoa.nome, motivo: r.motivo });
         else relatorio.pulados.push({ automacao, pessoa: pessoa.nome, motivo: r.motivo });
       }
-      const nomeProf = (id) => profPor[id]?.nome || 'a nutricionista';
       const agoraMs = inicio.getTime();
 
       // 1. Lembrete de consulta (até 40 h antes, pelo menos 1 h antes).
@@ -2760,7 +2767,7 @@ const NutriDuduAutomacoes = (() => {
         await tentar('lembrete', pessoa, async () => {
           const r = await enviar({
             cfg, automacao: 'lembrete', pessoa, dados, conversas,
-            valores: [primeiroNome(pessoa.nome), utils.diaPorExtenso(quando).toLowerCase(), utils.hora(quando), nomeProf(c.profissionalId)],
+            valores: [primeiroNome(pessoa.nome), utils.diaPorExtenso(quando).toLowerCase(), utils.hora(quando)],
             botoes: [`confirmar:${c.id}`, `remarcar:${c.id}`],
             // Dentro das 24 h vai como mensagem comum: com botões de verdade, senão o texto pede um botão que não existe.
             botoesLivres: [{ id: `confirmar:${c.id}`, titulo: 'Confirmar' }, { id: `remarcar:${c.id}`, titulo: 'Remarcar' }],
@@ -2884,7 +2891,7 @@ const NutriDuduAutomacoes = (() => {
           await tentar('linkOnline', pessoa, async () => {
             const r = await enviar({
               cfg, automacao: 'linkOnline', pessoa, dados, conversas,
-              valores: [primeiroNome(pessoa.nome), nomeProf(c.profissionalId), utils.hora(relogio.paraLocal(c.inicio)), link],
+              valores: [primeiroNome(pessoa.nome), utils.hora(relogio.paraLocal(c.inicio)), link],
             });
             await marcar('consultas', c.id, 'linkOnline', { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
             return r;
@@ -2920,7 +2927,7 @@ const NutriDuduAutomacoes = (() => {
         await tentar('posConsulta', pessoa, async () => {
           const r = await enviar({
             cfg, automacao: 'posConsulta', pessoa, dados, conversas,
-            valores: [primeiroNome(pessoa.nome), nomeProf(c.profissionalId)],
+            valores: [primeiroNome(pessoa.nome)],
             botoes,
             botoesLivres: MODELOS.posConsulta.botoes.map((titulo, i) => ({ id: botoes[i], titulo })),
           });
@@ -3061,7 +3068,7 @@ const NutriDuduAutomacoes = (() => {
             tentativas++;
             const r = await enviar({
               cfg, automacao: 'vagaEspera', pessoa, dados, conversas,
-              valores: [primeiroNome(pessoa.nome), profPor[vaga.profissionalId]?.nome || 'a nutricionista', quando],
+              valores: [primeiroNome(pessoa.nome), quando],
               botoes: [sim, nao],
               botoesLivres: [{ id: sim, titulo: 'Quero este horário' }, { id: nao, titulo: 'Não posso' }],
             });
@@ -3098,7 +3105,7 @@ const NutriDuduAutomacoes = (() => {
       try { entrada = entradaId ? await repo.pega('espera', entradaId) : null; } catch (erro) { entrada = null; }
       const oferta = entrada?.ofertas?.find((o) => o.id === ofertaId);
       if (!entrada || entrada.pessoaId !== pessoa.id || !oferta) {
-        return { texto: 'Não encontrei esse horário. Já chamei alguém da equipe para te ajudar. 🙏', equipe: 'Respondeu a uma oferta da lista de espera que não foi encontrada', resultado: 'nao_encontrada' };
+        return { texto: 'Opa, não achei esse horário por aqui 🤔 Já pedi pra me avisarem e te respondo rapidinho!', equipe: 'Respondeu a uma oferta da lista de espera que não foi encontrada', resultado: 'nao_encontrada' };
       }
       const agora = agoraIso();
       const quando = relogio.descrever(oferta.inicio).replace(/^./, (c) => c.toLowerCase());
@@ -3120,13 +3127,13 @@ const NutriDuduAutomacoes = (() => {
           resultado: 'recusou',
         };
       }
-      if (oferta.status === 'aceita') return { texto: `Esse horário já está reservado para você: ${quando}. ✅`, resultado: 'ja_reservado' };
+      if (oferta.status === 'aceita') return { texto: `Esse horário já é seu: ${quando} ✅`, resultado: 'ja_reservado' };
       if (entrada.status !== 'aguardando') {
-        return { texto: 'Esse pedido da lista de espera não está mais ativo. Se ainda quiser um horário, é só escrever por aqui que a gente ajuda. 🙂', resultado: 'inativo' };
+        return { texto: 'Esse pedido da lista de espera não tá mais ativo. Se ainda quiser um horário, me chama aqui que a gente vê 😊', resultado: 'inativo' };
       }
       if (new Date(oferta.inicio).getTime() - relogio.agora().getTime() < HORA) {
         await salvarOferta('expirada');
-        return { texto: 'Que pena, esse horário já está muito próximo e não dá mais para reservar. Você continua na lista de espera, e avisamos se abrir outro. 🙏', resultado: 'expirada' };
+        return { texto: 'Poxa, esse horário já tá muito em cima e não dá mais pra reservar 😕 Você continua na lista de espera e te aviso se abrir outro!', resultado: 'expirada' };
       }
 
       // Reserva com as mesmas regras do assistente (confere se o horário ainda está livre).
@@ -3142,13 +3149,13 @@ const NutriDuduAutomacoes = (() => {
       if (r.erro) {
         await salvarOferta('preenchida');
         await anotar(`Lista de espera: quis o horário de ${quando}, mas ele já tinha sido preenchido.`);
-        return { texto: 'Que pena! Esse horário acabou de ser reservado por outra pessoa. Você continua na nossa lista de espera, e avisamos assim que abrir outro. 🙏', resultado: 'preenchida' };
+        return { texto: 'Poxa, alguém confirmou esse horário um pouquinho antes 😕 Mas você continua na lista de espera e te aviso assim que abrir outro!', resultado: 'preenchida' };
       }
       const nova = ferramentas.efeitos.consultasAgendadas[0] || null;
       await salvarOferta('aceita', { status: 'agendado', resolvidoEm: agora, consultaAgendadaId: nova?.id || antecipar?.id || null });
       await anotar(`Lista de espera: aceitou o horário de ${quando}${antecipar ? ' (consulta antecipada)' : ''}.`);
       const link = /^https:\/\//.test(r.consulta?.link_videochamada || '') ? r.consulta.link_videochamada : null;
-      const texto = `Pronto, ${primeiroNome(pessoa.nome)}! ✅ ${antecipar ? 'Sua consulta foi antecipada para' : 'Reservei para você:'} ${r.consulta.quando.replace(/^./, (c) => c.toLowerCase())}${r.consulta.profissional ? `, com ${r.consulta.profissional}` : ''}.${link ? ` A consulta é online: entre por este link alguns minutos antes: ${link}` : ''} Se precisar remarcar, é só escrever por aqui.`;
+      const texto = `Pronto, ${primeiroNome(pessoa.nome)}! ✅ ${antecipar ? 'Antecipei nossa consulta pra' : 'Reservei pra você:'} ${r.consulta.quando.replace(/^./, (c) => c.toLowerCase())}.${link ? ` É online: entra por esse link uns minutinhos antes: ${link}` : ''} Se precisar remarcar, é só me chamar aqui 😊`;
       return { texto, consulta: nova, resultado: antecipar ? 'antecipada' : 'agendado' };
     }
 
@@ -3163,7 +3170,7 @@ const NutriDuduAutomacoes = (() => {
       if (!['otima', 'boa', 'melhorar'].includes(nota)) return { texto: '', resultado: 'invalida' };
       const consulta = consultaId ? await repo.pega('consultas', consultaId) : null;
       if (!consulta || consulta.pessoaId !== pessoa.id) {
-        return { texto: 'Obrigado pela resposta! 🙂', resultado: 'nao_encontrada' };
+        return { texto: 'Obrigado por responder! 💚', resultado: 'nao_encontrada' };
       }
       const agora = agoraIso();
       await repo.grava('consultas', { ...consulta, avaliacaoPaciente: { nota, em: agora }, atualizadoEm: agora });
@@ -3177,15 +3184,15 @@ const NutriDuduAutomacoes = (() => {
         const cfg = configuracao((await repo.pega('configuracoes', 'automacoes')) || {});
         const link = /^https:\/\/\S+$/.test(String(cfg.linkAvaliacao || '').trim()) ? cfg.linkAvaliacao.trim() : '';
         return {
-          texto: `Que bom saber, ${nome}! 💚 Obrigado pela confiança.${link ? ` Se puder, conte como foi numa avaliação no Google. Leva 1 minuto e ajuda outras pessoas a conhecerem o nosso trabalho: ${link}` : ''}`,
+          texto: `Que bom, ${nome}! Fico muito feliz 💚${link ? ` Se puder, deixa uma avaliação rapidinha no Google? Leva 1 minutinho e me ajuda muito a chegar em mais gente: ${link}` : ' Obrigado pela confiança!'}`,
           resultado: 'otima',
         };
       }
       if (nota === 'boa') {
-        return { texto: `Obrigado pelo retorno, ${nome}! 🙂 Se quiser contar o que podemos melhorar, é só escrever aqui.`, resultado: 'boa' };
+        return { texto: `Obrigado por me contar, ${nome}! 😊 Se tiver alguma coisa que eu possa melhorar, pode falar aqui, tá?`, resultado: 'boa' };
       }
       return {
-        texto: `Obrigado por contar, ${nome}. Sentimos muito que não foi como você esperava. Já avisei a nossa equipe, e alguém vai falar com você em breve. 🙏`,
+        texto: `Obrigado pela sinceridade, ${nome}. Poxa, sinto muito que não foi como você esperava 😕 Já vi aqui e vou falar com você pessoalmente pra entender melhor.`,
         equipe: 'Avaliou a consulta como "poderia ser melhor"',
         resumo: `Avaliação da consulta de ${quando}: poderia ser melhor. Entrar em contato para entender o que aconteceu.`,
         resultado: 'melhorar',

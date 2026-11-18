@@ -287,7 +287,6 @@ const NutriDuduAutomacoes = (() => {
         else if (r.erro) relatorio.erros.push({ automacao, pessoa: pessoa.nome, motivo: r.motivo });
         else relatorio.pulados.push({ automacao, pessoa: pessoa.nome, motivo: r.motivo });
       }
-      const nomeProf = (id) => profPor[id]?.nome || 'a nutricionista';
       const agoraMs = inicio.getTime();
 
       // 1. Lembrete de consulta (até 40 h antes, pelo menos 1 h antes).
@@ -300,7 +299,7 @@ const NutriDuduAutomacoes = (() => {
         await tentar('lembrete', pessoa, async () => {
           const r = await enviar({
             cfg, automacao: 'lembrete', pessoa, dados, conversas,
-            valores: [primeiroNome(pessoa.nome), utils.diaPorExtenso(quando).toLowerCase(), utils.hora(quando), nomeProf(c.profissionalId)],
+            valores: [primeiroNome(pessoa.nome), utils.diaPorExtenso(quando).toLowerCase(), utils.hora(quando)],
             botoes: [`confirmar:${c.id}`, `remarcar:${c.id}`],
             // Dentro das 24 h vai como mensagem comum: com botões de verdade, senão o texto pede um botão que não existe.
             botoesLivres: [{ id: `confirmar:${c.id}`, titulo: 'Confirmar' }, { id: `remarcar:${c.id}`, titulo: 'Remarcar' }],
@@ -424,7 +423,7 @@ const NutriDuduAutomacoes = (() => {
           await tentar('linkOnline', pessoa, async () => {
             const r = await enviar({
               cfg, automacao: 'linkOnline', pessoa, dados, conversas,
-              valores: [primeiroNome(pessoa.nome), nomeProf(c.profissionalId), utils.hora(relogio.paraLocal(c.inicio)), link],
+              valores: [primeiroNome(pessoa.nome), utils.hora(relogio.paraLocal(c.inicio)), link],
             });
             await marcar('consultas', c.id, 'linkOnline', { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
             return r;
@@ -460,7 +459,7 @@ const NutriDuduAutomacoes = (() => {
         await tentar('posConsulta', pessoa, async () => {
           const r = await enviar({
             cfg, automacao: 'posConsulta', pessoa, dados, conversas,
-            valores: [primeiroNome(pessoa.nome), nomeProf(c.profissionalId)],
+            valores: [primeiroNome(pessoa.nome)],
             botoes,
             botoesLivres: MODELOS.posConsulta.botoes.map((titulo, i) => ({ id: botoes[i], titulo })),
           });
@@ -601,7 +600,7 @@ const NutriDuduAutomacoes = (() => {
             tentativas++;
             const r = await enviar({
               cfg, automacao: 'vagaEspera', pessoa, dados, conversas,
-              valores: [primeiroNome(pessoa.nome), profPor[vaga.profissionalId]?.nome || 'a nutricionista', quando],
+              valores: [primeiroNome(pessoa.nome), quando],
               botoes: [sim, nao],
               botoesLivres: [{ id: sim, titulo: 'Quero este horário' }, { id: nao, titulo: 'Não posso' }],
             });
@@ -638,7 +637,7 @@ const NutriDuduAutomacoes = (() => {
       try { entrada = entradaId ? await repo.pega('espera', entradaId) : null; } catch (erro) { entrada = null; }
       const oferta = entrada?.ofertas?.find((o) => o.id === ofertaId);
       if (!entrada || entrada.pessoaId !== pessoa.id || !oferta) {
-        return { texto: 'Não encontrei esse horário. Já chamei alguém da equipe para te ajudar. 🙏', equipe: 'Respondeu a uma oferta da lista de espera que não foi encontrada', resultado: 'nao_encontrada' };
+        return { texto: 'Opa, não achei esse horário por aqui 🤔 Já pedi pra me avisarem e te respondo rapidinho!', equipe: 'Respondeu a uma oferta da lista de espera que não foi encontrada', resultado: 'nao_encontrada' };
       }
       const agora = agoraIso();
       const quando = relogio.descrever(oferta.inicio).replace(/^./, (c) => c.toLowerCase());
@@ -660,13 +659,13 @@ const NutriDuduAutomacoes = (() => {
           resultado: 'recusou',
         };
       }
-      if (oferta.status === 'aceita') return { texto: `Esse horário já está reservado para você: ${quando}. ✅`, resultado: 'ja_reservado' };
+      if (oferta.status === 'aceita') return { texto: `Esse horário já é seu: ${quando} ✅`, resultado: 'ja_reservado' };
       if (entrada.status !== 'aguardando') {
-        return { texto: 'Esse pedido da lista de espera não está mais ativo. Se ainda quiser um horário, é só escrever por aqui que a gente ajuda. 🙂', resultado: 'inativo' };
+        return { texto: 'Esse pedido da lista de espera não tá mais ativo. Se ainda quiser um horário, me chama aqui que a gente vê 😊', resultado: 'inativo' };
       }
       if (new Date(oferta.inicio).getTime() - relogio.agora().getTime() < HORA) {
         await salvarOferta('expirada');
-        return { texto: 'Que pena, esse horário já está muito próximo e não dá mais para reservar. Você continua na lista de espera, e avisamos se abrir outro. 🙏', resultado: 'expirada' };
+        return { texto: 'Poxa, esse horário já tá muito em cima e não dá mais pra reservar 😕 Você continua na lista de espera e te aviso se abrir outro!', resultado: 'expirada' };
       }
 
       // Reserva com as mesmas regras do assistente (confere se o horário ainda está livre).
@@ -682,13 +681,13 @@ const NutriDuduAutomacoes = (() => {
       if (r.erro) {
         await salvarOferta('preenchida');
         await anotar(`Lista de espera: quis o horário de ${quando}, mas ele já tinha sido preenchido.`);
-        return { texto: 'Que pena! Esse horário acabou de ser reservado por outra pessoa. Você continua na nossa lista de espera, e avisamos assim que abrir outro. 🙏', resultado: 'preenchida' };
+        return { texto: 'Poxa, alguém confirmou esse horário um pouquinho antes 😕 Mas você continua na lista de espera e te aviso assim que abrir outro!', resultado: 'preenchida' };
       }
       const nova = ferramentas.efeitos.consultasAgendadas[0] || null;
       await salvarOferta('aceita', { status: 'agendado', resolvidoEm: agora, consultaAgendadaId: nova?.id || antecipar?.id || null });
       await anotar(`Lista de espera: aceitou o horário de ${quando}${antecipar ? ' (consulta antecipada)' : ''}.`);
       const link = /^https:\/\//.test(r.consulta?.link_videochamada || '') ? r.consulta.link_videochamada : null;
-      const texto = `Pronto, ${primeiroNome(pessoa.nome)}! ✅ ${antecipar ? 'Sua consulta foi antecipada para' : 'Reservei para você:'} ${r.consulta.quando.replace(/^./, (c) => c.toLowerCase())}${r.consulta.profissional ? `, com ${r.consulta.profissional}` : ''}.${link ? ` A consulta é online: entre por este link alguns minutos antes: ${link}` : ''} Se precisar remarcar, é só escrever por aqui.`;
+      const texto = `Pronto, ${primeiroNome(pessoa.nome)}! ✅ ${antecipar ? 'Antecipei nossa consulta pra' : 'Reservei pra você:'} ${r.consulta.quando.replace(/^./, (c) => c.toLowerCase())}.${link ? ` É online: entra por esse link uns minutinhos antes: ${link}` : ''} Se precisar remarcar, é só me chamar aqui 😊`;
       return { texto, consulta: nova, resultado: antecipar ? 'antecipada' : 'agendado' };
     }
 
@@ -703,7 +702,7 @@ const NutriDuduAutomacoes = (() => {
       if (!['otima', 'boa', 'melhorar'].includes(nota)) return { texto: '', resultado: 'invalida' };
       const consulta = consultaId ? await repo.pega('consultas', consultaId) : null;
       if (!consulta || consulta.pessoaId !== pessoa.id) {
-        return { texto: 'Obrigado pela resposta! 🙂', resultado: 'nao_encontrada' };
+        return { texto: 'Obrigado por responder! 💚', resultado: 'nao_encontrada' };
       }
       const agora = agoraIso();
       await repo.grava('consultas', { ...consulta, avaliacaoPaciente: { nota, em: agora }, atualizadoEm: agora });
@@ -717,15 +716,15 @@ const NutriDuduAutomacoes = (() => {
         const cfg = configuracao((await repo.pega('configuracoes', 'automacoes')) || {});
         const link = /^https:\/\/\S+$/.test(String(cfg.linkAvaliacao || '').trim()) ? cfg.linkAvaliacao.trim() : '';
         return {
-          texto: `Que bom saber, ${nome}! 💚 Obrigado pela confiança.${link ? ` Se puder, conte como foi numa avaliação no Google. Leva 1 minuto e ajuda outras pessoas a conhecerem o nosso trabalho: ${link}` : ''}`,
+          texto: `Que bom, ${nome}! Fico muito feliz 💚${link ? ` Se puder, deixa uma avaliação rapidinha no Google? Leva 1 minutinho e me ajuda muito a chegar em mais gente: ${link}` : ' Obrigado pela confiança!'}`,
           resultado: 'otima',
         };
       }
       if (nota === 'boa') {
-        return { texto: `Obrigado pelo retorno, ${nome}! 🙂 Se quiser contar o que podemos melhorar, é só escrever aqui.`, resultado: 'boa' };
+        return { texto: `Obrigado por me contar, ${nome}! 😊 Se tiver alguma coisa que eu possa melhorar, pode falar aqui, tá?`, resultado: 'boa' };
       }
       return {
-        texto: `Obrigado por contar, ${nome}. Sentimos muito que não foi como você esperava. Já avisei a nossa equipe, e alguém vai falar com você em breve. 🙏`,
+        texto: `Obrigado pela sinceridade, ${nome}. Poxa, sinto muito que não foi como você esperava 😕 Já vi aqui e vou falar com você pessoalmente pra entender melhor.`,
         equipe: 'Avaliou a consulta como "poderia ser melhor"',
         resumo: `Avaliação da consulta de ${quando}: poderia ser melhor. Entrar em contato para entender o que aconteceu.`,
         resultado: 'melhorar',
