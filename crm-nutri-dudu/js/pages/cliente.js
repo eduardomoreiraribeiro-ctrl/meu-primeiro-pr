@@ -425,6 +425,52 @@ NutriDudu.pages.cliente = (function () {
   const estadoFotos = {};
   const estadoHistorico = {};
 
+  /**
+   * Exclui um cadastro (ex.: duplicado). Não exclui quem tem histórico de atendimento ou
+   * financeiro. Conversas e anotações passam para o outro cadastro com o mesmo celular, se houver.
+   */
+  async function excluirCadastro(pessoa) {
+    const { store, utils, modal, ui } = NutriDudu;
+    const doId = (lista) => lista.filter((x) => x.pessoaId === pessoa.id);
+    const [pessoas, consultas, pacotes, lancamentos, anamneses, avaliacoes, fotos, conversas, mensagens, interacoes, espera] = await Promise.all(
+      ['pessoas', 'consultas', 'pacotes', 'lancamentos', 'anamneses', 'avaliacoes', 'fotos', 'conversas', 'mensagens', 'interacoes', 'espera']
+        .map((c) => store.list(c).catch(() => [])),
+    );
+    const bloqueios = [
+      [doId(consultas).filter((c) => c.status !== 'cancelada').length, 'consulta(s)'],
+      [doId(pacotes).length, 'pacote(s)'],
+      [doId(lancamentos).length, 'lançamento(s) no financeiro'],
+      [doId(anamneses).length + doId(avaliacoes).length + doId(fotos).length, 'registro(s) de prontuário'],
+    ].filter(([n]) => n > 0);
+    if (bloqueios.length) {
+      await modal.confirmar({
+        titulo: 'Não dá para excluir este cadastro',
+        mensagem: `${pessoa.nome} tem ${bloqueios.map(([n, o]) => `${n} ${o}`).join(', ')}. Para não perder o histórico, só é possível excluir cadastros sem atendimentos nem pagamentos. Se for um cadastro antigo, use "Editar cadastro" e marque como inativo.`,
+        textoConfirmar: 'Entendi', textoCancelar: 'Fechar',
+      });
+      return;
+    }
+    const tel = utils.soDigitos(pessoa.telefone).slice(-8);
+    const gemeo = tel ? pessoas.find((p) => p.id !== pessoa.id && utils.soDigitos(p.telefone).slice(-8) === tel) : null;
+    const ok = await modal.confirmar({
+      titulo: 'Excluir cadastro?',
+      mensagem: `${pessoa.nome} será excluído(a) do sistema. ${gemeo ? `As conversas e anotações passam para o outro cadastro com o mesmo celular (${gemeo.nome}).` : 'As conversas e anotações dele(a) também serão apagadas.'} Isso não pode ser desfeito.`,
+      textoConfirmar: 'Excluir', perigo: true,
+    });
+    if (!ok) return;
+    // Conversas, mensagens, anotações e lista de espera: passam para o cadastro gêmeo ou são apagadas.
+    for (const [colecao, lista] of [['mensagens', mensagens], ['conversas', conversas], ['interacoes', interacoes], ['espera', espera], ['consultas', consultas]]) {
+      for (const item of doId(lista)) {
+        if (gemeo) await store.update(colecao, item.id, { pessoaId: gemeo.id });
+        else await store.remove(colecao, item.id);
+      }
+    }
+    for (const p of pessoas.filter((x) => x.indicadoPorId === pessoa.id)) await store.update('pessoas', p.id, { indicadoPorId: gemeo?.id || null });
+    await store.remove('pessoas', pessoa.id);
+    ui.toast('Cadastro excluído.');
+    location.hash = gemeo ? `#/clientes/${encodeURIComponent(gemeo.id)}` : '#/clientes';
+  }
+
   async function render(container, params) {
     const { store, ui, config, utils, permissoes, anamnese, calculos } = NutriDudu;
     const pessoa = await store.get('pessoas', params.id);
@@ -524,6 +570,7 @@ NutriDudu.pages.cliente = (function () {
               ? `<a class="btn btn-pequeno" href="#/conversas/${encodeURIComponent(conversa.id)}" data-ver-conversa>Conversa${conversa.naoLidas ? ` (${conversa.naoLidas})` : ''}</a>`
               : `<a class="btn btn-pequeno" href="https://wa.me/55${utils.soDigitos(pessoa.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`}
             <button type="button" class="btn btn-pequeno" data-editar-cadastro>Editar cadastro</button>
+            ${NutriDudu.permissoes.pode('gerenciarDados') ? '<button type="button" class="btn btn-pequeno btn-texto-perigo" data-excluir-cadastro>Excluir</button>' : ''}
           </div>
         </div>
       </div>
@@ -563,6 +610,7 @@ NutriDudu.pages.cliente = (function () {
       const alvo = (sel) => e.target.closest(sel);
       if (alvo('[data-agendar]')) NutriDudu.agendamento.abrir({ pessoaId: pessoa.id });
       else if (alvo('[data-editar-cadastro]')) NutriDudu.cadastroPessoa.abrir({ pessoa });
+      else if (alvo('[data-excluir-cadastro]')) await excluirCadastro(pessoa);
       else if (alvo('[data-atender]')) NutriDudu.atendimento.abrir(alvo('[data-atender]').dataset.atender);
       else if (alvo('[data-detalhes]')) NutriDudu.agendamento.detalhes(alvo('[data-detalhes]').dataset.detalhes);
       else if (alvo('[data-revisar-anamnese]')) NutriDudu.anamnese.abrir(pessoa);
