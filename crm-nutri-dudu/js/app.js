@@ -296,6 +296,46 @@
     setTimeout(() => NutriDudu.importarConsultas.abrir({ texto, novos }), 400);
   }
 
+  // Link para marcar a autorização de WhatsApp de vários pacientes (#consentir=…, com os nomes completos).
+  // Mostra a lista encontrada e só grava depois de "Confirmar".
+  async function abrirConsentimentoDoLink() {
+    const m = /^#consentir=([\w-]+)/.exec(location.hash);
+    if (!m) return;
+    history.replaceState(null, '', `${location.pathname}${location.search}#/clientes`);
+    let nomes = [];
+    try {
+      const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+      nomes = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)))).nomes || [];
+    } catch (erro) {
+      ui.toast('O link está incompleto. Peça um novo.', 'erro');
+      return;
+    }
+    renderizar();
+    const { store, utils, modal, permissoes } = NutriDudu;
+    const pessoas = await store.list('pessoas');
+    const chave = (n) => utils.normalizar(n).replace(/\s+/g, ' ').trim();
+    const achados = nomes.map((n) => ({ nome: n, pessoa: pessoas.find((p) => chave(p.nome) === chave(n)) }));
+    const marcar = achados.filter((a) => a.pessoa && a.pessoa.consentimentos?.whatsapp !== true);
+    modal.formulario({
+      titulo: 'Autorizar mensagens pelo WhatsApp',
+      textoSalvar: marcar.length ? `Confirmar (${marcar.length})` : 'Fechar',
+      corpo: `<p class="small">Estes pacientes passam a receber os lembretes e avisos da clínica pelo WhatsApp:</p>
+        <ul class="small">${achados.map((a) => `<li>${utils.escapeHtml(a.nome)} — ${!a.pessoa ? '<span class="texto-perigo">não encontrado</span>' : a.pessoa.consentimentos?.whatsapp === true ? 'já autorizado' : 'vai ser autorizado'}</li>`).join('')}</ul>`,
+      ler: () => ({}),
+      salvar: async () => {
+        const agora = new Date().toISOString();
+        for (const a of marcar) {
+          await store.update('pessoas', a.pessoa.id, { consentimentos: { ...(a.pessoa.consentimentos || {}), whatsapp: true } });
+          await store.create('interacoes', {
+            pessoaId: a.pessoa.id, dataHora: agora, tipo: 'nota', autor: permissoes.atual(), automatico: true,
+            descricao: 'Autorização de mensagens pelo WhatsApp registrada (confirmada pelo profissional).',
+          });
+        }
+        if (marcar.length) ui.toast(`${marcar.length} paciente(s) autorizado(s).`);
+      },
+    });
+  }
+
   // ---------- Início ----------
   // Aviso quando a nuvem existe mas alguém abriu a demonstração.
   document.getElementById('aviso-demo').hidden = !(NutriDudu.nuvem.configurada() && NutriDudu.nuvem.emDemonstracao());
@@ -308,6 +348,7 @@
         pronto = true;
         renderizar();
         abrirImportacaoDoLink();
+        abrirConsentimentoDoLink();
       },
     });
   } else {
@@ -315,5 +356,6 @@
     pronto = true;
     renderizar();
     abrirImportacaoDoLink();
+    abrirConsentimentoDoLink();
   }
 })();
