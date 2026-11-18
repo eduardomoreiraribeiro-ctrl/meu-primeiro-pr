@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-webhook" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 26504a
+// Versão: 235680
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
@@ -2324,6 +2324,13 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         if (!automacoes) return json({ erro: 'Mensagens automáticas indisponíveis nesta função.' }, 500);
         return json({ ok: true, relatorio: await automacoes.rodar({ manual: true, por: usuario.nome }) });
       }
+      // Administrador: mensagem de retorno ou reativação para as pessoas escolhidas.
+      if (corpo?.acao === 'enviar-grupo') {
+        if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador envia mensagens em grupo.' }, 403);
+        if (!automacoes?.enviarManual) return json({ erro: 'Envio em grupo indisponível nesta função.' }, 500);
+        const r = await automacoes.enviarManual({ automacao: String(corpo.automacao || ''), pessoaIds: Array.isArray(corpo.pessoaIds) ? corpo.pessoaIds : [], por: usuario.nome });
+        return r.erro ? json({ erro: r.erro }, 400) : json({ ok: true, resultado: r });
+      }
       const texto = String(corpo?.texto || '').trim();
       if (!texto) return json({ erro: 'Escreva a mensagem.' }, 400);
       if (texto.length > 4000) return json({ erro: 'Mensagem longa demais (máximo 4.000 caracteres).' }, 400);
@@ -3109,7 +3116,49 @@ const NutriDuduAutomacoes = (() => {
       else await repo.cria('configuracoes', { ...doc, criadoEm: agora });
     }
 
-    return { rodar, enviarPreAnamnese, enviar, avisarEquipe, responderVaga, responderAvaliacao };
+    // ---------------- Envio manual em grupo (botão "Enviar mensagens" em Clientes) ----------------
+
+    // Intervalo mínimo entre duas mensagens do mesmo tipo para a mesma pessoa (igual ao automático).
+    const INTERVALO_MANUAL = { retorno: 30 * DIA, reativacao: 90 * DIA };
+    const LIMITE_MANUAL = 50;
+
+    /**
+     * Manda "Retorno pendente" ou "Reativação" para as pessoas escolhidas na tela.
+     * Respeita o consentimento, o horário de envio e o intervalo mínimo; não depende de a automação estar ligada.
+     */
+    async function enviarManual({ automacao, pessoaIds = [], por = null }) {
+      if (!INTERVALO_MANUAL[automacao]) return { erro: 'Tipo de mensagem inválido.' };
+      const ids = [...new Set(pessoaIds.map(String))].slice(0, LIMITE_MANUAL);
+      const [configuracoes, pessoas, consultas, conversas, profissionais] = await Promise.all(
+        ['configuracoes', 'pessoas', 'consultas', 'conversas', 'profissionais'].map((t) => repo.todos(t)),
+      );
+      const cfg = configuracao(configuracoes.find((c) => c.id === 'automacoes'));
+      if (!dentroDoHorario(cfg)) return { erro: `Fora do horário de envio (segunda a sábado, das ${cfg.horaInicio}h às ${cfg.horaFim}h).` };
+      const geral = configuracoes.find((c) => c.id === 'geral') || {};
+      const dados = { geral, consultas };
+      const profPor = Object.fromEntries(profissionais.map((p) => [p.id, p]));
+      const resultado = { enviados: [], pulados: [], erros: [] };
+      for (const id of ids) {
+        const pessoa = pessoas.find((p) => p.id === id);
+        if (!pessoa) continue;
+        if (!podeReceber(pessoa)) { resultado.pulados.push({ pessoa: pessoa.nome, motivo: 'sem autorização de WhatsApp' }); continue; }
+        if (jaFeito(pessoa.automacoes?.[automacao], INTERVALO_MANUAL[automacao])) { resultado.pulados.push({ pessoa: pessoa.nome, motivo: 'já recebeu esta mensagem há pouco tempo' }); continue; }
+        let valores = [primeiroNome(pessoa.nome)];
+        if (automacao === 'retorno') {
+          const ultima = consultas.filter((c) => c.pessoaId === id && ['realizada', 'faltou'].includes(c.status) && new Date(c.inicio) < relogio.agora())
+            .sort((a, b) => b.inicio.localeCompare(a.inicio))[0];
+          if (!ultima) { resultado.pulados.push({ pessoa: pessoa.nome, motivo: 'sem consulta anterior' }); continue; }
+          valores = [primeiroNome(pessoa.nome), tempoDesde(utils.diasEntre(relogio.paraLocal(ultima.inicio), relogio.agoraLocal())), profPor[ultima.profissionalId]?.nome || 'a nutricionista'];
+        }
+        const r = await enviar({ cfg, automacao, pessoa, dados, conversas, valores });
+        await marcar('pessoas', pessoa.id, automacao, { em: agoraIso(), ok: r.ok, manual: true, ...(por ? { por } : {}), ...(r.ok ? {} : { erro: r.motivo }) });
+        if (r.ok) resultado.enviados.push({ pessoa: pessoa.nome, via: r.via });
+        else resultado.erros.push({ pessoa: pessoa.nome, motivo: r.motivo });
+      }
+      return resultado;
+    }
+
+    return { rodar, enviarPreAnamnese, enviar, avisarEquipe, responderVaga, responderAvaliacao, enviarManual };
   }
 
   // =====================================================================

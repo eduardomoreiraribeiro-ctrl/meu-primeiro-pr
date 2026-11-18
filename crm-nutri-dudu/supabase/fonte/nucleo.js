@@ -1214,6 +1214,13 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         if (!automacoes) return json({ erro: 'Mensagens automáticas indisponíveis nesta função.' }, 500);
         return json({ ok: true, relatorio: await automacoes.rodar({ manual: true, por: usuario.nome }) });
       }
+      // Administrador: mensagem de retorno ou reativação para as pessoas escolhidas.
+      if (corpo?.acao === 'enviar-grupo') {
+        if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador envia mensagens em grupo.' }, 403);
+        if (!automacoes?.enviarManual) return json({ erro: 'Envio em grupo indisponível nesta função.' }, 500);
+        const r = await automacoes.enviarManual({ automacao: String(corpo.automacao || ''), pessoaIds: Array.isArray(corpo.pessoaIds) ? corpo.pessoaIds : [], por: usuario.nome });
+        return r.erro ? json({ erro: r.erro }, 400) : json({ ok: true, resultado: r });
+      }
       const texto = String(corpo?.texto || '').trim();
       if (!texto) return json({ erro: 'Escreva a mensagem.' }, 400);
       if (texto.length > 4000) return json({ erro: 'Mensagem longa demais (máximo 4.000 caracteres).' }, 400);
