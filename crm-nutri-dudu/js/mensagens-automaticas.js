@@ -71,9 +71,9 @@ NutriDudu.mensagensAutomaticas = (function () {
       quando: 'Quando uma pessoa indicada vira cliente (até 30 dias depois); agradece a quem indicou, uma vez.',
       nomePadrao: 'nutridudu_agradecimento_indicacao_v2',
       categoria: 'MARKETING',
-      corpo: () => 'Oi, {{1}}! Passando pra te agradecer de coração por ter me indicado pra {{2}} 💚 Isso significa muito pra mim. Obrigado pela confiança!',
-      variaveis: ['primeiro nome de quem indicou', 'primeiro nome de quem foi indicado'],
-      exemplo: ['Mariana', 'Rafael'],
+      corpo: () => 'Oi, {{1}}! Passando pra te agradecer de coração por ter me indicado {{2}} 💚 Isso significa muito pra mim. Obrigado pela confiança!',
+      variaveis: ['primeiro nome de quem indicou', '"pro" ou "pra" + primeiro nome de quem foi indicado'],
+      exemplo: ['Mariana', 'pro Rafael'],
     },
     linkOnline: {
       titulo: 'Link da consulta online',
@@ -166,6 +166,18 @@ NutriDudu.mensagensAutomaticas = (function () {
     modelos: Object.fromEntries(Object.entries({ ...PADRAO.modelos, ...(doc.modelos || {}) }).map(([k, v]) => [k, RENOMEADOS[v] || v])),
   });
 
+  // Emojis no masculino: para homens, 😊 vira 💪 e 💚 vira 🚀 (pedido do Eduardo).
+  // Os modelos com esses emojis ganham uma versão masculina na Meta, com o nome + "_m".
+  const EMOJIS_MASCULINOS = [['😊', '💪'], ['💚', '🚀']];
+  const masculinizar = (texto) => EMOJIS_MASCULINOS.reduce((t, [de, para]) => t.split(de).join(para), String(texto || ''));
+  const ehHomem = (pessoa) => pessoa?.sexo === 'M';
+  /** Texto no "gênero" de quem recebe (só troca os emojis). */
+  const paraGenero = (texto, pessoa) => (ehHomem(pessoa) ? masculinizar(texto) : texto);
+  /** O modelo tem versão masculina? (algum emoji muda) */
+  const temVersaoMasculina = (id, clinica = 'clínica') => Boolean(MODELOS[id] && !MODELOS[id].paraEquipe && masculinizar(MODELOS[id].corpo(clinica)) !== MODELOS[id].corpo(clinica));
+  /** "pro Rafael" / "pra Rafaela" (sem sexo informado: "pra"). */
+  const proOuPra = (pessoa, nome) => `${ehHomem(pessoa) ? 'pro' : 'pra'} ${nome}`;
+
   const preencher = (texto, valores) => texto.replace(/\{\{(\d+)\}\}/g, (_, n) => String(valores[Number(n) - 1] ?? ''));
 
   /** Respostas do "Depois da consulta" (botões): rótulo para a tela. */
@@ -173,5 +185,5 @@ NutriDudu.mensagensAutomaticas = (function () {
 
   const CATEGORIAS = { UTILITY: 'Utilidade', MARKETING: 'Marketing' };
 
-  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, AVALIACOES, telefonesDaEquipe };
+  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, AVALIACOES, telefonesDaEquipe, masculinizar, paraGenero, temVersaoMasculina, ehHomem, proOuPra };
 })();

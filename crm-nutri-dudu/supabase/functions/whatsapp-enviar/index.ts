@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: ef6920
+// Versão: d994ea
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -827,9 +827,9 @@ NutriDudu.mensagensAutomaticas = (function () {
       quando: 'Quando uma pessoa indicada vira cliente (até 30 dias depois); agradece a quem indicou, uma vez.',
       nomePadrao: 'nutridudu_agradecimento_indicacao_v2',
       categoria: 'MARKETING',
-      corpo: () => 'Oi, {{1}}! Passando pra te agradecer de coração por ter me indicado pra {{2}} 💚 Isso significa muito pra mim. Obrigado pela confiança!',
-      variaveis: ['primeiro nome de quem indicou', 'primeiro nome de quem foi indicado'],
-      exemplo: ['Mariana', 'Rafael'],
+      corpo: () => 'Oi, {{1}}! Passando pra te agradecer de coração por ter me indicado {{2}} 💚 Isso significa muito pra mim. Obrigado pela confiança!',
+      variaveis: ['primeiro nome de quem indicou', '"pro" ou "pra" + primeiro nome de quem foi indicado'],
+      exemplo: ['Mariana', 'pro Rafael'],
     },
     linkOnline: {
       titulo: 'Link da consulta online',
@@ -922,6 +922,18 @@ NutriDudu.mensagensAutomaticas = (function () {
     modelos: Object.fromEntries(Object.entries({ ...PADRAO.modelos, ...(doc.modelos || {}) }).map(([k, v]) => [k, RENOMEADOS[v] || v])),
   });
 
+  // Emojis no masculino: para homens, 😊 vira 💪 e 💚 vira 🚀 (pedido do Eduardo).
+  // Os modelos com esses emojis ganham uma versão masculina na Meta, com o nome + "_m".
+  const EMOJIS_MASCULINOS = [['😊', '💪'], ['💚', '🚀']];
+  const masculinizar = (texto) => EMOJIS_MASCULINOS.reduce((t, [de, para]) => t.split(de).join(para), String(texto || ''));
+  const ehHomem = (pessoa) => pessoa?.sexo === 'M';
+  /** Texto no "gênero" de quem recebe (só troca os emojis). */
+  const paraGenero = (texto, pessoa) => (ehHomem(pessoa) ? masculinizar(texto) : texto);
+  /** O modelo tem versão masculina? (algum emoji muda) */
+  const temVersaoMasculina = (id, clinica = 'clínica') => Boolean(MODELOS[id] && !MODELOS[id].paraEquipe && masculinizar(MODELOS[id].corpo(clinica)) !== MODELOS[id].corpo(clinica));
+  /** "pro Rafael" / "pra Rafaela" (sem sexo informado: "pra"). */
+  const proOuPra = (pessoa, nome) => `${ehHomem(pessoa) ? 'pro' : 'pra'} ${nome}`;
+
   const preencher = (texto, valores) => texto.replace(/\{\{(\d+)\}\}/g, (_, n) => String(valores[Number(n) - 1] ?? ''));
 
   /** Respostas do "Depois da consulta" (botões): rótulo para a tela. */
@@ -929,7 +941,7 @@ NutriDudu.mensagensAutomaticas = (function () {
 
   const CATEGORIAS = { UTILITY: 'Utilidade', MARKETING: 'Marketing' };
 
-  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, AVALIACOES, telefonesDaEquipe };
+  return { MODELOS, PADRAO, configuracao, preencher, CATEGORIAS, AVALIACOES, telefonesDaEquipe, masculinizar, paraGenero, temVersaoMasculina, ehHomem, proOuPra };
 })();
 
 // ===== js/espera.js =====
@@ -1410,6 +1422,7 @@ Quem você é
 - Simpático, acolhedor e objetivo. Português do Brasil do dia a dia, sem jargão.
 - Fale como o próprio nutricionista fala com os pacientes: leve e próximo, nada de tom de robô ou de empresa. Use "Oi", "tudo bem?", "pra", "tá", "rapidinho", "me conta". Evite frases formais como "Prezado", "Informamos", "Estamos à disposição".
 - Mensagens curtas, como numa conversa de WhatsApp: no máximo 3 parágrafos curtos. Um ou dois emojis por mensagem quando combinar (😊 💚 🙌 ✅), sem exagero.
+- Emojis conforme quem está falando com você: com homens, prefira 💪 e 🚀 (no lugar de 😊 e 💚); com mulheres, 😊 e 💚. Se não souber, use 😊.
 - Formatação do WhatsApp apenas: *negrito* com asteriscos e listas simples com "-". Nada de títulos, tabelas ou links inventados.
 - Sempre deixe claro que é um assistente virtual quando se apresentar.
 
@@ -2191,7 +2204,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           console.error('Avaliação:', erro);
           r = { texto: 'Obrigado pela resposta! 🙂', resultado: 'erro' };
         }
-        if (r.texto) await enviarComoAgente(conversa, r.texto);
+        if (r.texto) await enviarComoAgente(conversa, NutriDudu.mensagensAutomaticas.paraGenero(r.texto, pessoa));
         if (r.equipe) {
           await marcarAguardando(conversa, r.equipe, r.resumo);
         } else {
@@ -2211,7 +2224,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           console.error('Lista de espera:', erro);
           r = { texto: 'Desculpe, não consegui reservar agora. Já chamei alguém da equipe para te ajudar. 🙏', equipe: 'Erro ao reservar um horário da lista de espera', resultado: 'erro' };
         }
-        if (r.texto) await enviarComoAgente(conversa, r.texto);
+        if (r.texto) await enviarComoAgente(conversa, NutriDudu.mensagensAutomaticas.paraGenero(r.texto, pessoa));
         if (r.consulta) await automacoes.enviarPreAnamnese?.({ consulta: r.consulta, pessoa, conversa, imediato: true }).catch((e) => console.error('Pré-anamnese:', e));
         if (r.equipe) {
           await marcarAguardando(conversa, r.equipe, r.resumo);
@@ -2233,7 +2246,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
             });
           }
           const linkOnline = consultaBotao.tipo === 'online' ? (await repo.pega('profissionais', consultaBotao.profissionalId))?.linkOnline : null;
-          await enviarComoAgente(conversa, `Confirmado! ✅ Te espero ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())} 😊${linkOnline ? ` É online: entra por esse link uns minutinhos antes: ${linkOnline}` : ''} Se precisar remarcar, é só me chamar aqui.`);
+          await enviarComoAgente(conversa, NutriDudu.mensagensAutomaticas.paraGenero(`Confirmado! ✅ Te espero ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())} 😊${linkOnline ? ` É online: entra por esse link uns minutinhos antes: ${linkOnline}` : ''} Se precisar remarcar, é só me chamar aqui.`, pessoa));
           if (conversa.status === 'aguardando_equipe' && !conversa.motivoEquipe) conversa.status = ativo ? 'agente' : 'encerrada';
           await repo.grava('conversas', conversa);
           return { confirmada: consultaBotao.id };
@@ -2375,24 +2388,32 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       const clinica = configuracoes.find((c) => c.id === 'geral')?.nomeClinica || 'clínica';
       const conta = await whatsapp.descobrirConta(contaSugerida && /^\d{6,25}$/.test(contaSugerida) ? contaSugerida : null);
       if (!conta) throw new Error('não encontrei a conta do WhatsApp deste número com o token atual');
+      // Cada modelo, e a versão masculina ("<nome>_m", emojis 💪/🚀) quando algum emoji muda.
+      const versoes = Object.keys(MA.MODELOS).flatMap((id) => [id, ...(MA.temVersaoMasculina(id, clinica) ? [`${id}:m`] : [])]);
+      const definicao = (chave) => {
+        const [id, m] = chave.split(':');
+        const modelo = MA.MODELOS[id];
+        const base = cfg.modelos[id] || modelo.nomePadrao;
+        return { modelo, nome: m ? `${base}_m` : base, texto: m ? MA.masculinizar(modelo.corpo(clinica)) : modelo.corpo(clinica) };
+      };
       const criados = [];
-      for (const id of criar) {
-        const m = MA.MODELOS[id];
-        if (!m) continue;
-        const components = [{ type: 'BODY', text: m.corpo(clinica), ...(m.exemplo?.length ? { example: { body_text: [m.exemplo] } } : {}) }];
+      for (const chave of criar) {
+        if (!versoes.includes(chave)) continue;
+        const { modelo: m, nome, texto } = definicao(chave);
+        const components = [{ type: 'BODY', text: texto, ...(m.exemplo?.length ? { example: { body_text: [m.exemplo] } } : {}) }];
         if (m.botoes?.length) components.push({ type: 'BUTTONS', buttons: m.botoes.map((t) => ({ type: 'QUICK_REPLY', text: t })) });
         try {
-          await whatsapp.criarModelo(conta, { name: cfg.modelos[id] || m.nomePadrao, category: m.categoria, language: cfg.idioma || 'pt_BR', components });
-          criados.push({ id, ok: true });
+          await whatsapp.criarModelo(conta, { name: nome, category: m.categoria, language: cfg.idioma || 'pt_BR', components });
+          criados.push({ id: chave, ok: true });
         } catch (erro) {
-          criados.push({ id, ok: false, erro: erro.message });
+          criados.push({ id: chave, ok: false, erro: erro.message });
         }
       }
       const existentes = await whatsapp.listarModelos(conta);
-      const situacao = Object.fromEntries(Object.keys(MA.MODELOS).map((id) => {
-        const nome = cfg.modelos[id] || MA.MODELOS[id].nomePadrao;
+      const situacao = Object.fromEntries(versoes.map((chave) => {
+        const { nome } = definicao(chave);
         const achado = existentes.find((t) => t.name === nome && (!t.language || t.language === (cfg.idioma || 'pt_BR')));
-        return [id, achado ? { status: achado.status, categoria: achado.category } : { status: 'NAO_CRIADO' }];
+        return [chave, { nome, ...(achado ? { status: achado.status, categoria: achado.category } : { status: 'NAO_CRIADO' }) }];
       }));
       return { conta, situacao, criados };
     }
@@ -2564,9 +2585,14 @@ const NutriDuduAutomacoes = (() => {
       const conversa = conversas.find((c) => c.pessoaId === pessoa.id) || null;
       const para = destinoDe(pessoa, conversa);
       if (!para) return { ok: false, motivo: 'telefone inválido' };
-      const texto = preencher(modelo.corpo(dados.geral.nomeClinica || 'clínica'), valores);
+      const clinica = dados.geral.nomeClinica || 'clínica';
+      const MA = NutriDudu.mensagensAutomaticas;
+      // Homem: emojis masculinos no texto e a versão "_m" do modelo aprovado.
+      const masculino = MA.ehHomem(pessoa) && MA.temVersaoMasculina(automacao, clinica);
+      const texto = MA.paraGenero(preencher(modelo.corpo(clinica), valores), pessoa);
       const livre = forcarTexto || janelaAberta(conversa);
-      const nomeModelo = String(cfg.modelos[automacao] || '').trim();
+      const nomeBase = String(cfg.modelos[automacao] || '').trim();
+      const nomeModelo = nomeBase && masculino ? `${nomeBase}_m` : nomeBase;
       if (!livre && !nomeModelo) return { ok: false, motivo: 'sem modelo aprovado configurado' };
 
       let waId = null;
@@ -2872,7 +2898,7 @@ const NutriDuduAutomacoes = (() => {
         const chave = `indicacao_${indicado.id}`;
         if (!quem || jaFeito(quem.automacoes?.[chave]) || marketingHoje.has(quem.id)) continue;
         await tentar('indicacao', quem, async () => {
-          const r = await enviar({ cfg, automacao: 'indicacao', pessoa: quem, dados, conversas, valores: [primeiroNome(quem.nome), primeiroNome(indicado.nome)] });
+          const r = await enviar({ cfg, automacao: 'indicacao', pessoa: quem, dados, conversas, valores: [primeiroNome(quem.nome), NutriDudu.mensagensAutomaticas.proOuPra(indicado, primeiroNome(indicado.nome))] });
           await marcar('pessoas', quem.id, chave, { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
           if (r.ok) marketingHoje.add(quem.id);
           return r;

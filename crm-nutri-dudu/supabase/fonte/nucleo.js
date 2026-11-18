@@ -286,6 +286,7 @@ Quem você é
 - Simpático, acolhedor e objetivo. Português do Brasil do dia a dia, sem jargão.
 - Fale como o próprio nutricionista fala com os pacientes: leve e próximo, nada de tom de robô ou de empresa. Use "Oi", "tudo bem?", "pra", "tá", "rapidinho", "me conta". Evite frases formais como "Prezado", "Informamos", "Estamos à disposição".
 - Mensagens curtas, como numa conversa de WhatsApp: no máximo 3 parágrafos curtos. Um ou dois emojis por mensagem quando combinar (😊 💚 🙌 ✅), sem exagero.
+- Emojis conforme quem está falando com você: com homens, prefira 💪 e 🚀 (no lugar de 😊 e 💚); com mulheres, 😊 e 💚. Se não souber, use 😊.
 - Formatação do WhatsApp apenas: *negrito* com asteriscos e listas simples com "-". Nada de títulos, tabelas ou links inventados.
 - Sempre deixe claro que é um assistente virtual quando se apresentar.
 
@@ -1067,7 +1068,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           console.error('Avaliação:', erro);
           r = { texto: 'Obrigado pela resposta! 🙂', resultado: 'erro' };
         }
-        if (r.texto) await enviarComoAgente(conversa, r.texto);
+        if (r.texto) await enviarComoAgente(conversa, NutriDudu.mensagensAutomaticas.paraGenero(r.texto, pessoa));
         if (r.equipe) {
           await marcarAguardando(conversa, r.equipe, r.resumo);
         } else {
@@ -1087,7 +1088,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
           console.error('Lista de espera:', erro);
           r = { texto: 'Desculpe, não consegui reservar agora. Já chamei alguém da equipe para te ajudar. 🙏', equipe: 'Erro ao reservar um horário da lista de espera', resultado: 'erro' };
         }
-        if (r.texto) await enviarComoAgente(conversa, r.texto);
+        if (r.texto) await enviarComoAgente(conversa, NutriDudu.mensagensAutomaticas.paraGenero(r.texto, pessoa));
         if (r.consulta) await automacoes.enviarPreAnamnese?.({ consulta: r.consulta, pessoa, conversa, imediato: true }).catch((e) => console.error('Pré-anamnese:', e));
         if (r.equipe) {
           await marcarAguardando(conversa, r.equipe, r.resumo);
@@ -1109,7 +1110,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
             });
           }
           const linkOnline = consultaBotao.tipo === 'online' ? (await repo.pega('profissionais', consultaBotao.profissionalId))?.linkOnline : null;
-          await enviarComoAgente(conversa, `Confirmado! ✅ Te espero ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())} 😊${linkOnline ? ` É online: entra por esse link uns minutinhos antes: ${linkOnline}` : ''} Se precisar remarcar, é só me chamar aqui.`);
+          await enviarComoAgente(conversa, NutriDudu.mensagensAutomaticas.paraGenero(`Confirmado! ✅ Te espero ${relogio.descrever(consultaBotao.inicio).replace(/^./, (c) => c.toLowerCase())} 😊${linkOnline ? ` É online: entra por esse link uns minutinhos antes: ${linkOnline}` : ''} Se precisar remarcar, é só me chamar aqui.`, pessoa));
           if (conversa.status === 'aguardando_equipe' && !conversa.motivoEquipe) conversa.status = ativo ? 'agente' : 'encerrada';
           await repo.grava('conversas', conversa);
           return { confirmada: consultaBotao.id };
@@ -1251,24 +1252,32 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
       const clinica = configuracoes.find((c) => c.id === 'geral')?.nomeClinica || 'clínica';
       const conta = await whatsapp.descobrirConta(contaSugerida && /^\d{6,25}$/.test(contaSugerida) ? contaSugerida : null);
       if (!conta) throw new Error('não encontrei a conta do WhatsApp deste número com o token atual');
+      // Cada modelo, e a versão masculina ("<nome>_m", emojis 💪/🚀) quando algum emoji muda.
+      const versoes = Object.keys(MA.MODELOS).flatMap((id) => [id, ...(MA.temVersaoMasculina(id, clinica) ? [`${id}:m`] : [])]);
+      const definicao = (chave) => {
+        const [id, m] = chave.split(':');
+        const modelo = MA.MODELOS[id];
+        const base = cfg.modelos[id] || modelo.nomePadrao;
+        return { modelo, nome: m ? `${base}_m` : base, texto: m ? MA.masculinizar(modelo.corpo(clinica)) : modelo.corpo(clinica) };
+      };
       const criados = [];
-      for (const id of criar) {
-        const m = MA.MODELOS[id];
-        if (!m) continue;
-        const components = [{ type: 'BODY', text: m.corpo(clinica), ...(m.exemplo?.length ? { example: { body_text: [m.exemplo] } } : {}) }];
+      for (const chave of criar) {
+        if (!versoes.includes(chave)) continue;
+        const { modelo: m, nome, texto } = definicao(chave);
+        const components = [{ type: 'BODY', text: texto, ...(m.exemplo?.length ? { example: { body_text: [m.exemplo] } } : {}) }];
         if (m.botoes?.length) components.push({ type: 'BUTTONS', buttons: m.botoes.map((t) => ({ type: 'QUICK_REPLY', text: t })) });
         try {
-          await whatsapp.criarModelo(conta, { name: cfg.modelos[id] || m.nomePadrao, category: m.categoria, language: cfg.idioma || 'pt_BR', components });
-          criados.push({ id, ok: true });
+          await whatsapp.criarModelo(conta, { name: nome, category: m.categoria, language: cfg.idioma || 'pt_BR', components });
+          criados.push({ id: chave, ok: true });
         } catch (erro) {
-          criados.push({ id, ok: false, erro: erro.message });
+          criados.push({ id: chave, ok: false, erro: erro.message });
         }
       }
       const existentes = await whatsapp.listarModelos(conta);
-      const situacao = Object.fromEntries(Object.keys(MA.MODELOS).map((id) => {
-        const nome = cfg.modelos[id] || MA.MODELOS[id].nomePadrao;
+      const situacao = Object.fromEntries(versoes.map((chave) => {
+        const { nome } = definicao(chave);
         const achado = existentes.find((t) => t.name === nome && (!t.language || t.language === (cfg.idioma || 'pt_BR')));
-        return [id, achado ? { status: achado.status, categoria: achado.category } : { status: 'NAO_CRIADO' }];
+        return [chave, { nome, ...(achado ? { status: achado.status, categoria: achado.category } : { status: 'NAO_CRIADO' }) }];
       }));
       return { conta, situacao, criados };
     }

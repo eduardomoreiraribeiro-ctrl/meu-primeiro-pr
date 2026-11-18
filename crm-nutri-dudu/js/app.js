@@ -343,6 +343,39 @@
     });
   }
 
+  // Link para preencher o sexo de vários pacientes (#sexo=…, com nome completo e "M" ou "F"). Grava só depois de "Confirmar".
+  async function abrirSexoDoLink() {
+    const m = /^#sexo=([\w-]+)/.exec(location.hash);
+    if (!m) return;
+    history.replaceState(null, '', `${location.pathname}${location.search}#/clientes`);
+    let lista = [];
+    try {
+      const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+      lista = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)))).pessoas || [];
+    } catch (erro) {
+      ui.toast('O link está incompleto. Peça um novo.', 'erro');
+      return;
+    }
+    renderizar();
+    const { store, utils, modal } = NutriDudu;
+    const pessoas = await store.list('pessoas');
+    const chave = (n) => utils.normalizar(n).replace(/\s+/g, ' ').trim();
+    const achados = lista.filter((x) => ['M', 'F'].includes(x.sexo)).map((x) => ({ ...x, pessoa: pessoas.find((p) => chave(p.nome) === chave(x.nome)) }));
+    const mudar = achados.filter((a) => a.pessoa && a.pessoa.sexo !== a.sexo);
+    const rotulo = { M: 'Masculino', F: 'Feminino' };
+    modal.formulario({
+      titulo: 'Preencher o sexo dos pacientes',
+      textoSalvar: mudar.length ? `Confirmar (${mudar.length})` : 'Fechar',
+      corpo: `<p class="small">Usado para os emojis das mensagens (homens: 💪 🚀; mulheres: 😊 💚) e para "pro"/"pra".</p>
+        <ul class="small">${achados.map((a) => `<li>${utils.escapeHtml(a.nome)} — ${!a.pessoa ? '<span class="texto-perigo">não encontrado</span>' : a.pessoa.sexo === a.sexo ? `já está ${rotulo[a.sexo]}` : rotulo[a.sexo]}</li>`).join('')}</ul>`,
+      ler: () => ({}),
+      salvar: async () => {
+        for (const a of mudar) await store.update('pessoas', a.pessoa.id, { sexo: a.sexo });
+        if (mudar.length) ui.toast(`${mudar.length} cadastro(s) atualizado(s).`);
+      },
+    });
+  }
+
   // ---------- Início ----------
   // Aviso quando a nuvem existe mas alguém abriu a demonstração.
   document.getElementById('aviso-demo').hidden = !(NutriDudu.nuvem.configurada() && NutriDudu.nuvem.emDemonstracao());
@@ -356,6 +389,7 @@
         renderizar();
         abrirImportacaoDoLink();
         abrirConsentimentoDoLink();
+        abrirSexoDoLink();
       },
     });
   } else {
@@ -364,5 +398,6 @@
     renderizar();
     abrirImportacaoDoLink();
     abrirConsentimentoDoLink();
+    abrirSexoDoLink();
   }
 })();

@@ -863,13 +863,16 @@ NutriDudu.pages.configuracoes = (function () {
     try {
       const r = await nuvem.modelosMeta(criar);
       const erroDe = Object.fromEntries((r.criados || []).filter((c) => !c.ok).map((c) => [c.id, c.erro]));
-      const linhas = Object.entries(MA.MODELOS).map(([id, m]) => {
-        const st = r.situacao[id]?.status || 'NAO_CRIADO';
+      const linhas = Object.entries(r.situacao).map(([chave, info]) => {
+        const [id, masc] = chave.split(':');
+        const m = MA.MODELOS[id];
+        if (!m) return '';
+        const st = info.status || 'NAO_CRIADO';
         const [rotulo, variante] = STATUS[st] || [st, 'neutro'];
         return `<tr>
-          <td>${st === 'NAO_CRIADO' ? `<input type="checkbox" data-criar-modelo="${id}" checked aria-label="Criar ${utils.escapeHtml(m.titulo)}">` : ''}</td>
-          <td>${utils.escapeHtml(m.titulo)}<span class="muted small bloco"><code>${utils.escapeHtml(m.nomePadrao)}</code> · ${utils.escapeHtml(MA.CATEGORIAS[m.categoria])}</span>
-            ${erroDe[id] ? `<span class="texto-perigo small bloco">${utils.escapeHtml(erroDe[id])}</span>` : ''}</td>
+          <td>${st === 'NAO_CRIADO' ? `<input type="checkbox" data-criar-modelo="${chave}"${id === 'cobranca' ? '' : ' checked'} aria-label="Criar ${utils.escapeHtml(m.titulo)}">` : ''}</td>
+          <td>${utils.escapeHtml(m.titulo)}${masc ? ' <span class="small">(versão para homens 💪)</span>' : ''}<span class="muted small bloco"><code>${utils.escapeHtml(info.nome || m.nomePadrao)}</code> · ${utils.escapeHtml(MA.CATEGORIAS[m.categoria])}</span>
+            ${erroDe[chave] ? `<span class="texto-perigo small bloco">${utils.escapeHtml(erroDe[chave])}</span>` : ''}</td>
           <td>${ui.badge(rotulo, variante)}</td></tr>`;
       }).join('');
       const faltam = Object.values(r.situacao).filter((x) => x.status === 'NAO_CRIADO').length;

@@ -96,9 +96,14 @@ const NutriDuduAutomacoes = (() => {
       const conversa = conversas.find((c) => c.pessoaId === pessoa.id) || null;
       const para = destinoDe(pessoa, conversa);
       if (!para) return { ok: false, motivo: 'telefone inválido' };
-      const texto = preencher(modelo.corpo(dados.geral.nomeClinica || 'clínica'), valores);
+      const clinica = dados.geral.nomeClinica || 'clínica';
+      const MA = NutriDudu.mensagensAutomaticas;
+      // Homem: emojis masculinos no texto e a versão "_m" do modelo aprovado.
+      const masculino = MA.ehHomem(pessoa) && MA.temVersaoMasculina(automacao, clinica);
+      const texto = MA.paraGenero(preencher(modelo.corpo(clinica), valores), pessoa);
       const livre = forcarTexto || janelaAberta(conversa);
-      const nomeModelo = String(cfg.modelos[automacao] || '').trim();
+      const nomeBase = String(cfg.modelos[automacao] || '').trim();
+      const nomeModelo = nomeBase && masculino ? `${nomeBase}_m` : nomeBase;
       if (!livre && !nomeModelo) return { ok: false, motivo: 'sem modelo aprovado configurado' };
 
       let waId = null;
@@ -404,7 +409,7 @@ const NutriDuduAutomacoes = (() => {
         const chave = `indicacao_${indicado.id}`;
         if (!quem || jaFeito(quem.automacoes?.[chave]) || marketingHoje.has(quem.id)) continue;
         await tentar('indicacao', quem, async () => {
-          const r = await enviar({ cfg, automacao: 'indicacao', pessoa: quem, dados, conversas, valores: [primeiroNome(quem.nome), primeiroNome(indicado.nome)] });
+          const r = await enviar({ cfg, automacao: 'indicacao', pessoa: quem, dados, conversas, valores: [primeiroNome(quem.nome), NutriDudu.mensagensAutomaticas.proOuPra(indicado, primeiroNome(indicado.nome))] });
           await marcar('pessoas', quem.id, chave, { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
           if (r.ok) marketingHoje.add(quem.id);
           return r;
