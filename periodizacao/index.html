@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Periodização Nutricional — Metas por Dia de Jogo</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-content">
+    <p class="eyebrow">Nutrição Esportiva · Periodização</p>
+    <h1>Metas diárias pelo calendário de jogos</h1>
+    <p class="subtitle">Cadastre os jogos e o elenco. Cada dia é classificado de MD-4 a MD+2 ou OFF, e as metas de carboidrato e proteína em gramas são ajustadas pela carga do dia (PSE e GPS).</p>
+    <a href="#cartao" class="cta">Ver cartão do dia ↓</a>
+  </div>
+</header>
+
+<main>
+
+  <section class="card">
+    <a href="../nutricao-esportiva/index.html" class="back-link">← Voltar para Nutrição</a>
+    <h2>Calendário de jogos</h2>
+    <p class="section-intro">Toque em um dia para abrir o cartão. Dias marcados com * tiveram a classificação ajustada manualmente.</p>
+
+    <form id="game-form" class="toolbar" novalidate>
+      <div class="field-group">
+        <label for="game-date">Data do jogo</label>
+        <input type="date" id="game-date" required>
+      </div>
+      <div class="field-group">
+        <label for="game-opponent">Adversário <span class="optional">opcional</span></label>
+        <input type="text" id="game-opponent" placeholder="Ex.: Fluminense">
+      </div>
+      <button type="submit" class="btn primary">Adicionar jogo</button>
+    </form>
+    <div class="chip-list" id="game-list"></div>
+
+    <div class="toolbar" style="margin-top:1.5rem">
+      <button type="button" class="btn" id="week-prev" aria-label="Semana anterior">←</button>
+      <div class="field-group" style="text-align:center">
+        <span id="week-label" class="stat-label"></span>
+      </div>
+      <button type="button" class="btn" id="week-next" aria-label="Próxima semana">→</button>
+    </div>
+    <div class="week" id="week"></div>
+  </section>
+
+  <section class="card">
+    <h2>Elenco</h2>
+    <p class="section-intro">Peso corporal usado para converter g/kg em gramas.</p>
+    <form id="athlete-form" class="toolbar" novalidate>
+      <div class="field-group">
+        <label for="athlete-name">Atleta</label>
+        <input type="text" id="athlete-name" placeholder="Nome" required>
+      </div>
+      <div class="field-group" style="max-width:110px">
+        <label for="athlete-position">Posição</label>
+        <select id="athlete-position">
+          <option value="">—</option>
+          <option>GOL</option><option>ZAG</option><option>LAT</option>
+          <option>VOL</option><option>MEI</option><option>ATA</option>
+        </select>
+      </div>
+      <div class="field-group" style="max-width:120px">
+        <label for="athlete-weight">Peso (kg)</label>
+        <input type="number" id="athlete-weight" min="40" max="150" step="0.1" required>
+      </div>
+      <button type="submit" class="btn primary">Salvar</button>
+    </form>
+    <p class="form-error" id="athlete-error" role="alert"></p>
+    <div id="roster"></div>
+    <div class="btn-row">
+      <button type="button" class="btn" id="import-hydration">Importar do módulo Hidratação</button>
+    </div>
+    <p class="field-hint" id="import-msg"></p>
+  </section>
+
+  <section class="card">
+    <h2>Metas por tipo de dia</h2>
+    <p class="section-intro">Faixas em g/kg de peso corporal. A meta de carboidrato fica no ponto da faixa definido pela carga do dia.</p>
+    <div class="table-wrap">
+      <table class="config-table">
+        <thead><tr>
+          <th>Dia</th><th>Perfil</th>
+          <th class="num">CHO mín</th><th class="num">CHO máx</th>
+          <th class="num">PTN mín</th><th class="num">PTN máx</th>
+        </tr></thead>
+        <tbody id="config-body"></tbody>
+      </table>
+    </div>
+    <div class="btn-row">
+      <button type="button" class="btn" id="config-reset">Restaurar padrão</button>
+    </div>
+    <p class="reference">Referência: UEFA Expert Group Statement on Nutrition in Elite Football (Collins et al., BJSM 2021).</p>
+  </section>
+
+  <section class="card print-area" id="cartao">
+    <div class="day-header">
+      <div>
+        <h2 id="card-title">Cartão diário</h2>
+        <span class="stat-label" id="card-subtitle"></span>
+      </div>
+      <span class="day-tag" id="card-tag"></span>
+    </div>
+
+    <div class="toolbar no-print">
+      <div class="field-group">
+        <label for="card-date">Data</label>
+        <input type="date" id="card-date">
+      </div>
+      <div class="field-group">
+        <label for="card-override">Classificação do dia</label>
+        <select id="card-override"></select>
+      </div>
+    </div>
+
+    <h3 class="subsection-title no-print">Carga do dia por atleta <span class="optional">opcional</span></h3>
+    <div class="table-wrap no-print">
+      <table class="load-inputs">
+        <thead><tr>
+          <th>Atleta</th>
+          <th class="num">PSE</th><th class="num">Min</th>
+          <th class="num">Dist. (m)</th><th class="num">AI (m)</th>
+        </tr></thead>
+        <tbody id="load-body"></tbody>
+      </table>
+    </div>
+    <p class="field-hint no-print">Carga interna = PSE × minutos. AI = distância em alta intensidade. Sem dados de carga, a meta usa o meio da faixa.</p>
+
+    <h3 class="subsection-title">Metas do dia</h3>
+    <div class="target-grid" id="targets"></div>
+
+    <div class="btn-row no-print">
+      <button type="button" class="btn primary" id="print-btn">Imprimir para cozinha (A4)</button>
+      <button type="button" class="btn" id="csv-btn">Exportar CSV</button>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>Proteína distribuída em 0,3–0,4 g/kg por refeição (4–5 refeições). Não substitui a avaliação individual do nutricionista.</p>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
