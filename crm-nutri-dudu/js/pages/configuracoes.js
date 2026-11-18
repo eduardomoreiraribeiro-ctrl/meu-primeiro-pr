@@ -634,7 +634,7 @@ NutriDudu.pages.configuracoes = (function () {
           <div class="acoes-linha">
             <button type="button" class="btn btn-pequeno btn-primary" data-editar-automacoes>Editar</button>
             <button type="button" class="btn btn-pequeno" data-ver-resumo>Ver o resumo de hoje</button>
-            ${naNuvem ? '<button type="button" class="btn btn-pequeno" data-rodar-automacoes>Verificar e enviar agora</button>' : ''}
+            ${naNuvem ? '<button type="button" class="btn btn-pequeno" data-rodar-automacoes>Verificar e enviar agora</button><button type="button" class="btn btn-pequeno" data-modelos-meta>Modelos na Meta</button>' : ''}
           </div>` : '<p class="muted small">Só o administrador altera as mensagens automáticas.</p>'}
       </section>`;
   }
@@ -854,6 +854,52 @@ NutriDudu.pages.configuracoes = (function () {
     }
   }
 
+  /** Situação dos modelos na Meta e criação dos que faltam, sem sair do sistema. */
+  async function modelosMeta(botao, criar = []) {
+    const { ui, utils, modal, nuvem, mensagensAutomaticas: MA } = NutriDudu;
+    const STATUS = { APPROVED: ['Aprovado', 'sucesso'], PENDING: ['Em análise', 'alerta'], IN_APPEAL: ['Em análise', 'alerta'], REJECTED: ['Recusado', 'perigo'], PAUSED: ['Pausado', 'perigo'], DISABLED: ['Desativado', 'perigo'], NAO_CRIADO: ['Não criado', 'neutro'] };
+    const textoOriginal = botao?.textContent;
+    if (botao) { botao.disabled = true; botao.textContent = criar.length ? 'Criando…' : 'Consultando…'; }
+    try {
+      const r = await nuvem.modelosMeta(criar);
+      const erroDe = Object.fromEntries((r.criados || []).filter((c) => !c.ok).map((c) => [c.id, c.erro]));
+      const linhas = Object.entries(MA.MODELOS).map(([id, m]) => {
+        const st = r.situacao[id]?.status || 'NAO_CRIADO';
+        const [rotulo, variante] = STATUS[st] || [st, 'neutro'];
+        return `<tr>
+          <td>${st === 'NAO_CRIADO' ? `<input type="checkbox" data-criar-modelo="${id}" checked aria-label="Criar ${utils.escapeHtml(m.titulo)}">` : ''}</td>
+          <td>${utils.escapeHtml(m.titulo)}<span class="muted small bloco"><code>${utils.escapeHtml(m.nomePadrao)}</code> · ${utils.escapeHtml(MA.CATEGORIAS[m.categoria])}</span>
+            ${erroDe[id] ? `<span class="texto-perigo small bloco">${utils.escapeHtml(erroDe[id])}</span>` : ''}</td>
+          <td>${ui.badge(rotulo, variante)}</td></tr>`;
+      }).join('');
+      const faltam = Object.values(r.situacao).filter((x) => x.status === 'NAO_CRIADO').length;
+      const criadosOk = (r.criados || []).filter((c) => c.ok).length;
+      const dialog = modal.painel({
+        titulo: 'Modelos de mensagem na Meta',
+        corpo: `
+          ${criadosOk ? `<p class="small"><strong>✅ ${criadosOk} modelo(s) enviado(s) para análise da Meta. A aprovação leva de minutos a algumas horas.</strong></p>` : ''}
+          <p class="small">Situação de cada modelo na sua conta do WhatsApp. Os marcados ainda não existem: o sistema cria com o texto certo e manda para análise.</p>
+          <div class="tabela-rolagem"><table class="tabela-simples small"><thead><tr><th></th><th>Modelo</th><th>Situação</th></tr></thead><tbody>${linhas}</tbody></table></div>`,
+        acoes: [
+          ...(faltam ? [{ texto: 'Criar os marcados', classe: 'btn-primary', aoClicar: () => {} }] : []),
+          { texto: 'Atualizar', aoClicar: () => modelosMeta(null) },
+        ],
+      });
+      // "Criar os marcados": lê as caixas antes de o painel fechar.
+      const botaoCriar = dialog.querySelector('[data-acao="0"]');
+      if (faltam && botaoCriar) {
+        botaoCriar.addEventListener('click', () => {
+          const ids = [...dialog.querySelectorAll('[data-criar-modelo]:checked')].map((c) => c.dataset.criarModelo);
+          if (ids.length) modelosMeta(null, ids);
+        }, { capture: true });
+      }
+    } catch (erro) {
+      ui.toast(erro.message || 'Não foi possível consultar a Meta agora.', 'erro');
+    } finally {
+      if (botao) { botao.disabled = false; botao.textContent = textoOriginal; }
+    }
+  }
+
   async function render(container) {
     const { store, ui, config, utils, permissoes } = NutriDudu;
     const [profissionais, horarios, bloqueios, geral, servicos, consultas] = await Promise.all([
@@ -1019,6 +1065,7 @@ NutriDudu.pages.configuracoes = (function () {
     mostrarUsoAgente(container, agenteCfg);
     container.querySelector('[data-editar-automacoes]')?.addEventListener('click', () => abrirAutomacoes(automacoesCfg));
     container.querySelector('[data-rodar-automacoes]')?.addEventListener('click', (e) => rodarAutomacoes(e.currentTarget));
+    container.querySelector('[data-modelos-meta]')?.addEventListener('click', (e) => modelosMeta(e.currentTarget));
     container.querySelector('[data-ver-resumo]')?.addEventListener('click', () => verResumo());
     container.querySelectorAll('[data-ver-modelo]').forEach((b) => b.addEventListener('click', () => verModelo(b.dataset.verModelo, automacoesCfg, geral)));
     container.querySelector('[data-editar-site]')?.addEventListener('click', () => abrirSite(siteCfg, servicos));

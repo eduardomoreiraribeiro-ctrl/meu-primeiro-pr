@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-webhook" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: b1fc82
+// Versão: 02651e
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
@@ -1275,7 +1275,40 @@ const NutriDuduServidor = (() => {
       });
     }
 
-    return { enviarTexto, enviarModelo, enviarBotoes };
+    // ----- Modelos de mensagem (gestão na conta do WhatsApp Business) -----
+    async function graph(caminho, opcoes = {}) {
+      const resp = await buscar(`https://graph.facebook.com/${versao}/${caminho}`, {
+        ...opcoes, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(opcoes.headers || {}) },
+      });
+      const corpo = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(corpo?.error?.error_user_msg || corpo?.error?.message || `erro ${resp.status}`);
+      return corpo;
+    }
+
+    /** Descobre a conta do WhatsApp Business dona deste número (pelas permissões do próprio token). */
+    async function descobrirConta() {
+      const info = await graph(`debug_token?input_token=${encodeURIComponent(token)}`);
+      const escopos = info?.data?.granular_scopes || [];
+      const ids = [...new Set(escopos.filter((e) => /whatsapp_business_(management|messaging)/.test(e.scope)).flatMap((e) => e.target_ids || []))];
+      for (const id of ids) {
+        try {
+          const nums = await graph(`${id}/phone_numbers?fields=id&limit=50`);
+          if ((nums.data || []).some((n) => String(n.id) === String(phoneNumberId))) return id;
+        } catch (erro) { /* não é uma conta do WhatsApp */ }
+      }
+      return null;
+    }
+
+    async function listarModelos(contaId) {
+      const r = await graph(`${contaId}/message_templates?fields=name,status,category,language&limit=200`);
+      return r.data || [];
+    }
+
+    function criarModelo(contaId, definicao) {
+      return graph(`${contaId}/message_templates`, { method: 'POST', body: JSON.stringify(definicao) });
+    }
+
+    return { enviarTexto, enviarModelo, enviarBotoes, descobrirConta, listarModelos, criarModelo };
   }
 
   /** Assinatura do webhook da Meta (X-Hub-Signature-256), com o "App Secret". */
@@ -2311,6 +2344,39 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
   const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
   function criarEnvioEquipe({ repo, whatsapp, relogio = criarRelogio(), quemEsta, automacoes = null }) {
+    /**
+     * Situação de cada modelo do sistema na Meta e, se pedido, cria os que faltam
+     * (texto, categoria, exemplo e botões iguais aos de js/mensagens-automaticas.js).
+     */
+    async function modelosMeta({ criar = [] }) {
+      const MA = NutriDudu.mensagensAutomaticas;
+      const configuracoes = await repo.todos('configuracoes');
+      const cfg = MA.configuracao(configuracoes.find((c) => c.id === 'automacoes'));
+      const clinica = configuracoes.find((c) => c.id === 'geral')?.nomeClinica || 'clínica';
+      const conta = await whatsapp.descobrirConta();
+      if (!conta) throw new Error('não encontrei a conta do WhatsApp deste número com o token atual');
+      const criados = [];
+      for (const id of criar) {
+        const m = MA.MODELOS[id];
+        if (!m) continue;
+        const components = [{ type: 'BODY', text: m.corpo(clinica), ...(m.exemplo?.length ? { example: { body_text: [m.exemplo] } } : {}) }];
+        if (m.botoes?.length) components.push({ type: 'BUTTONS', buttons: m.botoes.map((t) => ({ type: 'QUICK_REPLY', text: t })) });
+        try {
+          await whatsapp.criarModelo(conta, { name: cfg.modelos[id] || m.nomePadrao, category: m.categoria, language: cfg.idioma || 'pt_BR', components });
+          criados.push({ id, ok: true });
+        } catch (erro) {
+          criados.push({ id, ok: false, erro: erro.message });
+        }
+      }
+      const existentes = await whatsapp.listarModelos(conta);
+      const situacao = Object.fromEntries(Object.keys(MA.MODELOS).map((id) => {
+        const nome = cfg.modelos[id] || MA.MODELOS[id].nomePadrao;
+        const achado = existentes.find((t) => t.name === nome && (!t.language || t.language === (cfg.idioma || 'pt_BR')));
+        return [id, achado ? { status: achado.status, categoria: achado.category } : { status: 'NAO_CRIADO' }];
+      }));
+      return { conta, situacao, criados };
+    }
+
     async function atender(req) {
       if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
       if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405);
@@ -2323,6 +2389,16 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador roda as mensagens automáticas.' }, 403);
         if (!automacoes) return json({ erro: 'Mensagens automáticas indisponíveis nesta função.' }, 500);
         return json({ ok: true, relatorio: await automacoes.rodar({ manual: true, por: usuario.nome }) });
+      }
+      // Administrador: ver e criar os modelos de mensagem na conta do WhatsApp (Meta).
+      if (corpo?.acao === 'modelos-meta') {
+        if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador gerencia os modelos.' }, 403);
+        if (!whatsapp.descobrirConta) return json({ erro: 'Indisponível nesta função.' }, 500);
+        try {
+          return json({ ok: true, ...(await modelosMeta({ criar: Array.isArray(corpo.criar) ? corpo.criar.map(String) : [] })) });
+        } catch (erro) {
+          return json({ erro: `A Meta recusou: ${erro.message}` }, 502);
+        }
       }
       // Administrador: mensagem de retorno ou reativação para as pessoas escolhidas.
       if (corpo?.acao === 'enviar-grupo') {

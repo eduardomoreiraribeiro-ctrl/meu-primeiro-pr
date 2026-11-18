@@ -370,6 +370,18 @@ NutriDudu.nuvem = (function () {
     return data.resultado;
   }
 
+  /** Modelos de mensagem na Meta: situação de cada um; `criar` = ids dos que devem ser criados agora. */
+  async function modelosMeta(criar = []) {
+    const { data, error } = await obterCliente().functions.invoke('whatsapp-enviar', { body: { acao: 'modelos-meta', criar } });
+    if (error) {
+      let msg = '';
+      try { msg = (await error.context?.json())?.erro || ''; } catch (e) { /* sem JSON */ }
+      throw new Error(msg || 'Não foi possível falar com o servidor. Confira se a função "whatsapp-enviar" foi atualizada no Supabase.');
+    }
+    if (data?.erro) throw new Error(data.erro);
+    return data;
+  }
+
   /** Uso do Assistente no mês ("2026-10"): respostas e custo em US$. Só o administrador lê. */
   async function usoAgente(mes) {
     const { data, error } = await obterCliente().from('agente_uso').select('*').eq('mes', mes).maybeSingle();
@@ -378,7 +390,7 @@ NutriDudu.nuvem = (function () {
   }
 
   return {
-    enviarWhatsApp, usoAgente, rodarAutomacoes, enviarGrupo,
+    enviarWhatsApp, usoAgente, rodarAutomacoes, enviarGrupo, modelosMeta,
     TABELAS, configurada, ativa, emDemonstracao, problemaNaConfiguracao, traduzir,
     sessaoAtual, entrar, sair, trocarSenha, carregarPerfil, perfilAtual, veClinico, listarPerfis, atualizarPerfil, registrarAcesso,
     carregarTudo, criar, alterar, apagar, gravarLote, substituirTudo, ouvir, parar,
