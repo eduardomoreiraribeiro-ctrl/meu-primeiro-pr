@@ -53,7 +53,7 @@ NutriDudu.importarConsultas = (function () {
     return pessoas.filter(combina);
   }
 
-  async function abrir({ texto: textoInicial = '' } = {}) {
+  async function abrir({ texto: textoInicial = '', novos = [] } = {}) {
     const { form: f, modal, store, ui, utils, agenda, permissoes, calculos } = NutriDudu;
     if (!permissoes.exigir('gerenciarDados')) return;
     const [pessoas, profissionais, servicos, consultas, pacotes, horarios, bloqueios, geral] = await Promise.all([
@@ -115,9 +115,33 @@ NutriDudu.importarConsultas = (function () {
         }));
         let feitos = 0;
         const total = op.escolhas.filter(Boolean).length;
+        const criados = {};
+        // Paciente novo (veio no link com os dados completos): cadastra uma vez só.
+        const cadastrar = async (idx) => {
+          if (criados[idx]) return criados[idx];
+          const n = novos[idx];
+          const prof = ativos.find((p) => p.id === op.profissionalId) || ativos[0];
+          const salvo = await store.create('pessoas', {
+            nome: n.nome, telefone: utils.formatarTelefone(utils.soDigitos(n.telefone)), email: String(n.email || '').toLowerCase(),
+            dataNascimento: n.dataNascimento || null, cpf: n.cpf && utils.cpfValido(n.cpf) ? utils.formatarCpf(n.cpf) : '',
+            sexo: n.sexo || null, cidade: n.cidade || '', endereco: n.endereco || '', observacoes: n.observacoes || '',
+            origem: 'outro', indicadoPorId: null, objetivo: n.objetivo || '', profissionalId: prof?.id || null, servicoInteresseId: null, retornoDias: null,
+            tags: [], consentimentos: { saude: false, whatsapp: n.whatsapp === true, fotos: false, divulgacao: false },
+            funil: 'acompanhamento', etapa: 'tratamento', etapaDesde: agora,
+            status: 'ativo', clienteDesde: utils.isoDia(new Date()), motivoPerda: null, agentePausado: false,
+            importadoEm: agora,
+          });
+          await store.create('interacoes', {
+            pessoaId: salvo.id, dataHora: agora, tipo: 'nota', autor: permissoes.atual(), automatico: true,
+            descricao: 'Cadastrado(a) ao importar as consultas da agenda da clínica.',
+          });
+          criados[idx] = salvo.id;
+          return salvo.id;
+        };
         for (const [i, l] of linhas.entries()) {
-          const pessoaId = op.escolhas[i];
-          if (!pessoaId) continue;
+          const escolha = op.escolhas[i];
+          if (!escolha) continue;
+          const pessoaId = escolha.startsWith('novo:') ? await cadastrar(Number(escolha.slice(5))) : escolha;
           const inicio = agenda.dataComHora(l.dia, l.inicio);
           const fim = l.fim ? agenda.dataComHora(l.dia, l.fim) : agenda.somarMin(inicio, servico?.duracaoMin || 60);
           const pacote = pacotes
@@ -169,6 +193,15 @@ NutriDudu.importarConsultas = (function () {
         const ja = l.opcoes.length === 1 && consultas.some((c) => c.pessoaId === l.opcoes[0].id && !['cancelada', 'remarcada'].includes(c.status) && new Date(c.inicio).getTime() === inicio.getTime());
         if (ja) return { ...l, situacao: 'existe' };
         l.situacao = l.opcoes.length === 1 ? 'ok' : l.opcoes.length ? 'varios' : 'nenhum';
+        if (l.situacao === 'nenhum') {
+          // Veio no link com os dados completos? Se o celular já está cadastrado, usa esse cadastro.
+          const idx = novos.findIndex((n) => candidatos(l.nome, [n]).length);
+          if (idx >= 0) {
+            const tel = utils.soDigitos(novos[idx].telefone).slice(-8);
+            const mesmo = tel && pessoas.find((p) => utils.soDigitos(p.telefone).slice(-8) === tel);
+            if (mesmo) { l.opcoes = [mesmo]; l.situacao = 'ok'; } else { l.novo = idx; l.situacao = 'novo'; }
+          }
+        }
         return l;
       });
       desenhar();
@@ -183,6 +216,7 @@ NutriDudu.importarConsultas = (function () {
         const sel = l.situacao === 'ok' ? primeiras[0].id : '';
         return `<select name="pessoa${i}" aria-label="Paciente da linha ${i + 1}">
           <option value="">— não importar —</option>
+          ${l.situacao === 'novo' ? `<option value="novo:${l.novo}" selected>Cadastrar: ${utils.escapeHtml(novos[l.novo].nome)}</option>` : ''}
           ${primeiras.length ? `<optgroup label="Combinam com &quot;${utils.escapeHtml(l.nome)}&quot;">${primeiras.map((p) => `<option value="${utils.escapeHtml(p.id)}"${p.id === sel ? ' selected' : ''}>${utils.escapeHtml(p.nome)}</option>`).join('')}</optgroup>` : ''}
           <optgroup label="Todos os pacientes">${resto.map((p) => `<option value="${utils.escapeHtml(p.id)}">${utils.escapeHtml(p.nome)}</option>`).join('')}</optgroup>
         </select>`;
@@ -191,19 +225,20 @@ NutriDudu.importarConsultas = (function () {
         ok: ui.badge('Encontrado', 'sucesso'),
         varios: ui.badge('Escolha o paciente', 'alerta'),
         nenhum: ui.badge('Não encontrado', 'perigo'),
+        novo: ui.badge('Novo cadastro', 'info'),
         existe: ui.badge('Já está na agenda', 'neutro'),
         passada: ui.badge('Data já passou', 'neutro'),
       }[l.situacao] || '');
       const linhasTabela = linhas.map((l, i) => (l.erro ? '' : `<tr>
           <td>${utils.escapeHtml(utils.data(l.quando))}<span class="muted small bloco">${utils.escapeHtml(l.inicio)}${l.fim ? `–${utils.escapeHtml(l.fim)}` : ''}</span></td>
           <td>${utils.escapeHtml(l.nome)}</td>
-          <td>${['ok', 'varios', 'nenhum'].includes(l.situacao) ? seletor(l, i) : '—'}</td>
+          <td>${['ok', 'varios', 'nenhum', 'novo'].includes(l.situacao) ? seletor(l, i) : '—'}</td>
           <td>${situacao(l)}</td>
         </tr>`)).join('');
       const opcoesServico = servicosConsulta.map((s) => [s.id, `${s.nome} (${s.duracaoMin} min)`]);
       previa.innerHTML = `
         <h3 class="import-titulo">1. Confira os pacientes</h3>
-        <p class="small"><strong>${contar('ok')}</strong> encontrado(s)${contar('varios') ? ` · <strong>${contar('varios')}</strong> com mais de um paciente possível (escolha)` : ''}${contar('nenhum') ? ` · <span class="texto-perigo">${contar('nenhum')} não encontrado(s)</span>` : ''}${contar('existe') ? ` · ${contar('existe')} já na agenda` : ''}${contar('passada') ? ` · ${contar('passada')} com data passada` : ''}</p>
+        <p class="small"><strong>${contar('ok')}</strong> encontrado(s)${contar('varios') ? ` · <strong>${contar('varios')}</strong> com mais de um paciente possível (escolha)` : ''}${contar('nenhum') ? ` · <span class="texto-perigo">${contar('nenhum')} não encontrado(s)</span>` : ''}${contar('novo') ? ` · <strong>${new Set(linhas.filter((l) => l.situacao === 'novo').map((l) => l.novo)).size}</strong> paciente(s) novo(s) a cadastrar` : ''}${contar('existe') ? ` · ${contar('existe')} já na agenda` : ''}${contar('passada') ? ` · ${contar('passada')} com data passada` : ''}</p>
         ${contar('nenhum') ? '<p class="muted small">Paciente não encontrado: cadastre-o em Clientes (com o celular, para receber os lembretes) e leia a lista de novo, ou escolha o nome certo na lista.</p>' : ''}
         <div class="tabela-rolagem"><table class="tabela-simples small"><thead><tr><th>Quando</th><th>Na agenda da clínica</th><th>Paciente</th><th>Situação</th></tr></thead><tbody>${linhasTabela}</tbody></table></div>
         ${erros.length ? `<details class="small"><summary>${erros.length} linha(s) não entendida(s)</summary><ul>${erros.map((l) => `<li><code>${utils.escapeHtml(l.original)}</code> — ${utils.escapeHtml(l.erro)}</li>`).join('')}</ul></details>` : ''}

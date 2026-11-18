@@ -272,8 +272,10 @@
   // Link com uma lista de consultas para importar (?importar=…, preparado pelo assistente de configuração):
   // abre a Agenda com a importação já lida; só falta conferir e tocar em "Importar".
   function abrirImportacaoDoLink() {
+    // O código vem depois do "#" (não vai para o servidor, só fica no aparelho) ou, nos links antigos, no "?importar=".
     const params = new URLSearchParams(location.search);
-    const codigo = params.get('importar');
+    const noHash = /^#importar=([\w-]+)/.exec(location.hash);
+    const codigo = noHash ? noHash[1] : params.get('importar');
     if (!codigo) return;
     params.delete('importar');
     history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}#/agenda`);
@@ -285,8 +287,13 @@
       ui.toast('O link de importação está incompleto. Peça um novo.', 'erro');
       return;
     }
+    // Formato completo: { texto, novos: [dados de pacientes ainda não cadastrados] }.
+    let novos = [];
+    if (texto.trim().startsWith('{')) {
+      try { ({ texto = '', novos = [] } = JSON.parse(texto)); } catch (erro) { texto = ''; }
+    }
     renderizar();
-    setTimeout(() => NutriDudu.importarConsultas.abrir({ texto }), 400);
+    setTimeout(() => NutriDudu.importarConsultas.abrir({ texto, novos }), 400);
   }
 
   // ---------- Início ----------
