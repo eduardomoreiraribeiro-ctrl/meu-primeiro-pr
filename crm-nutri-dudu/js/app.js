@@ -326,6 +326,7 @@
       titulo: 'Autorizar mensagens pelo WhatsApp',
       textoSalvar: marcar.length ? `Confirmar (${marcar.length})` : 'Fechar',
       corpo: `<p class="small">Estes pacientes passam a receber os lembretes e avisos da clínica pelo WhatsApp:</p>
+        ${!achados.length ? `<p class="small"><strong>${todos ? 'Todos os clientes já autorizaram as mensagens. ✅' : 'Nenhum nome no link.'}</strong></p>` : ''}
         <ul class="small">${achados.map((a) => `<li>${utils.escapeHtml(a.nome)} — ${!a.pessoa ? '<span class="texto-perigo">não encontrado</span>' : a.pessoa.consentimentos?.whatsapp === true ? 'já autorizado' : 'vai ser autorizado'}</li>`).join('')}</ul>`,
       ler: () => ({}),
       salvar: async () => {
