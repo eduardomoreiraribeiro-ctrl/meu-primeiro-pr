@@ -269,6 +269,26 @@
   store.subscribe(() => renderizar());
   window.addEventListener('hashchange', navegar);
 
+  // Link com uma lista de consultas para importar (?importar=…, preparado pelo assistente de configuração):
+  // abre a Agenda com a importação já lida; só falta conferir e tocar em "Importar".
+  function abrirImportacaoDoLink() {
+    const params = new URLSearchParams(location.search);
+    const codigo = params.get('importar');
+    if (!codigo) return;
+    params.delete('importar');
+    history.replaceState(null, '', `${location.pathname}${params.toString() ? `?${params}` : ''}#/agenda`);
+    let texto = '';
+    try {
+      const b64 = codigo.replace(/-/g, '+').replace(/_/g, '/');
+      texto = new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)));
+    } catch (erro) {
+      ui.toast('O link de importação está incompleto. Peça um novo.', 'erro');
+      return;
+    }
+    renderizar();
+    setTimeout(() => NutriDudu.importarConsultas.abrir({ texto }), 400);
+  }
+
   // ---------- Início ----------
   // Aviso quando a nuvem existe mas alguém abriu a demonstração.
   document.getElementById('aviso-demo').hidden = !(NutriDudu.nuvem.configurada() && NutriDudu.nuvem.emDemonstracao());
@@ -280,11 +300,13 @@
         aplicarPerfil();
         pronto = true;
         renderizar();
+        abrirImportacaoDoLink();
       },
     });
   } else {
     aplicarPerfil();
     pronto = true;
     renderizar();
+    abrirImportacaoDoLink();
   }
 })();

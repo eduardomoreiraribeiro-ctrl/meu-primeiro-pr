@@ -53,7 +53,7 @@ NutriDudu.importarConsultas = (function () {
     return pessoas.filter(combina);
   }
 
-  async function abrir() {
+  async function abrir({ texto: textoInicial = '' } = {}) {
     const { form: f, modal, store, ui, utils, agenda, permissoes, calculos } = NutriDudu;
     if (!permissoes.exigir('gerenciarDados')) return;
     const [pessoas, profissionais, servicos, consultas, pacotes, horarios, bloqueios, geral] = await Promise.all([
@@ -227,6 +227,7 @@ NutriDudu.importarConsultas = (function () {
     }
 
     form.querySelector('[data-ler]').addEventListener('click', ler);
+    if (textoInicial) { form.elements.texto.value = textoInicial; ler(); }
   }
 
   return { abrir, lerLinha, candidatos };
