@@ -303,9 +303,12 @@
     if (!m) return;
     history.replaceState(null, '', `${location.pathname}${location.search}#/clientes`);
     let nomes = [];
+    let todos = false;
     try {
       const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
-      nomes = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)))).nomes || [];
+      const dados = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))));
+      nomes = dados.nomes || [];
+      todos = dados.todos === true;
     } catch (erro) {
       ui.toast('O link está incompleto. Peça um novo.', 'erro');
       return;
@@ -314,7 +317,10 @@
     const { store, utils, modal, permissoes } = NutriDudu;
     const pessoas = await store.list('pessoas');
     const chave = (n) => utils.normalizar(n).replace(/\s+/g, ' ').trim();
-    const achados = nomes.map((n) => ({ nome: n, pessoa: pessoas.find((p) => chave(p.nome) === chave(n)) }));
+    // "todos": todos os clientes (não leads) que ainda não autorizaram.
+    const achados = todos
+      ? pessoas.filter((p) => p.status !== 'lead' && p.consentimentos?.whatsapp !== true).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')).map((p) => ({ nome: p.nome, pessoa: p }))
+      : nomes.map((n) => ({ nome: n, pessoa: pessoas.find((p) => chave(p.nome) === chave(n)) }));
     const marcar = achados.filter((a) => a.pessoa && a.pessoa.consentimentos?.whatsapp !== true);
     modal.formulario({
       titulo: 'Autorizar mensagens pelo WhatsApp',
