@@ -271,3 +271,5 @@ footer {
   .grid-2, .tip-grid { grid-template-columns: 1fr; }
   .card { padding: 1.5rem; }
 }
+.hydration-link { display: block; margin-top: 0.5rem; color: var(--carbs); font-weight: 600; text-decoration: none; }
+.hydration-link:hover { text-decoration: underline; }
