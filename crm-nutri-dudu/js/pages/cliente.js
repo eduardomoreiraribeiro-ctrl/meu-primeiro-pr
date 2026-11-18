@@ -38,7 +38,7 @@ NutriDudu.pages.cliente = (function () {
           ${linha('CPF', utils.escapeHtml(p.cpf))}
           ${linha('Endereço', utils.escapeHtml([p.endereco, p.cidade].filter(Boolean).join(' — ')))}
           ${linha('Objetivo', utils.escapeHtml(config.OBJETIVOS[p.objetivo]))}
-          ${linha('Serviço de interesse', utils.escapeHtml(c.servicoPorId[p.servicoInteresseId]?.nome))}
+          ${linha('Serviço de interesse', p.permuta ? 'Permuta (não cobra)' : utils.escapeHtml(c.servicoPorId[p.servicoInteresseId]?.nome))}
           ${linha('Retorno a cada', `${c.resumo.prazoRetorno} dias${p.retornoDias ? '' : ' <span class="muted small">(padrão da clínica)</span>'}`)}
           ${linha('Cliente desde', p.clienteDesde ? utils.data(p.clienteDesde) : '')}
           ${linha('Indicou', c.indicados.map((x) => `<a href="#/clientes/${encodeURIComponent(x.id)}">${utils.escapeHtml(x.nome)}</a>`).join(', '))}
@@ -558,6 +558,7 @@ NutriDudu.pages.cliente = (function () {
               ${ui.statusPessoa(pessoa.status)}
               ${profissional ? ui.badge(profissional.nome) : ''}
               ${ui.badge(`Origem: ${config.ORIGENS[pessoa.origem] || ''}`)}
+              ${pessoa.permuta ? ui.badge('Permuta', 'info') : ''}
               ${(pessoa.tags || []).map((t) => ui.badge(t, 'etiqueta')).join('')}
               ${indicadoPor ? `<span class="small">Indicado(a) por <a href="#/clientes/${encodeURIComponent(indicadoPor.id)}">${utils.escapeHtml(indicadoPor.nome)}</a></span>` : ''}
               ${indicados.length ? `<span class="small muted">Indicou ${indicados.length} ${indicados.length === 1 ? 'pessoa' : 'pessoas'}</span>` : ''}

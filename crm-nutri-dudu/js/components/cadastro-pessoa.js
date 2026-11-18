@@ -67,7 +67,9 @@ NutriDudu.cadastroPessoa = (function () {
       cidade: f.valor(form, 'cidade'),
       endereco: f.valor(form, 'endereco'),
       profissionalId: f.valor(form, 'profissionalId') || null,
-      servicoInteresseId: f.valor(form, 'servicoInteresseId') || null,
+      // "Permuta" fica no mesmo campo, mas é guardada à parte: paciente que não paga.
+      servicoInteresseId: f.valor(form, 'servicoInteresseId') === '__permuta' ? null : (f.valor(form, 'servicoInteresseId') || null),
+      permuta: f.valor(form, 'servicoInteresseId') === '__permuta',
       retornoDias: f.numero(form, 'retornoDias'),
       tags: f.valor(form, 'tags').split(',').map((t) => t.trim()).filter(Boolean)
         .filter((t, i, todas) => todas.findIndex((x) => x.toLowerCase() === t.toLowerCase()) === i),
@@ -104,7 +106,7 @@ NutriDudu.cadastroPessoa = (function () {
       .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
       .map((x) => [x.id, `${x.nome} — ${x.telefone}`]);
     const profs = profissionais.filter((x) => x.ativo || x.id === p.profissionalId).map((x) => [x.id, x.nome]);
-    const servs = servicos.filter((s) => s.ativo || s.id === p.servicoInteresseId).map((s) => [s.id, s.nome]);
+    const servs = [...servicos.filter((s) => s.ativo || s.id === p.servicoInteresseId).map((s) => [s.id, s.nome]), ['__permuta', 'Permuta (não cobra)']];
     const cons = p.consentimentos || {};
 
     const corpo = `
@@ -137,7 +139,7 @@ NutriDudu.cadastroPessoa = (function () {
           ${f.texto('cidade', 'Cidade', p.cidade)}
           ${f.texto('endereco', 'Endereço', p.endereco)}
           ${f.selecao('profissionalId', 'Profissional responsável', profs, p.profissionalId, { vazio: 'A definir' })}
-          ${f.selecao('servicoInteresseId', 'Serviço de interesse', servs, p.servicoInteresseId, { vazio: 'Nenhum' })}
+          ${f.selecao('servicoInteresseId', 'Serviço de interesse', servs, p.permuta ? '__permuta' : p.servicoInteresseId, { vazio: 'Nenhum' })}
           ${f.texto('retornoDias', 'Retorno a cada (dias)', p.retornoDias ?? '', { tipo: 'number', atributos: 'min="7" max="365" step="1"', placeholder: 'Padrão da clínica', ajuda: 'Deixe em branco para usar o prazo padrão das Configurações.' })}
           ${f.texto('tags', 'Etiquetas', (p.tags || []).join(', '), { placeholder: 'Ex.: VIP, gestante', ajuda: 'Separe por vírgula.' })}
         </div>

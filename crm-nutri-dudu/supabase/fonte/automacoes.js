@@ -332,7 +332,7 @@ const NutriDuduAutomacoes = (() => {
         if (l.status !== 'pendente' || !l.vencimento || jaFeito(l.automacoes?.cobranca, 7 * DIA)) continue;
         if (utils.diasEntre(l.vencimento, hojeLocal) < 1) continue;
         const pessoa = pessoaPor[l.pessoaId];
-        if (!pessoa) continue;
+        if (!pessoa || pessoa.permuta) continue; // permuta: nunca recebe cobrança
         await tentar('cobranca', pessoa, async () => {
           const r = await enviar({
             cfg, automacao: 'cobranca', pessoa, dados, conversas,

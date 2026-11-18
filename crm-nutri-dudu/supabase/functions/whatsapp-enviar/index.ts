@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 976ba6
+// Versão: 3e2f02
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -2703,7 +2703,7 @@ const NutriDuduAutomacoes = (() => {
         if (l.status !== 'pendente' || !l.vencimento || jaFeito(l.automacoes?.cobranca, 7 * DIA)) continue;
         if (utils.diasEntre(l.vencimento, hojeLocal) < 1) continue;
         const pessoa = pessoaPor[l.pessoaId];
-        if (!pessoa) continue;
+        if (!pessoa || pessoa.permuta) continue; // permuta: nunca recebe cobrança
         await tentar('cobranca', pessoa, async () => {
           const r = await enviar({
             cfg, automacao: 'cobranca', pessoa, dados, conversas,

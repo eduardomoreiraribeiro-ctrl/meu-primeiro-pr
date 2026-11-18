@@ -171,7 +171,7 @@ NutriDudu.pages.clientes = (function () {
             <div class="cliente-celula">
               ${ui.avatar(utils.iniciais(p.nome))}
               <div>
-                <a href="${link}" class="cliente-nome">${utils.escapeHtml(p.nome)}</a>
+                <a href="${link}" class="cliente-nome">${utils.escapeHtml(p.nome)}</a>${p.permuta ? ` ${ui.badge('Permuta', 'info')}` : ''}
                 <span class="muted small bloco">${utils.escapeHtml(p.telefone)}</span>
               </div>
             </div>
@@ -219,7 +219,7 @@ NutriDudu.pages.clientes = (function () {
               <a class="cartao-cliente" href="#/clientes/${encodeURIComponent(p.id)}">
                 ${ui.avatar(utils.iniciais(p.nome))}
                 <span class="lista-item-info">
-                  <strong>${utils.escapeHtml(p.nome)}</strong>
+                  <strong>${utils.escapeHtml(p.nome)}</strong>${p.permuta ? ` ${ui.badge('Permuta', 'info')}` : ''}
                   <span class="muted small">${utils.escapeHtml(p.telefone)}${r.ultima ? ` · última consulta ${utils.haDias(r.diasSemConsulta)}` : ''}</span>
                   ${r.proxima ? `<span class="small">Próximo: ${utils.data(r.proxima.inicio)} ${utils.hora(r.proxima.inicio)}</span>` : ''}
                   ${avisos ? `<span class="avisos">${avisos}</span>` : ''}
