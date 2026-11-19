@@ -3,17 +3,395 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nutri Dudu</title>
-<!-- O sistema fica na pasta crm-nutri-dudu/: esta página só encaminha para lá. -->
-<meta http-equiv="refresh" content="0; url=crm-nutri-dudu/">
-<link rel="canonical" href="crm-nutri-dudu/">
+<title>Nutri Eduardo Ribeiro</title>
+<meta name="description" content="Nutricionista Eduardo Ribeiro: consultas presenciais na Praia da Costa, Vila Velha (ES), e online. Agende pelo WhatsApp.">
+<meta property="og:title" content="Nutri Eduardo Ribeiro">
+<meta property="og:description" content="Nutrição que cabe na sua rotina. Presencial em Vila Velha e online.">
+<meta property="og:image" content="nutri/img/avatar.jpg">
+<meta name="theme-color" content="#0e1c18">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; background: #f5f7f6; color: #17211b; }
-  a { color: #15803d; font-weight: 600; }
-  @media (prefers-color-scheme: dark) { body { background: #0e1311; color: #e3eae6; } a { color: #4ade80; } }
+  :root {
+    --fundo: #0e1c18;        /* verde quase preto */
+    --fundo-2: #142721;
+    --linha: rgba(236, 228, 214, 0.14);
+    --creme: #ece4d6;
+    --suave: rgba(236, 228, 214, 0.62);
+    --destaque: #b8e0c8;     /* verde-menta */
+    --dourado: #d2b07a;
+    --raio: 999px;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; background: var(--fundo); color: var(--creme); font-family: Inter, -apple-system, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+  img { display: block; max-width: 100%; }
+  a { color: inherit; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  .display { font-family: Anton, Impact, 'Arial Narrow', sans-serif; font-weight: 400; text-transform: uppercase; line-height: 0.95; letter-spacing: 0.005em; }
+
+  /* Barra fixa */
+  .barra { position: sticky; top: 0; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: rgba(14, 28, 24, 0.82); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-bottom: 1px solid var(--linha); }
+  .marca { font-weight: 700; letter-spacing: 0.12em; font-size: 0.78rem; text-transform: uppercase; text-decoration: none; }
+  .marca span { color: var(--destaque); }
+
+  /* Faixa de aviso no topo (projeto em divulgação) */
+  .aviso { display: block; text-align: center; padding: 9px 16px; background: linear-gradient(90deg, #e7b75f, #f2d08c, #e7b75f); background-size: 200% 100%; animation: brilho 6s ease-in-out infinite; color: #1d1608; font-size: 0.84rem; font-weight: 700; text-decoration: none; letter-spacing: 0.01em; }
+  .aviso span { text-decoration: underline; text-underline-offset: 3px; }
+  @keyframes brilho { 0%, 100% { background-position: 0% 0; } 50% { background-position: 100% 0; } }
+
+  /* Destaque do projeto logo abaixo dos botões */
+  .promo { position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 14px; margin-top: 18px; padding: 18px 18px 18px 20px; border-radius: 22px; text-decoration: none; overflow: hidden; color: #1d1608; background: radial-gradient(circle at 92% 20%, #fff3cf 0, transparent 38%), linear-gradient(135deg, #f2c66d, #e09a3e); box-shadow: 0 14px 34px rgba(224, 154, 62, 0.25); transition: transform .2s ease; }
+  .promo:hover, .promo:focus-visible { transform: translateY(-2px); }
+  .promo:focus-visible { outline: 2px solid var(--creme); outline-offset: 3px; }
+  .promo small { display: block; font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; font-weight: 700; opacity: 0.8; }
+  .promo strong { display: block; font-family: Anton, Impact, sans-serif; font-weight: 400; text-transform: uppercase; font-size: 1.9rem; line-height: 1; margin: 6px 0 4px; }
+  .promo em { font-style: normal; font-size: 0.92rem; }
+  .promo .ir { width: 46px; height: 46px; border-radius: 50%; background: #1d1608; color: #f2c66d; display: grid; place-items: center; font-size: 1.2rem; }
+  .promo .sol { position: absolute; right: -18px; top: -18px; font-size: 5.5rem; opacity: 0.18; pointer-events: none; animation: girar 30s linear infinite; }
+  @keyframes girar { to { transform: rotate(360deg); } }
+
+  /* Pílulas */
+  .pilulas { display: flex; flex-wrap: wrap; gap: 10px; }
+  .pilula { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: var(--raio); border: 1px solid var(--linha); text-decoration: none; font-weight: 600; font-size: 0.92rem; transition: background .2s ease, color .2s ease, border-color .2s ease, transform .2s ease; }
+  .pilula:hover, .pilula:focus-visible { border-color: var(--creme); transform: translateY(-2px); }
+  .pilula:focus-visible { outline: 2px solid var(--destaque); outline-offset: 3px; }
+  .pilula.cheia { background: var(--destaque); color: var(--fundo); border-color: var(--destaque); }
+  .pilula.cheia:hover { background: var(--creme); border-color: var(--creme); }
+  .pilula.pequena { padding: 8px 14px; font-size: 0.8rem; }
+  .pilula svg { width: 18px; height: 18px; }
+
+  /* Rótulos de seção */
+  .rotulo { display: flex; align-items: center; gap: 12px; font-size: 0.74rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--suave); font-weight: 600; }
+  .rotulo b { color: var(--destaque); font-weight: 700; }
+  .rotulo::after { content: ''; flex: 1; height: 1px; background: var(--linha); }
+
+  /* Topo */
+  .hero { padding: 44px 0 28px; }
+  .hero .rotulo { margin-bottom: 18px; }
+  .hero h1 { font-size: clamp(3.4rem, 17vw, 6.4rem); margin: 0 0 18px; }
+  .hero h1 .verde { color: var(--destaque); }
+  .hero p { color: var(--suave); font-size: 1.05rem; margin: 0 0 22px; max-width: 34ch; }
+  .hero-foto { position: relative; margin-top: 30px; border-radius: 28px; overflow: hidden; aspect-ratio: 4 / 5; }
+  .hero-foto img { width: 100%; height: 100%; object-fit: cover; object-position: center 22%; filter: grayscale(1) contrast(1.05); transition: filter .8s ease, transform 1.2s ease; transform: scale(1.04); }
+  .hero-foto.visivel img { filter: grayscale(0); transform: scale(1); }
+  .hero-foto figcaption { position: absolute; left: 16px; right: 16px; bottom: 16px; display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; font-size: 0.78rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .hero-foto figcaption strong { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: 1.7rem; letter-spacing: 0.02em; line-height: 1; display: block; }
+  .hero-foto::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(14, 28, 24, 0.9)); pointer-events: none; }
+  .hero-foto figcaption { z-index: 1; }
+
+  /* Capa: a foto logo de cara, com o título por cima */
+  .capa { position: relative; min-height: calc(100svh - 58px); max-height: 900px; display: flex; align-items: flex-end; overflow: hidden; }
+  .capa > img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 18%; animation: aproximar 1.6s ease-out both; }
+  .capa::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(14,28,24,0) 28%, rgba(14,28,24,0.6) 58%, var(--fundo) 96%); }
+  .capa-conteudo { position: relative; z-index: 1; width: 100%; padding-bottom: 8px; }
+  .capa .rotulo { margin-bottom: 14px; color: rgba(236,228,214,0.8); }
+  .capa h1 { font-size: clamp(3rem, 14vw, 5.6rem); margin: 0 0 14px; text-shadow: 0 2px 24px rgba(0,0,0,0.25); }
+  .capa h1 .verde { color: var(--destaque); }
+  .capa p { color: rgba(236,228,214,0.85); font-size: 1.04rem; margin: 0; max-width: 34ch; }
+  @keyframes aproximar { from { transform: scale(1.08); } to { transform: scale(1); } }
+  .depois-capa { padding-top: 22px; }
+
+  /* Faixa que corre */
+  .faixa { border-top: 1px solid var(--linha); border-bottom: 1px solid var(--linha); overflow: hidden; padding: 14px 0; margin: 36px 0 0; background: var(--fundo-2); }
+  .faixa-trilho { display: flex; width: max-content; animation: correr 28s linear infinite; }
+  .faixa span { font-family: Anton, Impact, sans-serif; text-transform: uppercase; font-size: 1.6rem; padding: 0 18px; white-space: nowrap; color: var(--creme); }
+  .faixa span:nth-child(even) { color: var(--destaque); }
+  @keyframes correr { to { transform: translateX(-50%); } }
+
+  section { padding: 64px 0 0; scroll-margin-top: 100px; }
+  /* Índice da página: linhas numeradas, no estilo das seções */
+  .indice { margin: 30px 0 0; border-top: 1px solid var(--linha); }
+  .indice a { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 13px 2px; border-bottom: 1px solid var(--linha); text-decoration: none; transition: padding .25s ease, color .25s ease; }
+  .indice a:hover, .indice a:focus-visible { padding-left: 10px; color: var(--destaque); }
+  .indice a:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+  .indice .n { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.1em; color: var(--destaque); }
+  .indice .t { font-family: Anton, Impact, sans-serif; text-transform: uppercase; font-size: 1.35rem; line-height: 1; letter-spacing: 0.01em; }
+  .indice .s { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--linha); display: grid; place-items: center; font-size: 0.9rem; transition: background .25s ease, color .25s ease, transform .25s ease; }
+  .indice a:hover .s, .indice a:focus-visible .s { background: var(--destaque); color: var(--fundo); border-color: var(--destaque); transform: rotate(-45deg); }
+  h2 { font-size: clamp(2.6rem, 12vw, 4.2rem); margin: 18px 0 16px; }
+  .texto { color: var(--suave); margin: 0 0 14px; font-size: 1.02rem; }
+  .texto strong { color: var(--creme); }
+
+  .foto-sobre { margin: 22px 0 0; border-radius: 22px; overflow: hidden; aspect-ratio: 4 / 5; }
+  .foto-sobre img { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1); transition: filter .8s ease; }
+  .foto-sobre.visivel img { filter: grayscale(0.15); }
+
+  .lista-destaques { list-style: none; margin: 22px 0 0; padding: 0; border-top: 1px solid var(--linha); }
+  .lista-destaques li { padding: 14px 0; border-bottom: 1px solid var(--linha); display: flex; gap: 12px; align-items: baseline; }
+  .lista-destaques li::before { content: '→'; color: var(--destaque); font-weight: 700; }
+
+  /* Passos em sanfona */
+  .sanfona { margin-top: 18px; border-top: 1px solid var(--linha); }
+  .sanfona details { border-bottom: 1px solid var(--linha); }
+  .sanfona summary { list-style: none; cursor: pointer; display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; padding: 20px 0; }
+  .sanfona summary::-webkit-details-marker { display: none; }
+  .sanfona .num { font-size: 0.8rem; color: var(--destaque); font-weight: 700; letter-spacing: 0.08em; }
+  .sanfona .tit { font-family: Anton, Impact, sans-serif; text-transform: uppercase; font-size: 1.55rem; line-height: 1.05; }
+  .sanfona .mais { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--linha); display: grid; place-items: center; transition: transform .3s ease, background .3s ease; }
+  .sanfona details[open] .mais { transform: rotate(45deg); background: var(--destaque); color: var(--fundo); border-color: var(--destaque); }
+  .sanfona summary:focus-visible { outline: 2px solid var(--destaque); outline-offset: 4px; }
+  .sanfona .corpo { padding: 0 0 20px 44px; color: var(--suave); }
+  .sanfona .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .sanfona .tags span { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; border: 1px solid var(--linha); border-radius: var(--raio); padding: 4px 10px; color: var(--creme); }
+
+  /* Objetivos */
+  .objetivos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+  .objetivo { border: 1px solid var(--linha); border-radius: 20px; padding: 18px 16px; transition: background .25s ease, border-color .25s ease; }
+  .objetivo:hover { background: var(--fundo-2); border-color: var(--destaque); }
+  .objetivo .ico { font-size: 1.5rem; }
+  .objetivo strong { display: block; margin-top: 8px; font-size: 1rem; }
+  .objetivo span { color: var(--suave); font-size: 0.86rem; }
+
+  /* Planos */
+  .planos { margin-top: 20px; border-top: 1px solid var(--linha); }
+  .plano { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 0; border-bottom: 1px solid var(--linha); text-decoration: none; transition: padding .25s ease; }
+  .plano:hover { padding-left: 8px; }
+  .plano .nome { font-family: Anton, Impact, sans-serif; text-transform: uppercase; font-size: 1.9rem; line-height: 1; }
+  .plano .qtd { color: var(--suave); font-size: 0.9rem; text-align: right; }
+  .plano .selo { display: inline-block; margin-left: 8px; vertical-align: middle; font-family: Inter, sans-serif; font-size: 0.66rem; letter-spacing: 0.1em; background: var(--dourado); color: var(--fundo); border-radius: var(--raio); padding: 3px 9px; font-weight: 700; }
+
+  /* Projetos e parcerias */
+  .cards { display: grid; gap: 14px; margin-top: 20px; }
+  .card { border: 1px solid var(--linha); border-radius: 24px; padding: 22px 20px; background: var(--fundo-2); }
+  .card .tipo { font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--suave); font-weight: 600; }
+  .card h3 { font-family: Anton, Impact, sans-serif; font-weight: 400; text-transform: uppercase; font-size: 1.9rem; line-height: 1; margin: 8px 0 10px; }
+  .card p { color: var(--suave); margin: 0 0 16px; }
+  .cupom { display: flex; align-items: center; justify-content: space-between; gap: 10px; border: 1px dashed var(--dourado); border-radius: 16px; padding: 12px 12px 12px 16px; margin: 0 0 14px; }
+  .cupom code { font-family: Anton, Impact, sans-serif; font-size: 1.45rem; letter-spacing: 0.06em; color: var(--dourado); word-break: break-all; }
+  .cupom button { flex: none; border: 0; border-radius: var(--raio); background: var(--dourado); color: var(--fundo); font: 600 0.85rem Inter, sans-serif; padding: 10px 14px; cursor: pointer; }
+  .cupom button:focus-visible { outline: 2px solid var(--creme); outline-offset: 2px; }
+
+  /* Contato */
+  .contato h2 .verde { color: var(--destaque); }
+  .dados { margin-top: 28px; display: grid; gap: 18px; }
+  .dado small { display: block; font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--suave); }
+  .dado a, .dado span { font-size: 1.08rem; font-weight: 600; text-decoration: none; }
+  .dado a:hover { color: var(--destaque); }
+
+  footer { margin-top: 64px; border-top: 1px solid var(--linha); padding: 22px 16px 34px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--suave); max-width: 640px; margin-left: auto; margin-right: auto; }
+  footer a { color: var(--suave); }
+
+  /* Botão de voltar ao topo: aparece depois que a pessoa desce um pouco */
+  .topo-btn { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 20; width: 52px; height: 52px; border-radius: 50%; border: 0; background: var(--destaque); color: var(--fundo); font-size: 1.35rem; font-weight: 700; display: grid; place-items: center; cursor: pointer; box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35); opacity: 0; transform: translateY(16px) scale(0.9); pointer-events: none; transition: opacity .3s ease, transform .3s ease, background .2s ease; }
+  .topo-btn.visivel { opacity: 1; transform: none; pointer-events: auto; }
+  .topo-btn:hover { background: var(--creme); }
+  .topo-btn:focus-visible { outline: 2px solid var(--creme); outline-offset: 3px; }
+
+  /* Aparecer ao rolar */
+  .surge { opacity: 0; transform: translateY(26px); transition: opacity .7s ease, transform .7s ease; }
+  .surge.visivel { opacity: 1; transform: none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aviso, .promo .sol { animation: none; }
+    .capa > img { animation: none; }
+    html { scroll-behavior: auto; }
+    .faixa-trilho { animation: none; }
+    .surge { opacity: 1; transform: none; transition: none; }
+    .hero-foto img, .foto-sobre img { transition: none; transform: none; }
+  }
 </style>
 </head>
 <body>
-  <p>Abrindo o Nutri Dudu… <a href="crm-nutri-dudu/">Clique aqui se não abrir sozinho</a>.</p>
+<div class="topo-fixo" style="position:sticky;top:0;z-index:10">
+<a class="aviso" data-verao href="https://projetoverao30dias.netlify.app" target="_blank" rel="noopener">☀️ Projeto Verão 30 Dias: <span data-verao-faixa>começa segunda, 23/11</span> →</a>
+<header class="barra" style="position:static">
+  <a class="marca" href="#topo">Eduardo <span>Ribeiro</span></a>
+  <a class="pilula cheia pequena" href="https://wa.me/5527997498446?text=Oi!%20Vim%20pelo%20Instagram%20e%20quero%20agendar%20uma%20consulta%20%F0%9F%98%8A" target="_blank" rel="noopener">Agendar</a>
+</header>
+</div>
+
+<header class="capa" id="topo" aria-labelledby="titulo">
+  <img src="nutri/img/perfil.jpg" alt="Eduardo Ribeiro, nutricionista, sorrindo no consultório" fetchpriority="high">
+  <div class="wrap capa-conteudo">
+    <div class="rotulo"><b>Nutricionista</b> Vila Velha · ES</div>
+    <h1 class="display" id="titulo">Nutrição que cabe na <span class="verde">sua rotina.</span></h1>
+    <p>Sem dieta de revista e sem terrorismo nutricional. Um plano feito pra sua vida real, presencial em Vila Velha ou online 💚</p>
+  </div>
+</header>
+
+<main class="wrap depois-capa">
+    <div class="pilulas">
+      <a class="pilula cheia" href="https://wa.me/5527997498446?text=Oi!%20Vim%20pelo%20Instagram%20e%20quero%20saber%20mais%20sobre%20o%20acompanhamento%20%F0%9F%98%8A" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2Zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.2-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1.1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3Z"/></svg>
+        Falar no WhatsApp
+      </a>
+      <a class="pilula" href="https://eduardomoreiraribeiro-ctrl.github.io/meu-primeiro-pr/crm-nutri-dudu/agendar.html" target="_blank" rel="noopener">Agendar online</a>
+      <a class="pilula" href="https://instagram.com/nutri.duduribeiro" target="_blank" rel="noopener">Instagram</a>
+    </div>
+    <a class="promo" data-verao href="https://projetoverao30dias.netlify.app" target="_blank" rel="noopener">
+      <span class="sol" aria-hidden="true">☀️</span>
+      <span><small data-verao-selo>Começa segunda, 23/11</small><strong>Verão 30 Dias</strong><em>30 dias pra chegar no verão com mais saúde e energia</em></span>
+      <span class="ir" aria-hidden="true">→</span>
+    </a>
+    <nav class="indice" aria-label="Seções da página">
+      <a href="#sobre"><span class="n">01</span><span class="t">Sobre mim</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#projetos"><span class="n">02</span><span class="t">Projetos e cupom</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#como-funciona"><span class="n">03</span><span class="t">Como funciona</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#pra-quem"><span class="n">04</span><span class="t">Pra quem é</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#planos"><span class="n">05</span><span class="t">Planos</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#contato"><span class="n">06</span><span class="t">Contato</span><span class="s" aria-hidden="true">↓</span></a>
+    </nav>
+</main>
+
+<div class="faixa" aria-hidden="true">
+  <div class="faixa-trilho">
+    <span>Emagrecimento</span><span>•</span><span>Hipertrofia</span><span>•</span><span>Performance</span><span>•</span><span>Saúde e energia</span><span>•</span>
+    <span>Emagrecimento</span><span>•</span><span>Hipertrofia</span><span>•</span><span>Performance</span><span>•</span><span>Saúde e energia</span><span>•</span>
+  </div>
+</div>
+
+<main class="wrap">
+  <section id="sobre" aria-labelledby="t-sobre" class="surge">
+    <div class="rotulo"><b>01</b> Sobre mim</div>
+    <h2 class="display" id="t-sobre">Prazer, eu sou o Eduardo.</h2>
+    <p class="texto">Sou nutricionista e acredito que comer bem <strong>não precisa ser complicado nem chato</strong>. Atendo <strong>atletas profissionais e amadores</strong> e também quem busca emagrecimento, ganho de massa muscular, estética, saúde e mais qualidade de vida.</p>
+    <p class="texto">Meu trabalho é montar um plano que funcione na sua vida real: com a sua rotina, o seu treino e as comidas que você gosta.</p>
+    <figure class="foto-sobre surge" style="margin-left:0;margin-right:0"><img src="nutri/img/consultorio.jpg" alt="Eduardo atendendo no consultório" loading="lazy"></figure>
+    <ul class="lista-destaques">
+      <li>Consultas de cerca de 1h30, sem pressa</li>
+      <li>Presencial na Praia da Costa ou online</li>
+      <li>Acompanhamento de perto pelo WhatsApp</li>
+    </ul>
+  </section>
+
+  <section id="projetos" class="surge" aria-labelledby="t-projetos">
+    <div class="rotulo"><b>02</b> Projetos e parcerias</div>
+    <h2 class="display" id="t-projetos">Tem mais por aqui.</h2>
+    <div class="cards">
+      <article class="card">
+        <span class="tipo">☀️ Projeto</span>
+        <h3>Verão 30 Dias</h3>
+        <p>Meu projeto de 30 dias pra você chegar no verão com mais saúde, energia e confiança.</p>
+        <a class="pilula cheia" href="https://projetoverao30dias.netlify.app" target="_blank" rel="noopener">Conhecer o projeto →</a>
+      </article>
+      <article class="card">
+        <span class="tipo">🏷️ Parceria TRUE</span>
+        <h3>Cupom de desconto</h3>
+        <p>Use o meu cupom nos produtos da True Source, na loja Viva True. Pelo botão da loja, o desconto já entra automático.</p>
+        <div class="cupom"><code>TRUENUTRIDUDU</code><button type="button" data-copiar="TRUENUTRIDUDU">Copiar cupom</button></div>
+        <a class="pilula" href="https://vivatrue.com.br/discount/TRUENUTRIDUDU?redirect=%2F&amp;utm_source=influenciador&amp;utm_medium=site&amp;utm_campaign=TRUENUTRIDUDU&amp;utm_content=site" target="_blank" rel="noopener">Ir para a loja →</a>
+      </article>
+    </div>
+  </section>
+
+  <section id="como-funciona" aria-labelledby="t-como" class="surge">
+    <div class="rotulo"><b>03</b> Como funciona</div>
+    <h2 class="display" id="t-como">Do primeiro oi ao resultado.</h2>
+    <div class="sanfona">
+      <details open>
+        <summary><span class="num">01</span><span class="tit">Consulta completa</span><span class="mais" aria-hidden="true">+</span></summary>
+        <div class="corpo">Uma conversa de verdade pra entender sua rotina, seus objetivos, seus treinos e sua história com a comida. Antes, você preenche um formulário rapidinho pra gente aproveitar melhor o tempo.
+          <div class="tags"><span>Anamnese</span><span>Avaliação</span><span>Objetivos</span></div></div>
+      </details>
+      <details>
+        <summary><span class="num">02</span><span class="tit">Plano feito pra você</span><span class="mais" aria-hidden="true">+</span></summary>
+        <div class="corpo">Um plano alimentar com a sua cara: possível de seguir, com opções e sem cortar tudo o que você gosta.
+          <div class="tags"><span>Plano alimentar</span><span>Substituições</span><span>Orientações</span></div></div>
+      </details>
+      <details>
+        <summary><span class="num">03</span><span class="tit">Acompanhamento</span><span class="mais" aria-hidden="true">+</span></summary>
+        <div class="corpo">Retornos pra ajustar o plano conforme a sua evolução, e eu perto pelo WhatsApp pra tirar as dúvidas do dia a dia.
+          <div class="tags"><span>Retornos</span><span>Ajustes</span><span>WhatsApp</span></div></div>
+      </details>
+    </div>
+  </section>
+
+  <section id="pra-quem" aria-labelledby="t-para" class="surge">
+    <div class="rotulo"><b>04</b> Pra quem é</div>
+    <h2 class="display" id="t-para">Qual é o seu objetivo?</h2>
+    <div class="objetivos">
+      <div class="objetivo"><span class="ico" aria-hidden="true">⚽</span><strong>Performance</strong><span>Render mais no treino, no jogo e na prova alvo</span></div>
+      <div class="objetivo"><span class="ico" aria-hidden="true">🔥</span><strong>Emagrecimento</strong><span>Perder peso com qualidade</span></div>
+      <div class="objetivo"><span class="ico" aria-hidden="true">💪</span><strong>Hipertrofia</strong><span>Ganho de massa muscular com qualidade</span></div>
+      <div class="objetivo"><span class="ico" aria-hidden="true">🌿</span><strong>Saúde</strong><span>Mais energia e qualidade de vida</span></div>
+    </div>
+  </section>
+
+  <section id="planos" aria-labelledby="t-planos" class="surge">
+    <div class="rotulo"><b>05</b> Planos</div>
+    <h2 class="display" id="t-planos">Escolha o seu ritmo.</h2>
+    <p class="texto">Nenhum plano tem prazo pra usar as consultas. Quanto maior o plano, mais em conta sai cada uma.</p>
+    <div class="planos">
+      <a class="plano" href="https://wa.me/5527997498446?text=Oi!%20Vim%20pelo%20Instagram%20e%20quero%20saber%20sobre%20a%20consulta%20avulsa%20%F0%9F%98%8A" target="_blank" rel="noopener"><span class="nome">Avulsa</span><span class="qtd">1 consulta →</span></a>
+      <a class="plano" href="https://wa.me/5527997498446?text=Oi!%20Vim%20pelo%20Instagram%20e%20quero%20saber%20sobre%20o%20plano%20trimestral%20%F0%9F%98%8A" target="_blank" rel="noopener"><span class="nome">Trimestral</span><span class="qtd">3 consultas →</span></a>
+      <a class="plano" href="https://wa.me/5527997498446?text=Oi!%20Vim%20pelo%20Instagram%20e%20quero%20saber%20sobre%20o%20plano%20semestral%20%F0%9F%98%8A" target="_blank" rel="noopener"><span class="nome">Semestral</span><span class="qtd">6 consultas →</span></a>
+      <a class="plano" href="https://wa.me/5527997498446?text=Oi!%20Vim%20pelo%20Instagram%20e%20quero%20saber%20sobre%20o%20plano%20anual%20%F0%9F%98%8A" target="_blank" rel="noopener"><span class="nome">Anual<span class="selo">Melhor custo</span></span><span class="qtd">12 consultas →</span></a>
+    </div>
+  </section>
+
+  <section id="contato" class="contato surge" aria-labelledby="t-contato">
+    <div class="rotulo"><b>06</b> Contato</div>
+    <h2 class="display" id="t-contato">Bora <span class="verde">começar?</span></h2>
+    <p class="texto">Me chama no WhatsApp que a gente encontra o melhor horário pra você 😊</p>
+    <div class="pilulas">
+      <a class="pilula cheia" href="https://wa.me/5527997498446?text=Oi!%20Vim%20pelo%20Instagram%20e%20quero%20agendar%20uma%20consulta%20%F0%9F%98%8A" target="_blank" rel="noopener">Quero agendar →</a>
+      <a class="pilula" href="https://g.page/r/CVSet0eAPnmSEBM/review" target="_blank" rel="noopener">⭐ Avaliações no Google</a>
+    </div>
+    <div class="dados">
+      <div class="dado"><small>WhatsApp</small><a href="https://wa.me/5527997498446" target="_blank" rel="noopener">(27) 99749-8446</a></div>
+      <div class="dado"><small>Instagram</small><a href="https://instagram.com/nutri.duduribeiro" target="_blank" rel="noopener">@nutri.duduribeiro</a></div>
+      <div class="dado"><small>Consultório</small><a href="https://www.google.com/maps/search/?api=1&query=Av.%20Ant%C3%B4nio%20Gil%20Veloso%2C%201856%2C%20Praia%20da%20Costa%2C%20Vila%20Velha%20-%20ES" target="_blank" rel="noopener">Av. Antônio Gil Veloso, 1856 · Praia da Costa, Vila Velha</a></div>
+      <div class="dado"><small>Online</small><span>🌎 Onde você estiver, no Brasil ou no mundo</span></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <span>© Nutri Eduardo Ribeiro</span>
+  <a href="https://eduardomoreiraribeiro-ctrl.github.io/meu-primeiro-pr/crm-nutri-dudu/privacidade.html">Privacidade</a>
+</footer>
+
+<button type="button" class="topo-btn" aria-label="Voltar ao topo" title="Voltar ao topo">↑</button>
+
+<script>
+  // Voltar ao topo: o botão aparece depois que a pessoa desce além do índice.
+  const botaoTopo = document.querySelector('.topo-btn');
+  const mostrarTopo = () => botaoTopo.classList.toggle('visivel', window.scrollY > 700);
+  window.addEventListener('scroll', mostrarTopo, { passive: true });
+  mostrarTopo();
+  // Projeto Verão 30 Dias (23/11 a 22/12/2026): o texto muda sozinho pela data, e o destaque some quando acaba.
+  (function verao() {
+    const agora = new Date();
+    const inicio = new Date(2026, 10, 23);          // 23/11/2026, 00:00
+    const fim = new Date(2026, 11, 23);             // fim do dia 22/12/2026
+    if (agora >= fim) { document.querySelectorAll('[data-verao]').forEach((el) => { el.hidden = true; }); return; }
+    if (agora >= inicio) {
+      document.querySelectorAll('[data-verao-faixa]').forEach((el) => { el.textContent = 'está rolando! Conheça'; });
+      document.querySelectorAll('[data-verao-selo]').forEach((el) => { el.textContent = 'Rolando agora · até 22/12'; });
+    }
+  })();
+
+  // Copiar o cupom com um toque.
+  document.querySelectorAll('[data-copiar]').forEach((b) => b.addEventListener('click', async () => {
+    const texto = b.dataset.copiar;
+    try { await navigator.clipboard.writeText(texto); }
+    catch (erro) {
+      const caixa = document.createElement('textarea');
+      caixa.value = texto; caixa.setAttribute('readonly', ''); caixa.style.position = 'fixed'; caixa.style.opacity = '0';
+      document.body.appendChild(caixa); caixa.select(); document.execCommand('copy'); caixa.remove();
+    }
+    b.textContent = 'Copiado ✓';
+    setTimeout(() => { b.textContent = 'Copiar cupom'; }, 2000);
+  }));
+
+  botaoTopo.addEventListener('click', () => {
+    const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: suave ? 'smooth' : 'auto' });
+  });
+
+  // Os blocos aparecem (e as fotos ganham cor) quando entram na tela.
+  const alvos = document.querySelectorAll('.surge');
+  if ('IntersectionObserver' in window) {
+    const obs = new IntersectionObserver((entradas) => {
+      entradas.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('visivel'); obs.unobserve(e.target); } });
+    }, { threshold: 0.15 });
+    alvos.forEach((el) => obs.observe(el));
+  } else {
+    alvos.forEach((el) => el.classList.add('visivel'));
+  }
+</script>
 </body>
 </html>
