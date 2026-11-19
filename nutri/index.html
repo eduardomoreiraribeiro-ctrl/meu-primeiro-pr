@@ -72,7 +72,16 @@
   .faixa span:nth-child(even) { color: var(--destaque); }
   @keyframes correr { to { transform: translateX(-50%); } }
 
-  section { padding: 64px 0 0; }
+  section { padding: 64px 0 0; scroll-margin-top: 64px; }
+  /* Índice da página: linhas numeradas, no estilo das seções */
+  .indice { margin: 30px 0 0; border-top: 1px solid var(--linha); }
+  .indice a { display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 10px; padding: 13px 2px; border-bottom: 1px solid var(--linha); text-decoration: none; transition: padding .25s ease, color .25s ease; }
+  .indice a:hover, .indice a:focus-visible { padding-left: 10px; color: var(--destaque); }
+  .indice a:focus-visible { outline: 2px solid var(--destaque); outline-offset: 2px; }
+  .indice .n { font-size: 0.74rem; font-weight: 700; letter-spacing: 0.1em; color: var(--destaque); }
+  .indice .t { font-family: Anton, Impact, sans-serif; text-transform: uppercase; font-size: 1.35rem; line-height: 1; letter-spacing: 0.01em; }
+  .indice .s { width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--linha); display: grid; place-items: center; font-size: 0.9rem; transition: background .25s ease, color .25s ease, transform .25s ease; }
+  .indice a:hover .s, .indice a:focus-visible .s { background: var(--destaque); color: var(--fundo); border-color: var(--destaque); transform: rotate(-45deg); }
   h2 { font-size: clamp(2.6rem, 12vw, 4.2rem); margin: 18px 0 16px; }
   .texto { color: var(--suave); margin: 0 0 14px; font-size: 1.02rem; }
   .texto strong { color: var(--creme); }
@@ -156,6 +165,13 @@
       <a class="pilula" href="https://eduardomoreiraribeiro-ctrl.github.io/meu-primeiro-pr/crm-nutri-dudu/agendar.html" target="_blank" rel="noopener">Agendar online</a>
       <a class="pilula" href="https://instagram.com/nutri.duduribeiro" target="_blank" rel="noopener">Instagram</a>
     </div>
+    <nav class="indice" aria-label="Seções da página">
+      <a href="#sobre"><span class="n">01</span><span class="t">Sobre mim</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#como-funciona"><span class="n">02</span><span class="t">Como funciona</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#pra-quem"><span class="n">03</span><span class="t">Pra quem é</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#planos"><span class="n">04</span><span class="t">Planos</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#contato"><span class="n">05</span><span class="t">Contato</span><span class="s" aria-hidden="true">↓</span></a>
+    </nav>
     <figure class="hero-foto surge" style="margin-left:0;margin-right:0;margin-bottom:0">
       <img src="img/perfil.jpg" alt="Eduardo Ribeiro, nutricionista, no consultório" fetchpriority="high">
       <figcaption><span><strong>Eduardo Ribeiro</strong>Nutricionista</span><span>Presencial · Online</span></figcaption>
@@ -171,7 +187,7 @@
 </div>
 
 <main class="wrap">
-  <section aria-labelledby="t-sobre" class="surge">
+  <section id="sobre" aria-labelledby="t-sobre" class="surge">
     <div class="rotulo"><b>01</b> Sobre mim</div>
     <h2 class="display" id="t-sobre">Prazer, Eduardo.</h2>
     <p class="texto">Sou nutricionista e acredito que comer bem <strong>não precisa ser complicado nem chato</strong>. Atendo <strong>atletas profissionais e amadores</strong> e também quem busca emagrecimento, ganho de massa muscular, estética, saúde e mais qualidade de vida.</p>
@@ -184,7 +200,7 @@
     </ul>
   </section>
 
-  <section aria-labelledby="t-como" class="surge">
+  <section id="como-funciona" aria-labelledby="t-como" class="surge">
     <div class="rotulo"><b>02</b> Como funciona</div>
     <h2 class="display" id="t-como">Do primeiro oi ao resultado.</h2>
     <div class="sanfona">
@@ -206,7 +222,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="t-para" class="surge">
+  <section id="pra-quem" aria-labelledby="t-para" class="surge">
     <div class="rotulo"><b>03</b> Pra quem é</div>
     <h2 class="display" id="t-para">Qual é o seu objetivo?</h2>
     <div class="objetivos">
@@ -217,7 +233,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="t-planos" class="surge">
+  <section id="planos" aria-labelledby="t-planos" class="surge">
     <div class="rotulo"><b>04</b> Planos</div>
     <h2 class="display" id="t-planos">Escolha o seu ritmo.</h2>
     <p class="texto">Nenhum plano tem prazo pra usar as consultas. Quanto maior o plano, mais em conta sai cada uma.</p>
@@ -229,7 +245,7 @@
     </div>
   </section>
 
-  <section class="contato surge" aria-labelledby="t-contato">
+  <section id="contato" class="contato surge" aria-labelledby="t-contato">
     <div class="rotulo"><b>05</b> Contato</div>
     <h2 class="display" id="t-contato">Bora <span class="verde">começar?</span></h2>
     <p class="texto">Me chama no WhatsApp que a gente encontra o melhor horário pra você 😊</p>
