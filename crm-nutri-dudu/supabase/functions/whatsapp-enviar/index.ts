@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: d994ea
+// Versão: 9570d3
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -2589,20 +2589,32 @@ const NutriDuduAutomacoes = (() => {
       const MA = NutriDudu.mensagensAutomaticas;
       // Homem: emojis masculinos no texto e a versão "_m" do modelo aprovado.
       const masculino = MA.ehHomem(pessoa) && MA.temVersaoMasculina(automacao, clinica);
-      const texto = MA.paraGenero(preencher(modelo.corpo(clinica), valores), pessoa);
+      let texto = MA.paraGenero(preencher(modelo.corpo(clinica), valores), pessoa);
       const livre = forcarTexto || janelaAberta(conversa);
       const nomeBase = String(cfg.modelos[automacao] || '').trim();
-      const nomeModelo = nomeBase && masculino ? `${nomeBase}_m` : nomeBase;
+      let nomeModelo = nomeBase && masculino ? `${nomeBase}_m` : nomeBase;
       if (!livre && !nomeModelo) return { ok: false, motivo: 'sem modelo aprovado configurado' };
 
       let waId = null;
       let erro = null;
+      const enviarModelo = (nome) => whatsapp.enviarModelo(para, { nome, idioma: cfg.idioma || 'pt_BR', parametros: valores, botoes });
       try {
         waId = livre
           ? (botoesLivres?.length && whatsapp.enviarBotoes ? await whatsapp.enviarBotoes(para, texto, botoesLivres) : await whatsapp.enviarTexto(para, texto))
-          : await whatsapp.enviarModelo(para, { nome: nomeModelo, idioma: cfg.idioma || 'pt_BR', parametros: valores, botoes });
+          : await enviarModelo(nomeModelo);
       } catch (e) {
         erro = e.message || String(e);
+        // Versão para homens ainda não aprovada (ou recusada): manda a versão padrão (😊 💚) para não deixar sem mensagem.
+        if (!livre && nomeModelo !== nomeBase) {
+          try {
+            waId = await enviarModelo(nomeBase);
+            nomeModelo = nomeBase;
+            texto = preencher(modelo.corpo(clinica), valores);
+            erro = null;
+          } catch (e2) {
+            erro = e2.message || String(e2);
+          }
+        }
       }
 
       const agora = agoraIso();
