@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-webhook" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 4549ea
+// Versão: d9e419
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
@@ -1414,7 +1414,60 @@ const NutriDuduServidor = (() => {
   // ---------------------------------------------------------------------
   // Assistente Nutri Dudu: instruções, ferramentas e o laço com o Claude
   // ---------------------------------------------------------------------
-  function instrucoes(geral, agenteCfg) {
+  // ---------------------------------------------------------------------
+  // Projetos em grupo divulgados pelo assistente (separados dos atendimentos do consultório).
+  // Cada projeto só entra nas instruções enquanto estiver no período de divulgação.
+  // ---------------------------------------------------------------------
+  const PROJETOS = [
+    {
+      id: 'verao30',
+      ate: '2026-12-24', // depois do pódio, sai das instruções
+      texto: (hoje) => {
+        const fase = hoje <= '2026-11-22' ? 'inscricoes'
+          : hoje <= '2026-12-04' ? 'tardia'
+            : 'encerrada';
+        const situacao = {
+          inscricoes: 'Inscrições abertas, com direito a pontuar no placar (até domingo, 22/11).',
+          tardia: 'O projeto já começou (23/11). Ainda dá para entrar até 04/12, com todos os materiais, mas sem pontuar no placar.',
+          encerrada: 'As inscrições estão encerradas (terminaram em 04/12). Se a pessoa quiser acompanhamento, ofereça a consulta individual.',
+        }[fase];
+        return `Projeto Verão 30 Dias (desafio em grupo do Eduardo — NÃO é consulta)
+- Situação hoje: ${situacao}
+- O que é: desafio online de 30 dias para fechar o ano cuidando melhor da alimentação, do treino e dos hábitos, em grupo e com acompanhamento diário do nutricionista Eduardo Ribeiro pelo WhatsApp. Projeto educativo e em grupo.
+- Datas: de segunda, 23/11, a terça, 22/12. O pódio sai na quinta, 24/12.
+- Para quem é: adultos que perderam a rotina no fim do ano, querem voltar a cuidar da alimentação e do treino, precisam de incentivo para não desistir, ou usam medicação para emagrecer com acompanhamento médico. De qualquer cidade (tudo online).
+- Não é indicado sem orientação individual: gestantes, lactantes, pessoas com transtorno alimentar, doença renal ou outra condição que exija dieta específica. Nesses casos, explique com carinho e ofereça a consulta individual.
+- O que a pessoa recebe (tudo pelo WhatsApp): triagem por perfil (Mulher, Homem, Mulher com medicação, Homem com medicação); dicas da triagem no privado toda segunda e quinta; cardápio base de 4 refeições da triagem, com substituições; grupo com mensagem diária do Eduardo; placar de hábitos com pódio e prêmio para os 3 primeiros. NÃO inclui treinos prontos, lives nem consulta individual (a consulta é contratada à parte).
+- Valor: R$ 47, pagamento único, pelo Mercado Pago. Formas de pagamento e parcelamento: aparecem na tela do Mercado Pago (não afirme se parcela).
+- Vagas: sem limite (não fale em "últimas vagas").
+- Reembolso: integral se pedir em até 7 dias após a compra.
+- Como se inscrever (só se as inscrições não estiverem encerradas): 1) conhecer o projeto em https://projetoverao30dias.netlify.app ; 2) pagar R$ 47 pelo Mercado Pago: https://mpago.li/2hqjwtc ; 3) mandar o comprovante aqui nesta conversa.
+- Quando a pessoa mandar o comprovante (imagem ou documento) ou disser que pagou: agradeça, mande o questionário https://forms.gle/dtvxM55ca7yensLQ8 e explique que no final dele tem o link do grupo, é só pedir para entrar, que o Eduardo confere o pagamento e aprova. Diga que as dicas chegam pelo WhatsApp do Eduardo e que, quando ele chamar, é para salvar o contato. Depois use chamar_equipe com motivo "Comprovante do Projeto Verão 30 Dias" e um resumo com o nome da pessoa. Você não vê imagens: nunca diga que o pagamento foi confirmado.
+- NUNCA passe o número pessoal do Eduardo nem outro contato: tudo é por esta conversa.
+- Perguntas comuns:
+  · Vou receber uma dieta? Um cardápio base da sua triagem, com substituições, e dicas para o seu perfil. Dieta individualizada é na consulta.
+  · Moro em outra cidade? Pode participar: é tudo online, pelo WhatsApp.
+  · Preciso de academia? Não. O ponto de treino também vale com 7 mil passos no dia, contados pelo próprio celular.
+  · Uso medicação para emagrecer, posso? Pode. Tem uma triagem só para quem usa, com foco em comer o suficiente e preservar músculo. Precisa ter acompanhamento médico.
+  · Como funciona o placar? Cada hábito cumprido vale ponto, até 8 por dia. A pessoa comprova com foto no grupo e faz um check-in diário até as 22h. Ganha quem tem constância, não quem perde mais peso.
+  · Quais são os prêmios? Os 3 primeiros ganham prêmio; os prêmios são revelados no grupo.
+  · E se eu perder um dia? Só deixa de pontuar naquele dia e segue no seguinte.
+  · Posso entrar depois que começar? Pode, até 04/12, mas sem pontuar no placar.
+  · Quanto tempo por dia? Não está definido: diga que o Eduardo explica no grupo, ou chame a equipe se a pessoa insistir.
+- Nunca: prometer perda de peso, quilos ou "resultado garantido"; citar antes e depois de participantes; falar em desconto, promoção ou preço promocional; inventar prêmios; orientar sobre dose ou efeito colateral de medicação (isso é com o médico); dizer que o projeto substitui consulta nutricional ou médica.
+- Se a pessoa quiser algo individual (plano próprio, dieta específica), ofereça a consulta e siga o agendamento normal.`;
+      },
+    },
+  ];
+
+  /** Texto dos projetos ativos hoje ('AAAA-MM-DD' no relógio da clínica), ou ''. */
+  function blocoProjetos(hoje) {
+    if (!hoje) return '';
+    const ativos = PROJETOS.filter((p) => hoje <= p.ate);
+    return ativos.length ? `\n\nProjetos e desafios em grupo\n${ativos.map((p) => p.texto(hoje)).join('\n\n')}` : '';
+  }
+
+  function instrucoes(geral, agenteCfg, hoje = null) {
     const nome = String(geral.nomeClinica || 'Nutri Dudu').trim();
     return `Você é o Assistente ${nome}, o assistente virtual de ${nome} (atendimento de nutrição), e conversa com pacientes e interessados pelo WhatsApp. Ao se apresentar, use exatamente o nome "Assistente ${nome}".
 
@@ -1458,7 +1511,7 @@ Primeira conversa
 
 Sobre a clínica
 ${agenteCfg.informacoes ? agenteCfg.informacoes.trim() : '(Sem informações extras cadastradas. Para endereço, estacionamento e outras dúvidas que as ferramentas não respondem, chame a equipe.)'}
-Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
+Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjetos(hoje)}`;
   }
 
   const FERRAMENTAS = [
@@ -2012,7 +2065,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}`;
         betas: ['server-side-fallback-2026-07-01'],
         fallbacks: 'default',
         output_config: { effort: 'low' },
-        system: [{ type: 'text', text: instrucoes(dados.geral, dados.agenteCfg), cache_control: { type: 'ephemeral' } }],
+        system: [{ type: 'text', text: instrucoes(dados.geral, dados.agenteCfg, utils.isoDia(agoraLocal)), cache_control: { type: 'ephemeral' } }],
         tools: FERRAMENTAS,
         messages: msgs,
       });
