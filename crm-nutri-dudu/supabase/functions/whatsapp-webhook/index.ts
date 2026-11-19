@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-webhook" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: d9e419
+// Versão: c55020
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
@@ -1277,7 +1277,43 @@ const NutriDuduServidor = (() => {
       return r.corpo?.messages?.[0]?.id || null;
     }
 
-    const enviarTexto = (para, texto) => enviar(para, { type: 'text', text: { body: texto, preview_url: false } });
+    /** Divide um texto longo em partes de até `max` caracteres, quebrando em parágrafos ou linhas. */
+    function dividir(texto, max) {
+      const partes = [];
+      let atual = '';
+      for (const bloco of String(texto).split(/\n{2,}/)) {
+        const pedacos = bloco.length > max ? bloco.split('\n') : [bloco];
+        for (const p of pedacos) {
+          const junto = atual ? `${atual}\n\n${p}` : p;
+          if (junto.length <= max) { atual = junto; continue; }
+          if (atual) partes.push(atual);
+          atual = '';
+          // Linha maior que o limite: quebra por palavras, sem perder texto.
+          for (const palavra of p.split(' ')) {
+            const com = atual ? `${atual} ${palavra}` : palavra;
+            if (com.length <= max) atual = com;
+            else { if (atual) partes.push(atual); atual = palavra; }
+          }
+        }
+      }
+      if (atual) partes.push(atual);
+      return partes.filter((x) => x.trim());
+    }
+
+    /**
+     * Texto livre. Respostas longas vão em mais de uma mensagem; se a Meta recusar o texto
+     * como inválido (131009), tenta de novo em partes menores. Devolve o id da última parte.
+     */
+    async function enviarTexto(para, texto) {
+      const corpo = String(texto || '').replace(/\n{3,}/g, '\n\n').trim();
+      const mandar = async (partes) => { let id = null; for (const t of partes) id = await enviar(para, { type: 'text', text: { body: t } }); return id; };
+      try {
+        return await mandar(dividir(corpo, 1500));
+      } catch (erro) {
+        if (erro.codigo !== 131009) throw erro;
+        return mandar(dividir(corpo, 600));
+      }
+    }
 
     /**
      * Mensagem com modelo aprovado pela Meta (fora da janela de 24 h).
