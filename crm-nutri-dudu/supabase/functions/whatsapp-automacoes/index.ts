@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-automacoes" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 17f97e
+// Versão: dcbc56
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -1685,6 +1685,9 @@ NutriDudu.areaPaciente = (function () {
     const servicoPorId = Object.fromEntries((d.servicos || []).map((s) => [s.id, s]));
     const consultas = (d.consultas || []).filter((c) => c.status !== 'cancelada').sort((a, b) => String(a.inicio).localeCompare(String(b.inicio)));
     const nomeServico = (id) => servicoPorId[id]?.nome || '';
+    // "Retorno" / "Primeira consulta" diz mais do que o nome do pacote.
+    const TIPOS = { primeira: 'Primeira consulta', retorno: 'Retorno' };
+    const rotuloConsulta = (c) => TIPOS[c.tipo] || nomeServico(c.servicoId) || 'Consulta';
 
     const proxima = consultas.find((c) => STATUS_FUTURO.includes(c.status) && new Date(c.inicio) >= new Date(agora.getTime() - 3600000));
     const realizadas = consultas.filter((c) => c.status === 'realizada');
@@ -1748,8 +1751,8 @@ NutriDudu.areaPaciente = (function () {
       sexo: pessoa.sexo || '',
       profissional: d.profissional?.nome || '',
       whatsapp: String(d.whatsappClinica || '').replace(/\D/g, ''),
-      proxima: proxima ? { inicio: proxima.inicio, servico: nomeServico(proxima.servicoId), confirmada: proxima.status === 'confirmada', online: proxima.tipo === 'online' || proxima.modalidade === 'online' } : null,
-      consultas: realizadas.map((c) => ({ data: c.inicio, servico: nomeServico(c.servicoId) })),
+      proxima: proxima ? { inicio: proxima.inicio, servico: rotuloConsulta(proxima), confirmada: proxima.status === 'confirmada', online: proxima.tipo === 'online' || proxima.modalidade === 'online' } : null,
+      consultas: realizadas.map((c) => ({ data: c.inicio, servico: rotuloConsulta(c) })),
       plano,
       evolucao,
       checkins,
