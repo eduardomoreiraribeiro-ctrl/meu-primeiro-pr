@@ -413,6 +413,71 @@ const NutriDuduAutomacoes = (() => {
         }, texto);
       }
 
+      // 6b. Check-ins programados: envia no dia e horário de cada paciente; lembrete no último dia do prazo.
+      if (cfg.ativas.checkinDisponivel || cfg.ativas.checkinLembrete) {
+        const CK = NutriDudu.checkin;
+        const ckCfg = CK.configuracao(configuracoes.find((c) => c.id === 'checkin') || {});
+        const checkins = await lerOpcional('checkins');
+        const base = String(cfg.linkSistema || linkPadrao || '').trim().replace(/\/+$/, '').replace(/\/index\.html$/, '');
+        const agoraLocal = relogio.agoraLocal();
+        const NOMES = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+        const prazoTexto = (iso) => { const d = relogio.paraLocal(iso); return `${NOMES[d.getDay()]} (${utils.data(d).slice(0, 5)})`; };
+        if (base && cfg.ativas.checkinDisponivel) {
+          for (const pessoa of pessoas) {
+            const prog = pessoa.checkinProgramado;
+            if (!prog?.ativo || prog.pausado || pessoa.status === 'inativo') continue;
+            const slot = CK.ultimoEnvioDevido(prog, agoraLocal);
+            if (!slot) continue;
+            const chaveSlot = CK.isoLocal(slot);
+            if (prog.ultimoSlot === chaveSlot) continue;
+            if (agoraLocal - slot > 12 * HORA) continue; // envio muito atrasado: espera o próximo
+            const tentativa = prog.tentativa;
+            if (tentativa?.slot === chaveSlot && relogio.agora().getTime() - new Date(tentativa.em).getTime() < NOVA_TENTATIVA_APOS_ERRO) continue;
+            const q = ckCfg.questionarios.find((x) => x.id === prog.questionarioId && x.ativo !== false);
+            if (!q) continue;
+            await tentar('checkinDisponivel', pessoa, async () => {
+              const codigo = codigoAleatorio();
+              const fim = new Date(slot); fim.setDate(fim.getDate() + (Number(prog.prazoDias) || 3)); fim.setHours(23, 59, 0, 0);
+              const prazo = relogio.deLocal(fim).toISOString();
+              const id = await resumo(codigo);
+              const agora = agoraIso();
+              await repo.cria('checkins', {
+                id, pessoaId: pessoa.id, questionarioId: q.id, titulo: q.titulo, perguntas: CK.montarPerguntas(q, ckCfg.perguntas), codigo,
+                enviadoEm: agora, prazo, enviadoPor: 'automatico', automatico: true, respostas: null, score: null, criadoEm: agora, atualizadoEm: agora,
+              });
+              const link = `${base}/checkin.html#${codigo}`;
+              const r = await enviar({ cfg, automacao: 'checkinDisponivel', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), q.titulo.toLowerCase(), link, prazoTexto(prazo)] });
+              const atual = await repo.pega('pessoas', pessoa.id);
+              const progAtual = { ...(atual.checkinProgramado || prog) };
+              if (r.ok) { progAtual.ultimoSlot = chaveSlot; delete progAtual.tentativa; }
+              else {
+                progAtual.tentativa = { slot: chaveSlot, em: agoraIso(), erro: r.motivo };
+                const ck = await repo.pega('checkins', id);
+                if (ck) await repo.grava('checkins', { ...ck, cancelado: true, canceladoEm: agoraIso(), motivoCancelamento: 'falha no envio' });
+              }
+              await repo.grava('pessoas', { ...atual, checkinProgramado: progAtual, atualizadoEm: agoraIso() });
+              return r;
+            }, q.titulo);
+          }
+        }
+        if (base && cfg.ativas.checkinLembrete) {
+          const hoje = utils.isoDia(agoraLocal);
+          for (const ck of checkins) {
+            if (ck.respondidoEm || ck.cancelado || ck.lembreteEm || !ck.codigo || !ck.prazo) continue;
+            if (utils.isoDia(relogio.paraLocal(ck.prazo)) !== hoje || new Date(ck.prazo) < relogio.agora()) continue;
+            if (relogio.agora().getTime() - new Date(ck.enviadoEm).getTime() < 12 * HORA) continue;
+            const pessoa = pessoaPor[ck.pessoaId];
+            if (!pessoa) continue;
+            await tentar('checkinLembrete', pessoa, async () => {
+              const r = await enviar({ cfg, automacao: 'checkinLembrete', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), String(ck.titulo || 'check-in').toLowerCase(), 'hoje', `${base}/checkin.html#${ck.codigo}`] });
+              const atual = await repo.pega('checkins', ck.id);
+              if (atual && r.ok) await repo.grava('checkins', { ...atual, lembreteEm: agoraIso(), atualizadoEm: agoraIso() });
+              return r;
+            }, ck.titulo);
+          }
+        }
+      }
+
       // 7. Agradecimento de indicação: indicado virou cliente nos últimos 30 dias.
       for (const indicado of pessoas) {
         if (!indicado.indicadoPorId || indicado.status !== 'ativo' || !indicado.clienteDesde) continue;
@@ -507,9 +572,9 @@ const NutriDuduAutomacoes = (() => {
       if (marca?.dia === hoje && (marca.ok || relogio.agora().getTime() - new Date(marca.em).getTime() < NOVA_TENTATIVA_APOS_ERRO)) return null;
       const destinos = telefonesDaEquipe(cfg.telefonesEquipe);
       if (!destinos.length) return { ok: false, motivo: 'nenhum celular da equipe cadastrado' };
-      const espera = await lerOpcional('espera');
+      const [espera, checkins] = await Promise.all([lerOpcional('espera'), lerOpcional('checkins')]);
       const resumo = NutriDudu.resumoDia.montar(
-        { consultas, pessoas, lancamentos, conversas, espera, profissionais },
+        { consultas, pessoas, lancamentos, conversas, espera, profissionais, checkins },
         { agora: relogio.agora(), local: (iso) => relogio.paraLocal(iso) },
       );
       const nomeModelo = String(cfg.modelos.resumoDia || '').trim();

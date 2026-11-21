@@ -39,6 +39,9 @@ NutriDudu.resumoDia = (function () {
     const mesDia = hoje.slice(5);
     // Cadastros novos pela página de agendamento nas últimas 24 h (para a equipe chamar quem não agendou).
     const leadsSite = (dados.pessoas || []).filter((p) => p.origem === 'site' && p.status === 'lead' && p.criadoEm && agora - new Date(p.criadoEm) < 24 * 3600 * 1000);
+    // Check-ins respondidos e ainda não revisados (com nota baixa destacada).
+    const ckRevisar = (dados.checkins || []).filter((c) => c.respondidoEm && !c.revisadoEm && !c.cancelado);
+    const ckBaixos = ckRevisar.filter((c) => c.score !== null && c.score !== undefined && c.score < 55);
     const aniversarios = (dados.pessoas || []).filter((p) => p.status !== 'lead' && p.dataNascimento && String(p.dataNascimento).slice(5, 10) === mesDia);
 
     const descreverConsulta = (c, curto = false) => {
@@ -71,6 +74,7 @@ NutriDudu.resumoDia = (function () {
     if (atrasados.length) avisos.push(`💰 Pagamentos atrasados: ${atrasados.length} (${utils.moeda(totalAtrasado)})`);
     if (naEspera.length) avisos.push(`⏳ Lista de espera: ${naEspera.length} ${naEspera.length === 1 ? 'pessoa' : 'pessoas'}`);
     if (leadsSite.length) avisos.push(`🆕 Cadastros novos pelo site: ${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')}`);
+    if (ckRevisar.length) avisos.push(`📋 Check-ins para revisar: ${ckRevisar.length}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
     if (aniversarios.length) avisos.push(`🎂 Aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (avisos.length) linhas.push('', ...avisos);
     linhas.push('', 'Abra o sistema para ver os detalhes.');
@@ -86,6 +90,7 @@ NutriDudu.resumoDia = (function () {
     if (atrasados.length) partes.push(`${atrasados.length} ${atrasados.length === 1 ? 'pagamento atrasado' : 'pagamentos atrasados'} (${utils.moeda(totalAtrasado)})`);
     if (naEspera.length) partes.push(`${naEspera.length} na lista de espera`);
     if (leadsSite.length) partes.push(`${leadsSite.length} ${leadsSite.length === 1 ? 'cadastro novo' : 'cadastros novos'} pelo site (${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')})`);
+    if (ckRevisar.length) partes.push(`${ckRevisar.length} ${ckRevisar.length === 1 ? 'check-in para revisar' : 'check-ins para revisar'}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
     if (aniversarios.length) partes.push(`aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     let resumo = partes.join('; ').replace(/\s+/g, ' ').trim();
     if (resumo.length > MAX_PARAMETRO) resumo = `${resumo.slice(0, MAX_PARAMETRO - 1)}…`;

@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-webhook" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: c52024
+// Versão: b0ed08
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
@@ -873,6 +873,25 @@ NutriDudu.mensagensAutomaticas = (function () {
       exemplo: ['Mariana'],
       botoes: ['Ótima', 'Boa', 'Poderia ser melhor'],
     },
+    checkinDisponivel: {
+      titulo: 'Check-in disponível',
+      quando: 'No dia e horário programados na ficha de cada paciente (aba Check-ins › Programar envio automático). Cria o link pessoal e manda.',
+      nomePadrao: 'nutridudu_checkin',
+      categoria: 'UTILITY',
+      corpo: () => 'Oi, {{1}}! Seu {{2}} tá disponível 😊 Responde rapidinho, leva uns 2 minutos: {{3}} Vale até {{4}}, tá?',
+      variaveis: ['primeiro nome', 'nome do questionário (ex.: check-in semanal)', 'link pessoal', 'prazo (ex.: quinta (27/11))'],
+      exemplo: ['Mariana', 'check-in semanal', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html#abc123', 'quinta (27/11)'],
+    },
+    checkinLembrete: {
+      titulo: 'Lembrete do check-in',
+      quando: 'No último dia do prazo, se o paciente ainda não respondeu (1 lembrete por check-in).',
+      nomePadrao: 'nutridudu_checkin_lembrete',
+      categoria: 'UTILITY',
+      // A Meta não aceita variável no fim do texto: o link fica antes da última frase.
+      corpo: () => 'Oi, {{1}}! Passando pra lembrar do seu {{2}}: o prazo termina {{3}} ⏰ É só tocar aqui: {{4}} Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚',
+      variaveis: ['primeiro nome', 'nome do questionário', 'quando (ex.: hoje)', 'link pessoal'],
+      exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html#abc123'],
+    },
     resumoDia: {
       titulo: 'Resumo do dia (para a equipe)',
       quando: 'Uma vez por dia, de segunda a sábado, logo no começo do horário de envio. Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',
@@ -1072,6 +1091,9 @@ NutriDudu.resumoDia = (function () {
     const mesDia = hoje.slice(5);
     // Cadastros novos pela página de agendamento nas últimas 24 h (para a equipe chamar quem não agendou).
     const leadsSite = (dados.pessoas || []).filter((p) => p.origem === 'site' && p.status === 'lead' && p.criadoEm && agora - new Date(p.criadoEm) < 24 * 3600 * 1000);
+    // Check-ins respondidos e ainda não revisados (com nota baixa destacada).
+    const ckRevisar = (dados.checkins || []).filter((c) => c.respondidoEm && !c.revisadoEm && !c.cancelado);
+    const ckBaixos = ckRevisar.filter((c) => c.score !== null && c.score !== undefined && c.score < 55);
     const aniversarios = (dados.pessoas || []).filter((p) => p.status !== 'lead' && p.dataNascimento && String(p.dataNascimento).slice(5, 10) === mesDia);
 
     const descreverConsulta = (c, curto = false) => {
@@ -1104,6 +1126,7 @@ NutriDudu.resumoDia = (function () {
     if (atrasados.length) avisos.push(`💰 Pagamentos atrasados: ${atrasados.length} (${utils.moeda(totalAtrasado)})`);
     if (naEspera.length) avisos.push(`⏳ Lista de espera: ${naEspera.length} ${naEspera.length === 1 ? 'pessoa' : 'pessoas'}`);
     if (leadsSite.length) avisos.push(`🆕 Cadastros novos pelo site: ${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')}`);
+    if (ckRevisar.length) avisos.push(`📋 Check-ins para revisar: ${ckRevisar.length}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
     if (aniversarios.length) avisos.push(`🎂 Aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (avisos.length) linhas.push('', ...avisos);
     linhas.push('', 'Abra o sistema para ver os detalhes.');
@@ -1119,6 +1142,7 @@ NutriDudu.resumoDia = (function () {
     if (atrasados.length) partes.push(`${atrasados.length} ${atrasados.length === 1 ? 'pagamento atrasado' : 'pagamentos atrasados'} (${utils.moeda(totalAtrasado)})`);
     if (naEspera.length) partes.push(`${naEspera.length} na lista de espera`);
     if (leadsSite.length) partes.push(`${leadsSite.length} ${leadsSite.length === 1 ? 'cadastro novo' : 'cadastros novos'} pelo site (${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')})`);
+    if (ckRevisar.length) partes.push(`${ckRevisar.length} ${ckRevisar.length === 1 ? 'check-in para revisar' : 'check-ins para revisar'}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
     if (aniversarios.length) partes.push(`aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     let resumo = partes.join('; ').replace(/\s+/g, ' ').trim();
     if (resumo.length > MAX_PARAMETRO) resumo = `${resumo.slice(0, MAX_PARAMETRO - 1)}…`;
@@ -1398,7 +1422,73 @@ NutriDudu.checkin = (function () {
     return 'pendente';
   }
 
+  // ---------------- Envio programado ----------------
+  // prog: { ativo, pausado, questionarioId, modo: 'dias' | 'intervalo', dias: [0..6], intervaloDias: 7|14|21|28,
+  //         hora: 'HH:MM', prazoDias, inicio: 'AAAA-MM-DD', ultimoSlot: 'AAAA-MM-DD' }
+  // Datas no relógio da clínica (Date "local").
+  const FREQUENCIAS = { 7: 'Toda semana', 14: 'A cada 2 semanas', 21: 'A cada 3 semanas', 28: 'A cada 4 semanas' };
+  const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  function diaComHora(iso, hora) {
+    const [y, m, d] = String(iso).split('-').map(Number);
+    const [h, mi] = String(hora || '09:00').split(':').map(Number);
+    return new Date(y, m - 1, d, h || 0, mi || 0);
+  }
+  const maisDias = (data, n) => { const d = new Date(data); d.setDate(d.getDate() + n); return d; };
+
+  /** Os próximos `n` envios a partir de `de` (inclusive). */
+  function proximosEnvios(prog, de, n = 5) {
+    if (!prog || !prog.inicio) return [];
+    const inicio = diaComHora(prog.inicio, prog.hora);
+    const lista = [];
+    if (prog.modo === 'intervalo') {
+      const passo = Number(prog.intervaloDias) || 7;
+      let k = Math.max(0, Math.ceil((de - inicio) / (passo * 864e5)) - 1);
+      for (let guard = 0; lista.length < n && guard < n + 400; guard++, k++) {
+        const slot = maisDias(inicio, k * passo);
+        if (slot >= de) lista.push(slot);
+      }
+      return lista;
+    }
+    const dias = (prog.dias || []).map(Number);
+    if (!dias.length) return [];
+    let d = diaComHora(isoLocal(de > inicio ? de : inicio), prog.hora);
+    for (let guard = 0; lista.length < n && guard < 400; guard++, d = maisDias(d, 1)) {
+      if (d >= inicio && d >= de && dias.includes(d.getDay())) lista.push(new Date(d));
+    }
+    return lista;
+  }
+
+  /** O envio que já deveria ter acontecido mais recentemente (até `agora`), ou null. */
+  function ultimoEnvioDevido(prog, agora) {
+    if (!prog || !prog.inicio) return null;
+    const inicio = diaComHora(prog.inicio, prog.hora);
+    if (agora < inicio) return null;
+    if (prog.modo === 'intervalo') {
+      const passo = Number(prog.intervaloDias) || 7;
+      let k = Math.floor((agora - inicio) / (passo * 864e5));
+      let slot = maisDias(inicio, k * passo);
+      if (slot > agora) slot = maisDias(inicio, (k - 1) * passo);
+      return slot >= inicio ? slot : null;
+    }
+    const dias = (prog.dias || []).map(Number);
+    for (let i = 0; i <= 7; i++) {
+      const d = diaComHora(isoLocal(maisDias(agora, -i)), prog.hora);
+      if (d <= agora && d >= inicio && dias.includes(d.getDay())) return d;
+    }
+    return null;
+  }
+
+  /** Texto curto da programação: "Toda seg e qui, às 09:00" / "A cada 2 semanas, às 09:00". */
+  function descreverProgramacao(prog) {
+    if (!prog) return '';
+    const NOMES = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const quando = prog.modo === 'intervalo' ? FREQUENCIAS[prog.intervaloDias] || `A cada ${prog.intervaloDias} dias`
+      : `Toda ${[...(prog.dias || [])].sort((a, b) => a - b).map((d) => NOMES[d]).join(', ').replace(/, ([^,]*)$/, ' e $1')}`;
+    return `${quando}, às ${prog.hora || '09:00'} · prazo de ${prog.prazoDias || 3} dia(s)`;
+  }
+
   return {
+    FREQUENCIAS, proximosEnvios, ultimoEnvioDevido, descreverProgramacao, isoLocal, diaComHora,
     TIPOS, CARINHAS, CATEGORIAS, BIBLIOTECA, QUESTIONARIOS_PADRAO, PESO_PADRAO, EMOJI_FAIXA, ROTULO_FAIXA,
     configuracao, carinhasDe, nota, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
   };
@@ -3268,6 +3358,71 @@ const NutriDuduAutomacoes = (() => {
         }, texto);
       }
 
+      // 6b. Check-ins programados: envia no dia e horário de cada paciente; lembrete no último dia do prazo.
+      if (cfg.ativas.checkinDisponivel || cfg.ativas.checkinLembrete) {
+        const CK = NutriDudu.checkin;
+        const ckCfg = CK.configuracao(configuracoes.find((c) => c.id === 'checkin') || {});
+        const checkins = await lerOpcional('checkins');
+        const base = String(cfg.linkSistema || linkPadrao || '').trim().replace(/\/+$/, '').replace(/\/index\.html$/, '');
+        const agoraLocal = relogio.agoraLocal();
+        const NOMES = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+        const prazoTexto = (iso) => { const d = relogio.paraLocal(iso); return `${NOMES[d.getDay()]} (${utils.data(d).slice(0, 5)})`; };
+        if (base && cfg.ativas.checkinDisponivel) {
+          for (const pessoa of pessoas) {
+            const prog = pessoa.checkinProgramado;
+            if (!prog?.ativo || prog.pausado || pessoa.status === 'inativo') continue;
+            const slot = CK.ultimoEnvioDevido(prog, agoraLocal);
+            if (!slot) continue;
+            const chaveSlot = CK.isoLocal(slot);
+            if (prog.ultimoSlot === chaveSlot) continue;
+            if (agoraLocal - slot > 12 * HORA) continue; // envio muito atrasado: espera o próximo
+            const tentativa = prog.tentativa;
+            if (tentativa?.slot === chaveSlot && relogio.agora().getTime() - new Date(tentativa.em).getTime() < NOVA_TENTATIVA_APOS_ERRO) continue;
+            const q = ckCfg.questionarios.find((x) => x.id === prog.questionarioId && x.ativo !== false);
+            if (!q) continue;
+            await tentar('checkinDisponivel', pessoa, async () => {
+              const codigo = codigoAleatorio();
+              const fim = new Date(slot); fim.setDate(fim.getDate() + (Number(prog.prazoDias) || 3)); fim.setHours(23, 59, 0, 0);
+              const prazo = relogio.deLocal(fim).toISOString();
+              const id = await resumo(codigo);
+              const agora = agoraIso();
+              await repo.cria('checkins', {
+                id, pessoaId: pessoa.id, questionarioId: q.id, titulo: q.titulo, perguntas: CK.montarPerguntas(q, ckCfg.perguntas), codigo,
+                enviadoEm: agora, prazo, enviadoPor: 'automatico', automatico: true, respostas: null, score: null, criadoEm: agora, atualizadoEm: agora,
+              });
+              const link = `${base}/checkin.html#${codigo}`;
+              const r = await enviar({ cfg, automacao: 'checkinDisponivel', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), q.titulo.toLowerCase(), link, prazoTexto(prazo)] });
+              const atual = await repo.pega('pessoas', pessoa.id);
+              const progAtual = { ...(atual.checkinProgramado || prog) };
+              if (r.ok) { progAtual.ultimoSlot = chaveSlot; delete progAtual.tentativa; }
+              else {
+                progAtual.tentativa = { slot: chaveSlot, em: agoraIso(), erro: r.motivo };
+                const ck = await repo.pega('checkins', id);
+                if (ck) await repo.grava('checkins', { ...ck, cancelado: true, canceladoEm: agoraIso(), motivoCancelamento: 'falha no envio' });
+              }
+              await repo.grava('pessoas', { ...atual, checkinProgramado: progAtual, atualizadoEm: agoraIso() });
+              return r;
+            }, q.titulo);
+          }
+        }
+        if (base && cfg.ativas.checkinLembrete) {
+          const hoje = utils.isoDia(agoraLocal);
+          for (const ck of checkins) {
+            if (ck.respondidoEm || ck.cancelado || ck.lembreteEm || !ck.codigo || !ck.prazo) continue;
+            if (utils.isoDia(relogio.paraLocal(ck.prazo)) !== hoje || new Date(ck.prazo) < relogio.agora()) continue;
+            if (relogio.agora().getTime() - new Date(ck.enviadoEm).getTime() < 12 * HORA) continue;
+            const pessoa = pessoaPor[ck.pessoaId];
+            if (!pessoa) continue;
+            await tentar('checkinLembrete', pessoa, async () => {
+              const r = await enviar({ cfg, automacao: 'checkinLembrete', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), String(ck.titulo || 'check-in').toLowerCase(), 'hoje', `${base}/checkin.html#${ck.codigo}`] });
+              const atual = await repo.pega('checkins', ck.id);
+              if (atual && r.ok) await repo.grava('checkins', { ...atual, lembreteEm: agoraIso(), atualizadoEm: agoraIso() });
+              return r;
+            }, ck.titulo);
+          }
+        }
+      }
+
       // 7. Agradecimento de indicação: indicado virou cliente nos últimos 30 dias.
       for (const indicado of pessoas) {
         if (!indicado.indicadoPorId || indicado.status !== 'ativo' || !indicado.clienteDesde) continue;
@@ -3362,9 +3517,9 @@ const NutriDuduAutomacoes = (() => {
       if (marca?.dia === hoje && (marca.ok || relogio.agora().getTime() - new Date(marca.em).getTime() < NOVA_TENTATIVA_APOS_ERRO)) return null;
       const destinos = telefonesDaEquipe(cfg.telefonesEquipe);
       if (!destinos.length) return { ok: false, motivo: 'nenhum celular da equipe cadastrado' };
-      const espera = await lerOpcional('espera');
+      const [espera, checkins] = await Promise.all([lerOpcional('espera'), lerOpcional('checkins')]);
       const resumo = NutriDudu.resumoDia.montar(
-        { consultas, pessoas, lancamentos, conversas, espera, profissionais },
+        { consultas, pessoas, lancamentos, conversas, espera, profissionais, checkins },
         { agora: relogio.agora(), local: (iso) => relogio.paraLocal(iso) },
       );
       const nomeModelo = String(cfg.modelos.resumoDia || '').trim();

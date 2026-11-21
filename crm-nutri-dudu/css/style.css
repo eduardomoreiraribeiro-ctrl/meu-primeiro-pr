@@ -1750,3 +1750,7 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
 .ck-pagina { margin-top: 14px; display: grid; gap: 14px; }
 .hm-num.hm-otimo { background: #bbf7d0; } .hm-num.hm-bom { background: var(--sucesso-soft); } .hm-num.hm-neutro { background: var(--surface-2); }
 .hm-num.hm-ruim { background: var(--perigo-soft); } .hm-num.hm-pessimo { background: #fecaca; }
+.ck-prog { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin: 10px 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--primary-soft); border: 1px solid var(--border); font-size: 0.92rem; }
+.ck-prog-vazio { background: var(--surface-2); }
+.ck-dias { display: flex; flex-wrap: wrap; gap: 6px; }
+.ck-dias label { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 0.9rem; }

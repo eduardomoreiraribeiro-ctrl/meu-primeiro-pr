@@ -25,6 +25,7 @@ NutriDudu.pages.checkins = (function () {
   function abaEnvios(lista, pessoaPor) {
     const { ui, utils } = NutriDudu;
     const agora = new Date();
+    const programados = Object.values(pessoaPor).filter((p) => p.checkinProgramado?.ativo).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
     const comSit = lista.filter((x) => !x.cancelado).map((x) => ({ ...x, sit: C().situacao(x, agora) }))
       .sort((a, b) => (b.respondidoEm || b.enviadoEm).localeCompare(a.respondidoEm || a.enviadoEm));
     const filtros = {
@@ -59,6 +60,13 @@ NutriDudu.pages.checkins = (function () {
         ${ui.kpi('A revisar', String(filtros.revisar[1].length), 'respondidos e ainda não vistos')}
         ${ui.kpi('Pontos de atenção', String(atencao), 'nota abaixo de 55%')}
       </section>
+      ${programados.length ? `<section class="card"><h2 class="card-title">⏱️ Envios automáticos (${programados.length})</h2>
+        <div class="tabela-rolagem"><table class="tabela-simples"><thead><tr><th>Paciente</th><th>Programação</th><th>Próximo envio</th><th>Situação</th></tr></thead><tbody>
+        ${programados.map((p) => {
+          const prox = p.checkinProgramado.pausado ? null : C().proximosEnvios(p.checkinProgramado, agora, 1)[0];
+          return `<tr><td><a href="#/clientes/${encodeURIComponent(p.id)}/checkins">${esc(p.nome)}</a></td><td class="small">${esc(C().descreverProgramacao(p.checkinProgramado))}</td>
+            <td>${prox ? `${utils.data(prox)} ${utils.hora(prox)}` : '—'}</td><td>${p.checkinProgramado.pausado ? ui.badge('Pausado', 'alerta') : p.checkinProgramado.tentativa ? ui.badge('Falhou', 'perigo') : ui.badge('Ativo', 'sucesso')}</td></tr>`;
+        }).join('')}</tbody></table></div></section>` : ''}
       <section class="card">
         <div class="acoes-linha" role="tablist">${Object.entries(filtros).map(([id, [rot, l]]) => `<button type="button" class="btn btn-pequeno${estado.filtro === id ? ' btn-primary' : ''}" data-filtro="${id}">${rot} (${l.length})</button>`).join('')}</div>
         ${linhas ? `<div class="tabela-rolagem"><table class="tabela-simples"><thead><tr><th>Paciente</th><th>Questionário</th><th>Situação</th><th>Enviado</th><th>Respondido</th><th>Nota</th></tr></thead><tbody>${linhas}</tbody></table></div>`

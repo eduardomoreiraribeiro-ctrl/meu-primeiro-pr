@@ -261,7 +261,73 @@ NutriDudu.checkin = (function () {
     return 'pendente';
   }
 
+  // ---------------- Envio programado ----------------
+  // prog: { ativo, pausado, questionarioId, modo: 'dias' | 'intervalo', dias: [0..6], intervaloDias: 7|14|21|28,
+  //         hora: 'HH:MM', prazoDias, inicio: 'AAAA-MM-DD', ultimoSlot: 'AAAA-MM-DD' }
+  // Datas no relógio da clínica (Date "local").
+  const FREQUENCIAS = { 7: 'Toda semana', 14: 'A cada 2 semanas', 21: 'A cada 3 semanas', 28: 'A cada 4 semanas' };
+  const isoLocal = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  function diaComHora(iso, hora) {
+    const [y, m, d] = String(iso).split('-').map(Number);
+    const [h, mi] = String(hora || '09:00').split(':').map(Number);
+    return new Date(y, m - 1, d, h || 0, mi || 0);
+  }
+  const maisDias = (data, n) => { const d = new Date(data); d.setDate(d.getDate() + n); return d; };
+
+  /** Os próximos `n` envios a partir de `de` (inclusive). */
+  function proximosEnvios(prog, de, n = 5) {
+    if (!prog || !prog.inicio) return [];
+    const inicio = diaComHora(prog.inicio, prog.hora);
+    const lista = [];
+    if (prog.modo === 'intervalo') {
+      const passo = Number(prog.intervaloDias) || 7;
+      let k = Math.max(0, Math.ceil((de - inicio) / (passo * 864e5)) - 1);
+      for (let guard = 0; lista.length < n && guard < n + 400; guard++, k++) {
+        const slot = maisDias(inicio, k * passo);
+        if (slot >= de) lista.push(slot);
+      }
+      return lista;
+    }
+    const dias = (prog.dias || []).map(Number);
+    if (!dias.length) return [];
+    let d = diaComHora(isoLocal(de > inicio ? de : inicio), prog.hora);
+    for (let guard = 0; lista.length < n && guard < 400; guard++, d = maisDias(d, 1)) {
+      if (d >= inicio && d >= de && dias.includes(d.getDay())) lista.push(new Date(d));
+    }
+    return lista;
+  }
+
+  /** O envio que já deveria ter acontecido mais recentemente (até `agora`), ou null. */
+  function ultimoEnvioDevido(prog, agora) {
+    if (!prog || !prog.inicio) return null;
+    const inicio = diaComHora(prog.inicio, prog.hora);
+    if (agora < inicio) return null;
+    if (prog.modo === 'intervalo') {
+      const passo = Number(prog.intervaloDias) || 7;
+      let k = Math.floor((agora - inicio) / (passo * 864e5));
+      let slot = maisDias(inicio, k * passo);
+      if (slot > agora) slot = maisDias(inicio, (k - 1) * passo);
+      return slot >= inicio ? slot : null;
+    }
+    const dias = (prog.dias || []).map(Number);
+    for (let i = 0; i <= 7; i++) {
+      const d = diaComHora(isoLocal(maisDias(agora, -i)), prog.hora);
+      if (d <= agora && d >= inicio && dias.includes(d.getDay())) return d;
+    }
+    return null;
+  }
+
+  /** Texto curto da programação: "Toda seg e qui, às 09:00" / "A cada 2 semanas, às 09:00". */
+  function descreverProgramacao(prog) {
+    if (!prog) return '';
+    const NOMES = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb'];
+    const quando = prog.modo === 'intervalo' ? FREQUENCIAS[prog.intervaloDias] || `A cada ${prog.intervaloDias} dias`
+      : `Toda ${[...(prog.dias || [])].sort((a, b) => a - b).map((d) => NOMES[d]).join(', ').replace(/, ([^,]*)$/, ' e $1')}`;
+    return `${quando}, às ${prog.hora || '09:00'} · prazo de ${prog.prazoDias || 3} dia(s)`;
+  }
+
   return {
+    FREQUENCIAS, proximosEnvios, ultimoEnvioDevido, descreverProgramacao, isoLocal, diaComHora,
     TIPOS, CARINHAS, CATEGORIAS, BIBLIOTECA, QUESTIONARIOS_PADRAO, PESO_PADRAO, EMOJI_FAIXA, ROTULO_FAIXA,
     configuracao, carinhasDe, nota, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
   };

@@ -749,10 +749,10 @@ NutriDudu.pages.configuracoes = (function () {
   /** Prévia do "Resumo do dia" com os dados de agora (o mesmo texto que o servidor envia). */
   async function verResumo() {
     const { store, modal, utils } = NutriDudu;
-    const [consultas, pessoas, lancamentos, conversas, espera, profissionais] = await Promise.all(
-      ['consultas', 'pessoas', 'lancamentos', 'conversas', 'espera', 'profissionais'].map((c) => store.list(c)),
+    const [consultas, pessoas, lancamentos, conversas, espera, profissionais, checkins] = await Promise.all(
+      ['consultas', 'pessoas', 'lancamentos', 'conversas', 'espera', 'profissionais', 'checkins'].map((c) => store.list(c)),
     );
-    const r = NutriDudu.resumoDia.montar({ consultas, pessoas, lancamentos, conversas, espera, profissionais });
+    const r = NutriDudu.resumoDia.montar({ consultas, pessoas, lancamentos, conversas, espera, profissionais, checkins });
     modal.painel({
       titulo: 'Resumo de hoje',
       corpo: `

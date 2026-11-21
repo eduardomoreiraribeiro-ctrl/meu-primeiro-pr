@@ -515,6 +515,7 @@ NutriDudu.pages.cliente = (function () {
       store.get('configuracoes', 'geral'),
     ]);
     const checkins = verClinico ? await store.list('checkins', doCliente) : [];
+    const checkinCfg = verClinico ? NutriDudu.checkin.configuracao((await store.get('configuracoes', 'checkin')) || {}) : null;
     const conversa = (await store.list('conversas', doCliente)).sort((a, b) => (b.ultimaMensagemEm || '').localeCompare(a.ultimaMensagemEm || ''))[0];
 
     const porId = (lista) => Object.fromEntries(lista.map((x) => [x.id, x]));
@@ -528,7 +529,7 @@ NutriDudu.pages.cliente = (function () {
     estadoHistorico[pessoa.id] = estadoHistorico[pessoa.id] || {};
 
     const c = {
-      pessoa, consultas, pacotes, lancamentos, checkins, anamneses, avaliacoes, avaliacoesOrdenadas, fotos, interacoes, indicados, resumo, dadosFormula,
+      pessoa, consultas, pacotes, lancamentos, checkins, checkinCfg, anamneses, avaliacoes, avaliacoesOrdenadas, fotos, interacoes, indicados, resumo, dadosFormula,
       servicoPorId: porId(servicos), profPorId: porId(profissionais),
       estadoFotos: estadoFotos[pessoa.id], estadoHistorico: estadoHistorico[pessoa.id],
     };

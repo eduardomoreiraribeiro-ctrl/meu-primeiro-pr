@@ -89,6 +89,99 @@ NutriDudu.checkinFicha = (function () {
     });
   }
 
+  // ---------------- Envio automático programado ----------------
+  const DIAS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+
+  function blocoProgramacao(c, cfg) {
+    const { ui } = NutriDudu;
+    const prog = c.pessoa.checkinProgramado;
+    if (!prog?.ativo) {
+      return `<div class="ck-prog ck-prog-vazio"><span>⏱️ <strong>Envio automático:</strong> desligado. O check-in sai sozinho pelo WhatsApp da clínica no dia e horário que você escolher.</span>
+        <button type="button" class="btn btn-pequeno" data-ck-programar>Programar envio automático</button></div>`;
+    }
+    const q = cfg?.questionarios.find((x) => x.id === prog.questionarioId);
+    const proximos = prog.pausado ? [] : C().proximosEnvios(prog, new Date(), 3);
+    const erro = prog.tentativa?.erro;
+    return `<div class="ck-prog">
+      <div><span>⏱️ <strong>Envio automático:</strong> ${esc(q?.titulo || 'questionário removido')} · ${esc(C().descreverProgramacao(prog))}
+        ${prog.pausado ? ui.badge('Pausado', 'alerta') : ui.badge('Ativo', 'sucesso')}</span>
+        ${proximos.length ? `<span class="muted small bloco">Próximos: ${proximos.map((d) => `${DIAS[d.getDay()]} ${U().data(d).slice(0, 5)}`).join(' · ')}</span>` : ''}
+        ${erro ? `<span class="texto-perigo small bloco">Último envio falhou: ${esc(erro)}</span>` : ''}</div>
+      <span class="acoes-linha sem-margem"><button type="button" class="btn btn-pequeno" data-ck-programar>Editar</button>
+        <button type="button" class="btn btn-pequeno" data-ck-pausar>${prog.pausado ? 'Retomar' : 'Pausar'}</button>
+        <button type="button" class="btn btn-pequeno btn-texto-perigo" data-ck-parar>Desligar</button></span></div>`;
+  }
+
+  async function programar(pessoa) {
+    const { store, modal, form: f, permissoes, ui } = NutriDudu;
+    if (!permissoes.exigir('verClinico')) return;
+    const cfg = C().configuracao((await store.get('configuracoes', 'checkin')) || {});
+    const ativos = cfg.questionarios.filter((q) => q.ativo !== false);
+    const atual = pessoa.checkinProgramado || {};
+    const hoje = U().isoDia(new Date());
+    const dialog = modal.formulario({
+      titulo: `Envio automático para ${pessoa.nome.split(' ')[0]}`,
+      textoSalvar: 'Salvar programação',
+      corpo: `
+        ${f.selecao('questionarioId', 'Questionário', ativos.map((q) => [q.id, q.titulo]), atual.questionarioId || ativos[0]?.id)}
+        ${f.selecao('modo', 'Frequência', { dias: 'Em dias da semana', intervalo: 'A cada X semanas' }, atual.modo || 'dias')}
+        <div data-modo="dias"><p class="small" style="margin:0 0 6px"><strong>Dias</strong></p><div class="ck-dias">${DIAS.map((d, i) => `<label><input type="checkbox" name="dia" value="${i}"${(atual.dias || [1]).includes(i) ? ' checked' : ''}> ${d}</label>`).join('')}</div>
+          <p class="muted small">Dica: 1 ou 2 vezes por semana é o ideal. Mais que isso cansa o paciente.</p></div>
+        <div data-modo="intervalo">${f.selecao('intervaloDias', 'Intervalo', C().FREQUENCIAS, String(atual.intervaloDias || 7))}</div>
+        <div class="grade-2">
+          ${f.texto('hora', 'Horário do envio', atual.hora || '09:00', { tipo: 'time' })}
+          ${f.selecao('prazoDias', 'Prazo para responder', { 1: '1 dia', 2: '2 dias', 3: '3 dias', 5: '5 dias', 6: '6 dias' }, String(atual.prazoDias || 3))}
+        </div>
+        ${f.texto('inicio', 'Começar em', atual.inicio && atual.inicio >= hoje ? atual.inicio : hoje, { tipo: 'date' })}
+        <div class="ck-prog-previa" data-previa-datas></div>
+        <p class="muted small">Sai pelo WhatsApp da clínica, das ${'8h'} às ${'20h'}, só se a automação <strong>Check-in disponível</strong> estiver ligada em Configurações e o paciente tiver autorizado o WhatsApp. No último dia do prazo vai 1 lembrete (automação <strong>Lembrete do check-in</strong>).</p>`,
+      ler: (form) => ({
+        questionarioId: f.valor(form, 'questionarioId'), modo: f.valor(form, 'modo'),
+        dias: [...form.querySelectorAll('[name="dia"]:checked')].map((x) => Number(x.value)),
+        intervaloDias: Number(f.valor(form, 'intervaloDias')) || 7, hora: f.valor(form, 'hora') || '09:00',
+        prazoDias: Number(f.valor(form, 'prazoDias')) || 3, inicio: f.valor(form, 'inicio') || hoje,
+      }),
+      validar: (d) => {
+        if (!d.questionarioId) return { _geral: 'Crie um questionário primeiro.' };
+        if (d.modo === 'dias' && !d.dias.length) return { _geral: 'Escolha pelo menos um dia da semana.' };
+        if (!/^\d{2}:\d{2}$/.test(d.hora)) return { hora: 'Informe o horário.' };
+        if (d.modo === 'dias' && d.dias.length > 1) {
+          const ord = [...d.dias].sort((a, b) => a - b);
+          const menor = Math.min(...ord.map((x, i) => ((ord[(i + 1) % ord.length] - x + 7) % 7) || 7));
+          if (d.prazoDias >= menor) return { prazoDias: `Com esses dias, o prazo precisa ser menor que ${menor} dia(s), senão um check-in encavala no outro.` };
+        }
+        return {};
+      },
+      salvar: async (d) => {
+        const prog = { ...d, ativo: true, pausado: false, ultimoSlot: atual.ultimoSlot || null };
+        // Não manda na hora um envio "atrasado" de hoje que já passou: começa no próximo.
+        const devido = C().ultimoEnvioDevido(prog, new Date());
+        if (devido && !atual.ativo) prog.ultimoSlot = C().isoLocal(devido);
+        await store.update('pessoas', pessoa.id, { checkinProgramado: prog });
+        await store.create('interacoes', {
+          pessoaId: pessoa.id, dataHora: new Date().toISOString(), tipo: 'nota', autor: permissoes.atual(), automatico: true,
+          descricao: `Envio automático de check-in programado: ${C().descreverProgramacao(prog)}.`,
+        });
+        ui.toast('Envio automático programado.');
+      },
+    });
+    const form = dialog.querySelector('form');
+    const atualizar = () => {
+      const modo = form.elements.modo.value;
+      form.querySelectorAll('[data-modo]').forEach((el) => { el.hidden = el.dataset.modo !== modo; });
+      const d = {
+        modo, dias: [...form.querySelectorAll('[name="dia"]:checked')].map((x) => Number(x.value)),
+        intervaloDias: Number(form.elements.intervaloDias.value), hora: form.elements.hora.value || '09:00', inicio: form.elements.inicio.value || hoje,
+      };
+      const prox = C().proximosEnvios(d, new Date(), 5);
+      form.querySelector('[data-previa-datas]').innerHTML = prox.length
+        ? `<p class="small"><strong>Próximos envios:</strong> ${prox.map((x) => `${DIAS[x.getDay()]} ${U().data(x).slice(0, 5)} às ${U().hora(x)}`).join(' · ')}</p>` : '';
+    };
+    form.addEventListener('change', atualizar);
+    form.addEventListener('input', atualizar);
+    atualizar();
+  }
+
   // ---------------- Leitura ----------------
   /** Colunas do mapa: perguntas que aparecem nos check-ins, na ordem do mais recente. */
   function colunas(respondidos) {
@@ -117,6 +210,7 @@ NutriDudu.checkinFicha = (function () {
 
   function aba(c) {
     const { ui } = NutriDudu;
+    const cfgProg = c.checkinCfg;
     const lista = c.checkins || [];
     const agora = new Date();
     const respondidos = lista.filter((x) => x.respondidoEm).sort((a, b) => b.respondidoEm.localeCompare(a.respondidoEm));
@@ -151,6 +245,7 @@ NutriDudu.checkinFicha = (function () {
           <h2 class="card-title">Check-ins de acompanhamento</h2>
           <button type="button" class="btn btn-primary btn-pequeno" data-ck-enviar>+ Enviar check-in</button>
         </div>
+        ${blocoProgramacao(c, cfgProg)}
         <div class="ck-kpis">
           <div><span class="muted small">Última nota</span><strong class="${ult ? corScore(ult.score) : ''}">${ult?.score ?? '—'}${ult?.score != null ? '%' : ''}</strong></div>
           <div><span class="muted small">Média (últimos 4)</span><strong>${mediaScore ?? '—'}${mediaScore !== null ? '%' : ''}</strong></div>
@@ -253,6 +348,18 @@ NutriDudu.checkinFicha = (function () {
     const lista = c.checkins || [];
     const achar = (id) => lista.find((x) => x.id === id);
     raiz.querySelector('[data-ck-enviar]')?.addEventListener('click', () => enviar(c.pessoa));
+    raiz.querySelector('[data-ck-programar]')?.addEventListener('click', () => programar(c.pessoa));
+    raiz.querySelector('[data-ck-pausar]')?.addEventListener('click', async () => {
+      const prog = c.pessoa.checkinProgramado;
+      await store.update('pessoas', c.pessoa.id, { checkinProgramado: { ...prog, pausado: !prog.pausado } });
+      ui.toast(prog.pausado ? 'Envio automático retomado.' : 'Envio automático pausado.');
+    });
+    raiz.querySelector('[data-ck-parar]')?.addEventListener('click', async () => {
+      const ok = await modal.confirmar({ titulo: 'Desligar o envio automático?', mensagem: 'Os check-ins já enviados continuam valendo. Dá para programar de novo quando quiser.', textoConfirmar: 'Desligar', perigo: true });
+      if (!ok) return;
+      await store.update('pessoas', c.pessoa.id, { checkinProgramado: { ...c.pessoa.checkinProgramado, ativo: false } });
+      ui.toast('Envio automático desligado.');
+    });
     raiz.querySelectorAll('[data-ck-ver]').forEach((b) => b.addEventListener('click', () => ver(achar(b.dataset.ckVer), () => NutriDudu.recarregarPagina())));
     raiz.querySelectorAll('[data-ck-grafico]').forEach((b) => b.addEventListener('click', () => grafico(b.dataset.ckGrafico, lista)));
     raiz.querySelectorAll('[data-ck-reenviar]').forEach((b) => b.addEventListener('click', async () => {
@@ -267,5 +374,5 @@ NutriDudu.checkinFicha = (function () {
     }));
   }
 
-  return { aba, ligar, enviar, ver, grafico, painelEnvio, linkDe };
+  return { aba, ligar, enviar, programar, ver, grafico, painelEnvio, linkDe };
 })();

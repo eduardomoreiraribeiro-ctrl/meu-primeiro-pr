@@ -116,6 +116,25 @@ NutriDudu.mensagensAutomaticas = (function () {
       exemplo: ['Mariana'],
       botoes: ['Ótima', 'Boa', 'Poderia ser melhor'],
     },
+    checkinDisponivel: {
+      titulo: 'Check-in disponível',
+      quando: 'No dia e horário programados na ficha de cada paciente (aba Check-ins › Programar envio automático). Cria o link pessoal e manda.',
+      nomePadrao: 'nutridudu_checkin',
+      categoria: 'UTILITY',
+      corpo: () => 'Oi, {{1}}! Seu {{2}} tá disponível 😊 Responde rapidinho, leva uns 2 minutos: {{3}} Vale até {{4}}, tá?',
+      variaveis: ['primeiro nome', 'nome do questionário (ex.: check-in semanal)', 'link pessoal', 'prazo (ex.: quinta (27/11))'],
+      exemplo: ['Mariana', 'check-in semanal', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html#abc123', 'quinta (27/11)'],
+    },
+    checkinLembrete: {
+      titulo: 'Lembrete do check-in',
+      quando: 'No último dia do prazo, se o paciente ainda não respondeu (1 lembrete por check-in).',
+      nomePadrao: 'nutridudu_checkin_lembrete',
+      categoria: 'UTILITY',
+      // A Meta não aceita variável no fim do texto: o link fica antes da última frase.
+      corpo: () => 'Oi, {{1}}! Passando pra lembrar do seu {{2}}: o prazo termina {{3}} ⏰ É só tocar aqui: {{4}} Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚',
+      variaveis: ['primeiro nome', 'nome do questionário', 'quando (ex.: hoje)', 'link pessoal'],
+      exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html#abc123'],
+    },
     resumoDia: {
       titulo: 'Resumo do dia (para a equipe)',
       quando: 'Uma vez por dia, de segunda a sábado, logo no começo do horário de envio. Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',
