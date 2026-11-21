@@ -184,6 +184,69 @@ NutriDudu.pages.servicos = (function () {
     ui.toast('Serviço excluído.');
   }
 
+  const estadoVendas = { meses: 6 };
+
+  /**
+   * Vendas por serviço no período: cada plano contratado conta como 1 venda (valor negociado, pela data de início);
+   * consultas avulsas contam pelos lançamentos sem plano (pela data de vencimento). Cancelados ficam de fora.
+   */
+  function vendas(servicos, pacotes, lancamentos, meses, agora = new Date()) {
+    const { utils } = NutriDudu;
+    const inicio = new Date(agora.getFullYear(), agora.getMonth() - (meses - 1), 1);
+    const chave = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const lista = [];
+    pacotes.filter((p) => p.status !== 'cancelado').forEach((p) => {
+      const d = utils.paraData(p.inicio);
+      if (d && d >= inicio && d <= agora) lista.push({ servicoId: p.servicoId, valor: Number(p.valorNegociado) || 0, mes: chave(d), renovacao: Boolean(p.renovacaoDe) });
+    });
+    lancamentos.filter((l) => !l.pacoteId && l.status !== 'cancelado' && l.servicoId).forEach((l) => {
+      const d = utils.paraData(l.vencimento);
+      if (d && d >= inicio && d <= agora) lista.push({ servicoId: l.servicoId, valor: (Number(l.valor) || 0) - (Number(l.desconto) || 0), mes: chave(d) });
+    });
+    const mesesLista = Array.from({ length: meses }, (_, i) => chave(new Date(inicio.getFullYear(), inicio.getMonth() + i, 1)));
+    const porMes = Object.fromEntries(mesesLista.map((m) => [m, 0]));
+    lista.forEach((v) => { porMes[v.mes] = (porMes[v.mes] || 0) + v.valor; });
+    const porServico = servicos.map((s) => {
+      const vs = lista.filter((v) => v.servicoId === s.id);
+      const total = vs.reduce((t, v) => t + v.valor, 0);
+      return { s, vendas: vs.length, total, ticket: vs.length ? total / vs.length : 0, renovacoes: vs.filter((v) => v.renovacao).length };
+    }).filter((x) => x.vendas).sort((a, b) => b.total - a.total);
+    const total = lista.reduce((t, v) => t + v.valor, 0);
+    const planos = lista.filter((v) => servicos.find((s) => s.id === v.servicoId)?.categoria === 'pacote');
+    return { total, vendas: lista.length, ticket: lista.length ? total / lista.length : 0, porMes, porServico, renovacoes: planos.filter((v) => v.renovacao).length, planos: planos.length };
+  }
+
+  function cartaoVendas(v) {
+    const { utils } = NutriDudu;
+    const MESES = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const meses = Object.entries(v.porMes);
+    const max = Math.max(1, ...meses.map(([, x]) => x));
+    const W = 560; const H = 190; const PB = 26; const PT = 18; const larg = (W / meses.length) * 0.62;
+    const barras = meses.map(([m, x], i) => {
+      const h = ((H - PB - PT) * x) / max;
+      const cx = (W / meses.length) * (i + 0.5);
+      return `<rect x="${cx - larg / 2}" y="${H - PB - h}" width="${larg}" height="${Math.max(h, x ? 2 : 0)}" rx="6" class="vd-barra"><title>${MESES[Number(m.slice(5)) - 1]}/${m.slice(2, 4)}: ${utils.moeda(x)}</title></rect>
+        ${x ? `<text x="${cx}" y="${H - PB - h - 5}" text-anchor="middle" class="vd-valor">${utils.moedaCurta ? utils.moedaCurta(x) : Math.round(x)}</text>` : ''}
+        <text x="${cx}" y="${H - 8}" text-anchor="middle" class="gr-eixo">${MESES[Number(m.slice(5)) - 1]}</text>`;
+    }).join('');
+    const taxaRenov = v.planos ? Math.round((v.renovacoes / v.planos) * 100) : null;
+    return `<section class="card vd">
+      <div class="secao-cabecalho"><h2 class="card-title">Vendas e faturamento</h2>
+        <select data-vd-meses aria-label="Período">${[3, 6, 12].map((n) => `<option value="${n}"${n === estadoVendas.meses ? ' selected' : ''}>Últimos ${n} meses</option>`).join('')}</select></div>
+      <div class="ck-kpis">
+        <div><span class="muted small">Total vendido</span><strong>${utils.moeda(v.total)}</strong></div>
+        <div><span class="muted small">Vendas</span><strong>${v.vendas}</strong></div>
+        <div><span class="muted small">Ticket médio</span><strong>${utils.moeda(v.ticket)}</strong></div>
+        <div><span class="muted small">Renovações de plano</span><strong>${v.renovacoes}${taxaRenov !== null ? ` <span class="muted small">(${taxaRenov}%)</span>` : ''}</strong></div>
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" class="gr" role="img" aria-label="Vendas por mês">${barras}</svg>
+      ${v.porServico.length ? `<div class="tabela-rolagem"><table class="tabela-simples"><thead><tr><th>Serviço</th><th>Vendas</th><th>Faturamento</th><th>Ticket médio</th><th>% do total</th></tr></thead><tbody>
+        ${v.porServico.map((x) => `<tr><td>${utils.escapeHtml(x.s.nome)}${x.renovacoes ? `<span class="muted small bloco">${x.renovacoes} renovação(ões)</span>` : ''}</td><td>${x.vendas}</td><td>${utils.moeda(x.total)}</td><td>${utils.moeda(x.ticket)}</td><td>${v.total ? Math.round((x.total / v.total) * 100) : 0}%</td></tr>`).join('')}
+      </tbody></table></div>` : '<p class="muted small">Nenhuma venda no período. As vendas entram quando você contrata um plano ou lança uma consulta avulsa no Financeiro.</p>'}
+      <p class="muted small">Plano conta pela data de início e pelo valor negociado; consulta avulsa, pelo lançamento. Cancelados ficam de fora.</p>
+    </section>`;
+  }
+
   async function render(container) {
     const { store, ui, config, utils, permissoes } = NutriDudu;
     const [servicos, profissionais, consultas, pacotes, lancamentos] = await Promise.all([
@@ -246,6 +309,7 @@ NutriDudu.pages.servicos = (function () {
       ${ui.cabecalho('Serviços', 'Serviços, pacotes e valores da clínica',
         podeEditar ? '<button type="button" class="btn btn-primary" data-novo-servico>+ Novo serviço</button>' : '')}
       ${podeEditar ? '' : '<p class="aviso-perfil small">Só o administrador pode cadastrar ou alterar serviços e preços.</p>'}
+      ${permissoes.pode('gerenciarDados') ? cartaoVendas(vendas(servicos, pacotes, lancamentos, estadoVendas.meses)) : ''}
       <div class="grid-cards">
         ${ativos.length ? ativos.map(cartao).join('') : `<div class="card">${ui.vazio('Nenhum serviço ativo.')}</div>`}
       </div>
@@ -255,6 +319,7 @@ NutriDudu.pages.servicos = (function () {
     `;
 
     const porId = (id) => servicos.find((s) => s.id === id);
+    container.querySelector('[data-vd-meses]')?.addEventListener('change', (e) => { estadoVendas.meses = Number(e.target.value); NutriDudu.recarregarPagina(); });
     container.querySelector('[data-novo-servico]')?.addEventListener('click', () => abrirFormulario(null, servicos, profissionais));
     container.querySelectorAll('[data-editar]').forEach((b) => b.addEventListener('click', () => abrirFormulario(porId(b.dataset.editar), servicos, profissionais)));
     container.querySelectorAll('[data-ativo]').forEach((b) => b.addEventListener('click', () => alternarAtivo(porId(b.dataset.ativo))));

@@ -25,7 +25,7 @@ NutriDudu.pages.clientes = (function () {
   };
 
   // Filtros e ordenação ficam guardados enquanto o sistema estiver aberto.
-  const estado = { filtros: { ...FILTROS_PADRAO }, ordem: { campo: 'nome', direcao: 1 } };
+  const estado = { filtros: { ...FILTROS_PADRAO }, ordem: { campo: 'nome', direcao: 1 }, visao: 'lista' };
 
   /** Monta uma linha de dados por pessoa, com tudo que a tabela, os filtros e o CSV precisam. */
   function montarLinhas(dados) {
@@ -304,6 +304,11 @@ NutriDudu.pages.clientes = (function () {
         <button type="button" class="btn" data-novo="lead">+ Lead</button>
         <button type="button" class="btn btn-primary" data-novo="cliente">+ Cliente</button>`)}
 
+      <nav class="abas pl-visao" aria-label="Visão">
+        <button type="button" class="aba${estado.visao === 'lista' ? ' ativa' : ''}" data-visao-cli="lista">Lista</button>
+        <button type="button" class="aba${estado.visao === 'planos' ? ' ativa' : ''}" data-visao-cli="planos">Planos e renovações</button>
+      </nav>
+      ${estado.visao === 'planos' ? `<div class="card" data-planos>${NutriDudu.planosClientes.render({ pessoas, pacotes, consultas, servicos }, permissoes.pode('gerenciarDados'))}</div>` : `
       <div class="card filtros-clientes" role="search">
         <div class="filtro-busca">
           <input type="search" data-filtro="busca" value="${utils.escapeHtml(fl.busca)}" placeholder="Buscar por nome, telefone, e-mail ou etiqueta" aria-label="Buscar clientes">
@@ -319,8 +324,24 @@ NutriDudu.pages.clientes = (function () {
       </div>
 
       <p class="muted small contagem" data-contagem aria-live="polite"></p>
-      <div data-resultados></div>
+      <div data-resultados></div>`}
     `;
+    function ligarCabecalho() {
+      container.querySelectorAll('[data-novo]').forEach((bt) => bt.addEventListener('click', () => {
+        NutriDudu.cadastroPessoa.abrir({
+          tipo: bt.dataset.novo,
+          aoSalvar: (p) => { location.hash = `#/clientes/${encodeURIComponent(p.id)}`; },
+        });
+      }));
+      container.querySelector('[data-importar]')?.addEventListener('click', () => NutriDudu.importarPessoas.abrir());
+      container.querySelector('[data-enviar-grupo]')?.addEventListener('click', () => NutriDudu.enviarGrupo.abrir());
+    }
+    container.querySelectorAll('[data-visao-cli]').forEach((b) => b.addEventListener('click', () => { estado.visao = b.dataset.visaoCli; NutriDudu.recarregarPagina(); }));
+    if (estado.visao === 'planos') {
+      NutriDudu.planosClientes.ligar(container.querySelector('[data-planos]'), { pessoas, pacotes });
+      ligarCabecalho();
+      return;
+    }
 
     const resultados = container.querySelector('[data-resultados]');
     const contagem = container.querySelector('[data-contagem]');
@@ -364,14 +385,7 @@ NutriDudu.pages.clientes = (function () {
       const linha = e.target.closest('tr[data-href]');
       if (linha && !e.target.closest('a, button')) location.hash = linha.dataset.href;
     });
-    container.querySelectorAll('[data-novo]').forEach((b) => b.addEventListener('click', () => {
-      NutriDudu.cadastroPessoa.abrir({
-        tipo: b.dataset.novo,
-        aoSalvar: (p) => { location.hash = `#/clientes/${encodeURIComponent(p.id)}`; },
-      });
-    }));
-    container.querySelector('[data-importar]')?.addEventListener('click', () => NutriDudu.importarPessoas.abrir());
-    container.querySelector('[data-enviar-grupo]')?.addEventListener('click', () => NutriDudu.enviarGrupo.abrir());
+    ligarCabecalho();
     container.querySelector('[data-exportar]')?.addEventListener('click', () => {
       exportarCsv(filtradas);
       ui.toast(`${filtradas.length} cadastro(s) exportado(s).`);

@@ -1754,3 +1754,12 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
 .ck-prog-vazio { background: var(--surface-2); }
 .ck-dias { display: flex; flex-wrap: wrap; gap: 6px; }
 .ck-dias label { display: inline-flex; align-items: center; gap: 4px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 999px; font-size: 0.9rem; }
+.vd-barra { fill: var(--grafico); }
+.vd-barra:hover { fill: var(--primary-hover); }
+.vd-valor { fill: var(--text-muted); font-size: 11px; font-weight: 600; }
+.vd .gr { margin: 8px 0 12px; }
+.pl-visao { margin-bottom: 14px; }
+.pl-abas { flex-wrap: wrap; margin-bottom: 6px; }
+.pl-alerta { background: var(--alerta-soft) !important; color: var(--alerta) !important; }
+.link-whats { white-space: nowrap; text-decoration: none; font-weight: 600; }
+.vd .tabela-simples td, .vd .tabela-simples th { white-space: nowrap; }
