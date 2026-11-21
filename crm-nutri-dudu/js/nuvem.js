@@ -9,12 +9,12 @@ NutriDudu.nuvem = (function () {
   const TABELAS = [
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera',
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins',
   ];
   // Campos clínicos guardados à parte (a recepção nem recebe esses dados).
   const CLINICOS = { consultas: { tabela: 'consultas_clinico', campos: ['anotacoes', 'conduta'] } };
   // Tabelas de fases novas: se ainda não existirem no banco, o sistema abre sem elas.
-  const OPCIONAIS = ['espera'];
+  const OPCIONAIS = ['espera', 'checkins'];
   const PAGINA = 1000;
   const BUCKET = 'fotos';
 

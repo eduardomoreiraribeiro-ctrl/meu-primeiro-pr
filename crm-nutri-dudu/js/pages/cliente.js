@@ -9,6 +9,7 @@ NutriDudu.pages.cliente = (function () {
     visao: { nome: 'Visão geral' },
     anamnese: { nome: 'Anamnese', clinica: true },
     consultas: { nome: 'Consultas' },
+    checkins: { nome: 'Check-ins', clinica: true },
     avaliacao: { nome: 'Avaliação física', clinica: true },
     fotos: { nome: 'Fotos', clinica: true },
     pacotes: { nome: 'Pacotes' },
@@ -513,6 +514,7 @@ NutriDudu.pages.cliente = (function () {
       store.list('servicos'),
       store.get('configuracoes', 'geral'),
     ]);
+    const checkins = verClinico ? await store.list('checkins', doCliente) : [];
     const conversa = (await store.list('conversas', doCliente)).sort((a, b) => (b.ultimaMensagemEm || '').localeCompare(a.ultimaMensagemEm || ''))[0];
 
     const porId = (lista) => Object.fromEntries(lista.map((x) => [x.id, x]));
@@ -526,7 +528,7 @@ NutriDudu.pages.cliente = (function () {
     estadoHistorico[pessoa.id] = estadoHistorico[pessoa.id] || {};
 
     const c = {
-      pessoa, consultas, pacotes, lancamentos, anamneses, avaliacoes, avaliacoesOrdenadas, fotos, interacoes, indicados, resumo, dadosFormula,
+      pessoa, consultas, pacotes, lancamentos, checkins, anamneses, avaliacoes, avaliacoesOrdenadas, fotos, interacoes, indicados, resumo, dadosFormula,
       servicoPorId: porId(servicos), profPorId: porId(profissionais),
       estadoFotos: estadoFotos[pessoa.id], estadoHistorico: estadoHistorico[pessoa.id],
     };
@@ -544,6 +546,7 @@ NutriDudu.pages.cliente = (function () {
     const conteudo = {
       visao: abaVisao, anamnese: abaAnamnese, consultas: abaConsultas, avaliacao: abaAvaliacao,
       fotos: abaFotos, pacotes: abaPacotes, financeiro: abaFinanceiro, historico: abaHistorico,
+      checkins: (ctx) => NutriDudu.checkinFicha.aba(ctx),
     }[aba](c);
 
     const base = `#/clientes/${encodeURIComponent(pessoa.id)}`;
@@ -644,6 +647,8 @@ NutriDudu.pages.cliente = (function () {
       if (e.target.matches('[data-foto-ate]')) { c.estadoFotos.ate = e.target.value; NutriDudu.recarregarPagina(); }
       if (e.target.matches('[data-filtro-historico]')) { c.estadoHistorico.tipo = e.target.value; NutriDudu.recarregarPagina(); }
     });
+
+    if (aba === 'checkins') NutriDudu.checkinFicha.ligar(container, c);
 
     // Imagens das fotos: vêm do IndexedDB, depois que a página está montada.
     container.querySelectorAll('img[data-chave]').forEach(async (img) => {

@@ -1116,14 +1116,80 @@ const NutriDuduAutomacoes = (() => {
    * - POST { acao: 'rodar' } com o cabeçalho x-chave-automacoes → roda as automações;
    * - GET ?t=… / POST { acao: 'pre-anamnese', t, … } → formulário.
    */
-  function criarServidor({ automacoes, preAnamnese, site = null, chave }) {
+  // =====================================================================
+  // Check-in de acompanhamento (página pública checkin.html, link pessoal)
+  // O registro do check-in tem como id o "resumo" (hash) do código do link.
+  // =====================================================================
+  function criarCheckin({ repo, relogio = S.criarRelogio() }) {
+    const CORS = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'content-type',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    };
+    const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
+    const C = () => NutriDudu.checkin;
+
+    async function abrir(codigo) {
+      if (!codigo || String(codigo).length < 20) return { erro: 'Confira se você abriu o link completo que chegou no WhatsApp.', titulo: 'Link inválido', status: 404 };
+      const ck = await repo.pega('checkins', await resumo(codigo));
+      if (!ck || ck.cancelado) return { erro: 'Esse link não vale mais. Se precisar, peça um novo pelo WhatsApp.', titulo: 'Link inválido', status: 404 };
+      if (ck.respondidoEm) return { erro: 'Você já respondeu esse check-in. Obrigado! 💚', titulo: 'Tudo certo!', status: 409 };
+      if (ck.prazo && relogio.agora() > new Date(ck.prazo)) return { erro: 'O prazo desse check-in acabou. Fica tranquilo(a): no próximo a gente se fala 😊', titulo: 'Prazo encerrado', status: 410 };
+      const pessoa = await repo.pega('pessoas', ck.pessoaId);
+      if (!pessoa) return { erro: 'Esse link não vale mais.', titulo: 'Link inválido', status: 404 };
+      return { ck, pessoa };
+    }
+
+    /** Só o que a tela precisa (sem notas das opções). */
+    const publico = (p) => ({
+      id: p.id, icone: p.icone, titulo: p.titulo, texto: p.texto, tipo: p.tipo, unidade: p.unidade, casas: p.casas,
+      min: p.min, max: p.max, rotuloMin: p.rotuloMin, rotuloMax: p.rotuloMax, inverter: p.inverter, rotulos: p.rotulos,
+      opcoes: p.opcoes, explicacao: p.explicacao,
+    });
+
+    async function atender(req, corpo = null) {
+      if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+      if (req.method === 'GET') {
+        const r = await abrir(new URL(req.url).searchParams.get('checkin'));
+        if (r.erro) return json({ erro: r.erro, titulo: r.titulo }, r.status);
+        const profissional = r.pessoa.profissionalId ? await repo.pega('profissionais', r.pessoa.profissionalId) : null;
+        return json({
+          ok: true, nome: primeiroNome(r.pessoa.nome), titulo: r.ck.titulo || 'Check-in',
+          profissional: profissional?.nome || '', perguntas: (r.ck.perguntas || []).map(publico), prazo: r.ck.prazo || null,
+        });
+      }
+      if (req.method !== 'POST') return json({ erro: 'Método não permitido' }, 405);
+      if (!corpo) { try { corpo = await req.json(); } catch (e) { return json({ erro: 'Pedido inválido.' }, 400); } }
+      if (JSON.stringify(corpo).length > 80000) return json({ erro: 'Respostas longas demais.' }, 413);
+      const r = await abrir(corpo.t);
+      if (r.erro) return json({ erro: r.erro, titulo: r.titulo }, r.status);
+      const v = C().validarRespostas(r.ck.perguntas || [], corpo.respostas || {});
+      if (v.erro) return json({ erro: v.erro }, 400);
+      if (!Object.keys(v.respostas).length) return json({ erro: 'Responda pelo menos uma pergunta.' }, 400);
+      const agora = relogio.agora().toISOString();
+      const score = C().score(r.ck.perguntas || [], v.respostas);
+      const atual = await repo.pega('checkins', r.ck.id);
+      await repo.grava('checkins', { ...atual, respostas: v.respostas, score, respondidoEm: agora, atualizadoEm: agora });
+      await repo.cria('interacoes', {
+        id: utils.uid('int'), pessoaId: r.pessoa.id, dataHora: agora, tipo: 'nota', autor: 'paciente', automatico: true,
+        descricao: `Respondeu o check-in "${r.ck.titulo || 'Check-in'}"${score !== null ? ` (nota ${score}%)` : ''}.`, criadoEm: agora, atualizadoEm: agora,
+      });
+      return json({ ok: true, score });
+    }
+
+    return { atender };
+  }
+
+  function criarServidor({ automacoes, preAnamnese, site = null, checkin = null, chave }) {
     return async function atender(req) {
       if (req.method === 'GET' && site && new URL(req.url).searchParams.has('site')) return site.atender(req);
+      if (req.method === 'GET' && checkin && new URL(req.url).searchParams.has('checkin')) return checkin.atender(req);
       if (req.method === 'OPTIONS' || req.method === 'GET') return preAnamnese.atender(req);
       if (req.method !== 'POST') return new Response('Método não permitido', { status: 405 });
       let corpo;
       try { corpo = await req.json(); } catch (e) { corpo = {}; }
       if (corpo.acao === 'pre-anamnese') return preAnamnese.atender(req, corpo);
+      if (corpo.acao === 'checkin') return checkin ? checkin.atender(req, corpo) : new Response(JSON.stringify({ erro: 'Check-in indisponível.' }), { status: 404 });
       if (corpo.acao === 'agendar-site' || corpo.acao === 'cadastro-site') return site ? site.atender(req, corpo) : new Response(JSON.stringify({ erro: 'Agendamento pelo site indisponível.' }), { status: 404 });
       if (!chave) return new Response(JSON.stringify({ erro: 'AUTOMACOES_CHAVE não configurada.' }), { status: 500 });
       if (req.headers.get('x-chave-automacoes') !== chave) return new Response(JSON.stringify({ erro: 'Chave inválida.' }), { status: 401 });
@@ -1132,5 +1198,5 @@ const NutriDuduAutomacoes = (() => {
     };
   }
 
-  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarAgendamentoSite, criarServidor, tempoDesde, resumo };
+  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarAgendamentoSite, criarCheckin, criarServidor, tempoDesde, resumo };
 })();

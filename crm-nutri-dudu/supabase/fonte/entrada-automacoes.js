@@ -17,6 +17,7 @@ const servidor = NutriDuduAutomacoes.criarServidor({
   automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', '') }),
   preAnamnese: NutriDuduAutomacoes.criarPreAnamnese({ repo, relogio }),
   site: NutriDuduAutomacoes.criarAgendamentoSite({ repo, relogio }),
+  checkin: NutriDuduAutomacoes.criarCheckin({ repo, relogio }),
   chave: variavel('AUTOMACOES_CHAVE'),
 });
 

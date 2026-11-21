@@ -11,6 +11,7 @@
     { padrao: /^\/clientes$/, pagina: 'clientes', menu: 'clientes' },
     { padrao: /^\/clientes\/([^/]+)(?:\/([a-z]+))?$/, pagina: 'cliente', menu: 'clientes', params: ['id', 'aba'] },
     { padrao: /^\/conversas(?:\/([^/]+))?$/, pagina: 'conversas', menu: 'conversas', params: ['id'] },
+    { padrao: /^\/checkins$/, pagina: 'checkins', menu: 'checkins' },
     { padrao: /^\/servicos$/, pagina: 'servicos', menu: 'servicos' },
     { padrao: /^\/configuracoes$/, pagina: 'configuracoes', menu: 'configuracoes' },
   ];

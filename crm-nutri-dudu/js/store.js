@@ -30,6 +30,7 @@ NutriDudu.store = (function () {
     conversas: 'cvs',
     mensagens: 'msg',
     espera: 'esp',
+    checkins: 'chk',
   };
 
   const nuvem = () => NutriDudu.nuvem?.ativa();

@@ -390,6 +390,37 @@ NutriDudu.seed = (function () {
       { id: 'esp_3', pessoaId: 'pes_9', servicoId: 'srv_1', profissionalId: null, modalidade: 'online', dias: [], periodo: 'tarde', ateDia: dia(14), consultaId: null, observacao: 'Mora em outra cidade.', status: 'aguardando', origem: 'equipe', criadoEm: diaHora(-1, '15:00'), ofertas: [] },
     ];
 
+    // Check-ins fictícios (6 semanas de uma paciente e 1 aguardando resposta de outro).
+    const checkins = [];
+    const C = NutriDudu.checkin;
+    if (C) {
+      const q = C.QUESTIONARIOS_PADRAO[0];
+      const perguntas = C.montarPerguntas(q, C.BIBLIOTECA);
+      const semanas = [
+        { peso: 72.4, ade: 1, liv: 3, pul: 1, fom: 1, agua: 0, int: 1, sono: -1, dis: 0, tre: 3, evo: 0 },
+        { peso: 71.9, ade: 1, liv: 2, pul: 1, fom: 1, agua: 1, int: 0, sono: 0, dis: 1, tre: 4, evo: 1 },
+        { peso: 71.6, ade: 0, liv: 1, pul: 0, fom: 0, agua: 1, int: 0, sono: 1, dis: 1, tre: 4, evo: 1 },
+        { peso: 71.8, ade: 2, liv: 4, pul: 1, fom: 2, agua: -1, int: 1, sono: -2, dis: -1, tre: 2, evo: 0, exp: 'Semana de provas na faculdade, dormi muito pouco.' },
+        { peso: 71.1, ade: 0, liv: 1, pul: 0, fom: 0, agua: 2, int: 0, sono: 1, dis: 2, tre: 5, evo: 2 },
+        { peso: 70.6, ade: 0, liv: 0, pul: 0, fom: 0, agua: 2, int: 0, sono: 2, dis: 2, tre: 5, evo: 2 },
+      ];
+      semanas.forEach((w, i) => {
+        const quando = diaHora(-7 * (semanas.length - i), '20:10');
+        const respostas = {
+          q_peso: { valor: w.peso }, q_aderencia: { valor: w.ade }, q_livres: { valor: w.liv }, q_pular: { valor: w.pul }, q_fome: { valor: w.fom },
+          q_agua: { valor: w.agua }, q_intestino: { valor: w.int }, q_sono: { valor: w.sono, ...(w.exp ? { explicacao: w.exp } : {}) },
+          q_disposicao: { valor: w.dis }, q_treino: { valor: w.tre }, q_evolucao: { valor: w.evo },
+          ...(i === semanas.length - 1 ? { q_recado: { valor: 'Essa semana foi a melhor até agora! 💪' } } : {}),
+        };
+        checkins.push({
+          id: `chk_demo_${i + 1}`, pessoaId: 'pes_1', questionarioId: q.id, titulo: q.titulo, perguntas, codigo: `demo${i}`,
+          enviadoEm: diaHora(-7 * (semanas.length - i) - 1, '09:00'), prazo: diaHora(-7 * (semanas.length - i) + 2, '23:59'),
+          respostas, score: C.score(perguntas, respostas), respondidoEm: quando, revisadoEm: i < semanas.length - 1 ? quando : null,
+        });
+      });
+      checkins.push({ id: 'chk_demo_7', pessoaId: 'pes_2', questionarioId: q.id, titulo: q.titulo, perguntas, codigo: 'demo7', enviadoEm: diaHora(-1, '09:00'), prazo: diaHora(2, '23:59'), respostas: null, score: null });
+    }
+
     const comDatas = (lista) => lista.map((x) => ({ criadoEm: agora, atualizadoEm: agora, ...x }));
 
     return {
@@ -409,6 +440,7 @@ NutriDudu.seed = (function () {
       conversas: comDatas(conversas),
       mensagens: comDatas(mensagens),
       espera: comDatas(espera),
+      checkins: comDatas(checkins),
     };
   }
 
