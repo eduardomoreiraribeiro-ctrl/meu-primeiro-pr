@@ -153,6 +153,30 @@
   .plano .qtd { color: var(--suave); font-size: 0.9rem; text-align: right; }
   .plano .selo { display: inline-block; margin-left: 8px; vertical-align: middle; font-family: Inter, sans-serif; font-size: 0.66rem; letter-spacing: 0.1em; background: var(--dourado); color: var(--fundo); border-radius: var(--raio); padding: 3px 9px; font-weight: 700; }
 
+  /* Selo do clube na capa */
+  .rotulo-clube { text-decoration: none; flex-wrap: wrap; row-gap: 4px; }
+  .rotulo-clube::after { display: none; }
+  .rotulo-clube b, .rotulo-clube span { white-space: nowrap; }
+  .rotulo-clube b { color: var(--dourado); }
+  .selo-clube { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 14px; padding: 7px 12px; border-radius: var(--raio); background: rgba(14, 28, 24, 0.55); border: 1px solid rgba(210, 176, 122, 0.55); color: var(--creme); font-size: 0.78rem; font-weight: 600; text-decoration: none; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+
+  /* No futebol profissional */
+  .clube-destaque { position: relative; margin-top: 22px; border-radius: 24px; overflow: hidden; aspect-ratio: 4 / 5; }
+  .clube-destaque img { width: 100%; height: 100%; object-fit: cover; object-position: center 25%; }
+  .clube-destaque::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 50%, rgba(14, 28, 24, 0.92)); }
+  .clube-destaque figcaption { position: absolute; z-index: 1; left: 18px; right: 18px; bottom: 16px; font-size: 0.76rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dourado); font-weight: 700; }
+  .numeros { display: grid; gap: 0; margin-top: 22px; border-top: 1px solid var(--linha); }
+  .numero { display: grid; grid-template-columns: 96px 1fr; align-items: center; gap: 14px; padding: 16px 0; border-bottom: 1px solid var(--linha); }
+  .numero strong { font-family: Anton, Impact, sans-serif; font-weight: 400; font-size: 2.6rem; line-height: 1; color: var(--dourado); }
+  .numero span { color: var(--suave); }
+  .numero span b { display: block; color: var(--creme); font-size: 1.05rem; }
+  .galeria { display: grid; grid-auto-flow: column; grid-auto-columns: 72%; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 22px -16px 0; padding: 0 16px 6px; scrollbar-width: none; }
+  .galeria::-webkit-scrollbar { display: none; }
+  .galeria figure { margin: 0; scroll-snap-align: start; border-radius: 20px; overflow: hidden; aspect-ratio: 3 / 4; position: relative; }
+  .galeria img { width: 100%; height: 100%; object-fit: cover; }
+  .galeria figcaption { position: absolute; left: 10px; bottom: 10px; right: 10px; font-size: 0.74rem; padding: 6px 10px; border-radius: 12px; background: rgba(14, 28, 24, 0.75); color: var(--creme); }
+  .dica-arraste { margin-top: 8px; font-size: 0.78rem; color: var(--suave); }
+
   /* Projetos e parcerias */
   .cards { display: grid; gap: 14px; margin-top: 20px; }
   .card { border: 1px solid var(--linha); border-radius: 24px; padding: 22px 20px; background: var(--fundo-2); }
@@ -206,7 +230,7 @@
 <header class="capa" id="topo" aria-labelledby="titulo">
   <img src="nutri/img/perfil.jpg" alt="Eduardo Ribeiro, nutricionista, sorrindo no consultório" fetchpriority="high">
   <div class="wrap capa-conteudo">
-    <div class="rotulo"><b>Nutricionista</b> Vila Velha · ES</div>
+    <a class="rotulo rotulo-clube" href="#rio-branco"><b>🏆 Nutricionista do Rio Branco</b> <span>Bicampeão Capixaba</span></a>
     <h1 class="display" id="titulo">Nutrição que cabe na <span class="verde">sua rotina.</span></h1>
     <p>Sem dieta de revista e sem terrorismo nutricional. Um plano feito pra sua vida real, presencial em Vila Velha ou online 💚</p>
   </div>
@@ -228,11 +252,12 @@
     </a>
     <nav class="indice" aria-label="Seções da página">
       <a href="#sobre"><span class="n">01</span><span class="t">Sobre mim</span><span class="s" aria-hidden="true">↓</span></a>
-      <a href="#projetos"><span class="n">02</span><span class="t">Projetos e cupom</span><span class="s" aria-hidden="true">↓</span></a>
-      <a href="#como-funciona"><span class="n">03</span><span class="t">Como funciona</span><span class="s" aria-hidden="true">↓</span></a>
-      <a href="#pra-quem"><span class="n">04</span><span class="t">Pra quem é</span><span class="s" aria-hidden="true">↓</span></a>
-      <a href="#planos"><span class="n">05</span><span class="t">Planos</span><span class="s" aria-hidden="true">↓</span></a>
-      <a href="#contato"><span class="n">06</span><span class="t">Contato</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#rio-branco"><span class="n">02</span><span class="t">No futebol</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#projetos"><span class="n">03</span><span class="t">Projetos e cupom</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#como-funciona"><span class="n">04</span><span class="t">Como funciona</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#pra-quem"><span class="n">05</span><span class="t">Pra quem é</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#planos"><span class="n">06</span><span class="t">Planos</span><span class="s" aria-hidden="true">↓</span></a>
+      <a href="#contato"><span class="n">07</span><span class="t">Contato</span><span class="s" aria-hidden="true">↓</span></a>
     </nav>
 </main>
 
@@ -257,8 +282,28 @@
     </ul>
   </section>
 
+  <section id="rio-branco" class="surge" aria-labelledby="t-clube">
+    <div class="rotulo"><b>02</b> No futebol profissional</div>
+    <h2 class="display" id="t-clube">Nutrição de quem é <span style="color:var(--dourado)">campeão.</span></h2>
+    <p class="texto">Desde o início de 2024 sou <strong>nutricionista do Rio Branco</strong>, no futebol profissional capixaba. A mesma ciência que uso com os atletas do clube, eu trago pro seu dia a dia, seja qual for o seu objetivo.</p>
+    <figure class="clube-destaque" style="margin-left:0;margin-right:0"><img src="nutri/img/rb-medalha.jpg" alt="Eduardo com a medalha de campeão do Capixabão 2025" loading="lazy"><figcaption>Campeão Capixaba 2025</figcaption></figure>
+    <div class="numeros">
+      <div class="numero"><strong>2x</strong><span><b>Bicampeão Capixaba</b>2024 e 2025</span></div>
+      <div class="numero"><strong>2</strong><span><b>Temporadas de Série D</b>Brasileiro 2025 e 2026</span></div>
+      <div class="numero"><strong>🥈</strong><span><b>Vice da Copa Centro-Oeste 2026</b>A melhor campanha da história do clube na Copa Verde</span></div>
+    </div>
+    <div class="galeria" aria-label="Fotos no Rio Branco">
+      <figure><img src="nutri/img/rb-centro-oeste.jpg" alt="Eduardo no gramado antes de jogo da Copa Centro-Oeste" loading="lazy"><figcaption>Copa Centro-Oeste 2026</figcaption></figure>
+      <figure><img src="nutri/img/rb-treino.jpg" alt="Eduardo levando hidratação no treino" loading="lazy"><figcaption>Hidratação no treino</figcaption></figure>
+      <figure><img src="nutri/img/rb-hidratacao.jpg" alt="Eduardo preparando bebida para os atletas" loading="lazy"><figcaption>Suplementação dos atletas</figcaption></figure>
+      <figure><img src="nutri/img/rb-campo.jpg" alt="Eduardo no gramado em noite de jogo" loading="lazy"><figcaption>Dia de jogo</figcaption></figure>
+      <figure><img src="nutri/img/rb-torcida.jpg" alt="Eduardo comemorando no gramado com a torcida ao fundo" loading="lazy"><figcaption>Comemoração com a torcida</figcaption></figure>
+    </div>
+    <p class="dica-arraste">Arraste pro lado pra ver mais fotos →</p>
+  </section>
+
   <section id="projetos" class="surge" aria-labelledby="t-projetos">
-    <div class="rotulo"><b>02</b> Projetos e parcerias</div>
+    <div class="rotulo"><b>03</b> Projetos e parcerias</div>
     <h2 class="display" id="t-projetos">Tem mais por aqui.</h2>
     <div class="cards">
       <article class="card">
@@ -278,7 +323,7 @@
   </section>
 
   <section id="como-funciona" aria-labelledby="t-como" class="surge">
-    <div class="rotulo"><b>03</b> Como funciona</div>
+    <div class="rotulo"><b>04</b> Como funciona</div>
     <h2 class="display" id="t-como">Do primeiro oi ao resultado.</h2>
     <div class="sanfona">
       <details open>
@@ -300,7 +345,7 @@
   </section>
 
   <section id="pra-quem" aria-labelledby="t-para" class="surge">
-    <div class="rotulo"><b>04</b> Pra quem é</div>
+    <div class="rotulo"><b>05</b> Pra quem é</div>
     <h2 class="display" id="t-para">Qual é o seu objetivo?</h2>
     <div class="objetivos">
       <div class="objetivo"><span class="ico" aria-hidden="true">⚽</span><strong>Performance</strong><span>Render mais no treino, no jogo e na prova alvo</span></div>
@@ -311,7 +356,7 @@
   </section>
 
   <section id="planos" aria-labelledby="t-planos" class="surge">
-    <div class="rotulo"><b>05</b> Planos</div>
+    <div class="rotulo"><b>06</b> Planos</div>
     <h2 class="display" id="t-planos">Escolha o seu ritmo.</h2>
     <p class="texto">Nenhum plano tem prazo pra usar as consultas. Quanto maior o plano, mais em conta sai cada uma.</p>
     <div class="planos">
@@ -323,7 +368,7 @@
   </section>
 
   <section id="contato" class="contato surge" aria-labelledby="t-contato">
-    <div class="rotulo"><b>06</b> Contato</div>
+    <div class="rotulo"><b>07</b> Contato</div>
     <h2 class="display" id="t-contato">Bora <span class="verde">começar?</span></h2>
     <p class="texto">Me chama no WhatsApp que a gente encontra o melhor horário pra você 😊</p>
     <div class="pilulas">
