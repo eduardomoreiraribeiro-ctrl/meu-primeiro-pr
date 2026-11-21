@@ -104,9 +104,14 @@ NutriDudu.checkinFicha = (function () {
     if (!pergunta) return '<td class="hm-vazio" aria-label="não perguntado"></td>';
     if (!r) return '<td class="hm-vazio">–</td>';
     const titulo = `${p.titulo}: ${C().textoResposta(pergunta, r)}${r.explicacao ? ` — "${r.explicacao}"` : ''}`;
-    if (p.tipo === 'numero') return `<td class="hm-num" title="${esc(titulo)}">${r.pulou ? '—' : esc(Number(r.valor).toLocaleString('pt-BR', { maximumFractionDigits: pergunta.casas ?? 1 }))}</td>`;
+    const ctx = { pesoKg: C().pesoDe(ck.perguntas, ck.respostas) };
+    if (p.tipo === 'numero') {
+      const n = r.pulou ? null : C().nota(pergunta, r.valor, ctx);
+      const classe = n === null ? 'hm-num' : `hm-num hm-${C().faixa(n)}`;
+      return `<td class="${classe}" title="${esc(titulo)}">${r.pulou ? '—' : esc(Number(r.valor).toLocaleString('pt-BR', { maximumFractionDigits: pergunta.casas ?? 1 }))}</td>`;
+    }
     if (p.tipo === 'texto') return `<td class="hm-vazio" title="${esc(titulo)}">💬</td>`;
-    const f = C().faixa(C().nota(pergunta, r.valor));
+    const f = C().faixa(C().nota(pergunta, r.valor, ctx));
     return `<td class="hm-${f}" title="${esc(titulo)}">${C().EMOJI_FAIXA[f]}${r.explicacao ? '<sup>✎</sup>' : ''}</td>`;
   }
 
@@ -213,14 +218,17 @@ NutriDudu.checkinFicha = (function () {
   // ---------------- Ver respostas e revisar ----------------
   function ver(ck, aoMudar) {
     const { modal, store, permissoes, ui } = NutriDudu;
+    const ctx = { pesoKg: C().pesoDe(ck.perguntas, ck.respostas) };
     const linhas = (ck.perguntas || []).map((p) => {
       const r = ck.respostas?.[p.id];
-      const n = r && !r.pulou ? C().nota(p, r.valor) : null;
+      const n = r && !r.pulou ? C().nota(p, r.valor, ctx) : null;
+      const m = C().metaDe(p, ctx);
+      const metaTxt = m?.tipo === 'porPeso' ? ` <span class="muted small">(meta ${String(m.alvo).replace('.', ',')} L${m.pelaPeso ? ' pelo peso' : ''})</span>` : m?.tipo === 'faixa' ? ` <span class="muted small">(ideal ${m.min} a ${m.max} ${esc(p.unidade || '')})</span>` : '';
       const f = C().faixa(n);
       return `<li class="ck-resp">
         <span class="ck-resp-ico" aria-hidden="true">${esc(p.icone || '•')}</span>
         <div><strong>${esc(p.titulo)}</strong><span class="muted small bloco">${esc(p.texto)}</span>
-          <span class="${f ? `ck-f-${f}` : ''}">${esc(C().textoResposta(p, r))}</span>
+          <span class="${f ? `ck-f-${f}` : ''}">${esc(C().textoResposta(p, r))}</span>${metaTxt}
           ${r?.explicacao ? `<blockquote class="ck-msg">${esc(r.explicacao)}</blockquote>` : ''}</div>
         ${f ? `<span class="ck-resp-emo" title="${C().ROTULO_FAIXA[f]}">${C().EMOJI_FAIXA[f]}</span>` : ''}
       </li>`;

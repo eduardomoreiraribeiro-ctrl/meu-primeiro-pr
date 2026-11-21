@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 81f54c
+// Versão: 646590
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -1199,7 +1199,9 @@ NutriDudu.checkin = (function () {
       { texto: 'Sinto fome em alguns momentos', nota: 0 },
       { texto: 'Sinto muita fome com frequência', nota: -2 },
     ], explicacao: { ativo: true, texto: 'Em que horários a fome aperta mais?' } },
-    { id: 'q_agua', categoria: 'alimentacao', icone: '💧', sigla: 'H2O', titulo: 'Ingestão de água', texto: 'Como foi a sua ingestão de água nos últimos dias?', tipo: 'carinhas' },
+    // Meta de água: 35 ml/kg/dia (faixa usual de 30–40 ml/kg); sem peso no check-in, 2,5 L (referência EFSA p/ adultos).
+    { id: 'q_agua', categoria: 'alimentacao', icone: '💧', sigla: 'H2O', titulo: 'Ingestão de água', texto: 'Quantos litros de água você bebeu por dia, em média, nos últimos dias?', tipo: 'numero', unidade: 'L', casas: 1,
+      meta: { tipo: 'porPeso', mlPorKg: 35, padrao: 2.5 }, explicacao: { ativo: true, texto: 'O que tem dificultado beber mais água?' } },
     { id: 'q_intestino', categoria: 'digestao', icone: '🚽', sigla: 'INT', titulo: 'Frequência intestinal', texto: 'Como está o funcionamento do seu intestino?', tipo: 'opcoes', opcoes: [
       { texto: 'Todo dia ou quase todo dia', nota: 2 },
       { texto: 'A cada 2 dias', nota: 0 },
@@ -1211,7 +1213,9 @@ NutriDudu.checkin = (function () {
       { texto: 'Sim, com frequência', nota: -2 },
     ], explicacao: { ativo: true, texto: 'Qual refeição ou alimento e o que você sente?' } },
     { id: 'q_sono', categoria: 'sono', icone: '😴', sigla: 'SON', titulo: 'Qualidade do sono', texto: 'Como você avalia a qualidade do seu sono?', tipo: 'carinhas', explicacao: { ativo: true, texto: 'O que tem atrapalhado o seu sono?' } },
-    { id: 'q_horas_sono', categoria: 'sono', icone: '🌙', sigla: 'HSO', titulo: 'Horas de sono', texto: 'Quantas horas você está dormindo por noite, em média?', tipo: 'numero', unidade: 'h', casas: 1 },
+    // Sono: 7–9 h por noite para adultos (recomendação AASM/National Sleep Foundation).
+    { id: 'q_horas_sono', categoria: 'sono', icone: '🌙', sigla: 'HSO', titulo: 'Horas de sono', texto: 'Quantas horas você está dormindo por noite, em média?', tipo: 'numero', unidade: 'h', casas: 1,
+      meta: { tipo: 'faixa', min: 7, max: 9 }, explicacao: { ativo: true, texto: 'O que tem atrapalhado o seu sono?' } },
     { id: 'q_disposicao', categoria: 'sono', icone: '⚡', sigla: 'DIS', titulo: 'Disposição', texto: 'Como está a sua disposição no dia a dia?', tipo: 'carinhas', rotulos: ['Muita disposição', 'Boa', 'Depende do dia', 'Geralmente indisposto(a)', 'Zero disposição'], explicacao: { ativo: true, texto: 'Em quais situações você sente mais cansaço?' } },
     { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'TRE', titulo: 'Frequência de treino', texto: 'Quantos treinos (musculação ou esporte) você fez na última semana?', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais' },
     { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'AER', titulo: 'Frequência de aeróbico', texto: 'Quantas sessões de aeróbico (corrida, bike, caminhada…) você fez na última semana?', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhuma', rotuloMax: '7 ou mais' },
@@ -1256,9 +1260,45 @@ NutriDudu.checkin = (function () {
     return CARINHAS.map((c, i) => ({ ...c, rotulo: (p.rotulos && p.rotulos[i]) || c.rotulo }));
   }
 
-  /** Nota de -2 a 2 de uma resposta (ou null quando a pergunta não pontua). */
-  function nota(p, valor) {
+  /** Meta da medida no contexto do check-in (ex.: litros de água pelo peso). */
+  function metaDe(p, ctx = {}) {
+    const m = p.meta;
+    if (!m) return null;
+    if (m.tipo === 'porPeso') {
+      const peso = Number(ctx.pesoKg);
+      const alvo = Number.isFinite(peso) && peso > 20 && peso < 400 ? (peso * Number(m.mlPorKg || 35)) / 1000 : Number(m.padrao || 2.5);
+      return { tipo: 'porPeso', alvo: Math.round(alvo * 10) / 10, pelaPeso: Number.isFinite(peso) && peso > 20 };
+    }
+    if (m.tipo === 'faixa') return { tipo: 'faixa', min: Number(m.min), max: Number(m.max) };
+    return null;
+  }
+
+  /** Peso (kg) informado no mesmo check-in, para as metas que dependem dele. */
+  function pesoDe(perguntas, respostas) {
+    const p = (perguntas || []).find((x) => x.id === 'q_peso') || (perguntas || []).find((x) => x.tipo === 'numero' && x.unidade === 'kg');
+    const r = p && respostas?.[p.id];
+    const v = r && !r.pulou ? Number(String(r.valor).replace(',', '.')) : NaN;
+    return Number.isFinite(v) ? v : null;
+  }
+
+  /** Nota de -2 a 2 de uma resposta (ou null quando a pergunta não pontua). ctx: { pesoKg }. */
+  function nota(p, valor, ctx = {}) {
     if (valor === null || valor === undefined || valor === '') return null;
+    if (p.tipo === 'numero') {
+      const v = Number(String(valor).replace(',', '.'));
+      const m = metaDe(p, ctx);
+      if (!m || !Number.isFinite(v)) return null;
+      if (m.tipo === 'porPeso') {
+        const pct = v / m.alvo;
+        return pct >= 1 ? 2 : pct >= 0.85 ? 1 : pct >= 0.7 ? 0 : pct >= 0.5 ? -1 : -2;
+      }
+      if (m.tipo === 'faixa') {
+        if (v >= m.min && v <= m.max) return 2;
+        const fora = v < m.min ? m.min - v : v - m.max;
+        return fora <= 0.5 ? 1 : fora <= 1 ? 0 : fora <= 2 ? -1 : -2;
+      }
+      return null;
+    }
     if (p.tipo === 'carinhas') { const n = Number(valor); return [2, 1, 0, -1, -2].includes(n) ? n : null; }
     if (p.tipo === 'opcoes') { const o = (p.opcoes || [])[Number(valor)]; return o ? Math.max(-2, Math.min(2, Number(o.nota) || 0)) : null; }
     if (p.tipo === 'escala') {
@@ -1277,7 +1317,7 @@ NutriDudu.checkin = (function () {
     const v = r.valor;
     if (p.tipo === 'carinhas') { const c = carinhasDe(p).find((x) => x.nota === Number(v)); return c ? `${c.emoji} ${c.rotulo}` : '—'; }
     if (p.tipo === 'opcoes') return (p.opcoes || [])[Number(v)]?.texto || '—';
-    if (p.tipo === 'numero') return `${Number(v).toLocaleString('pt-BR', { maximumFractionDigits: p.casas ?? 1 })} ${p.unidade || ''}`.trim();
+    if (p.tipo === 'numero') return `${Number(String(v).replace(',', '.')).toLocaleString('pt-BR', { maximumFractionDigits: p.casas ?? 1 })} ${p.unidade || ''}`.trim();
     if (p.tipo === 'escala') return String(v);
     return String(v || '—');
   }
@@ -1297,9 +1337,10 @@ NutriDudu.checkin = (function () {
   /** Nota geral (0–100%) ponderada pelos pesos; null se nada pontuou. */
   function score(perguntas, respostas) {
     let soma = 0; let total = 0;
+    const ctx = { pesoKg: pesoDe(perguntas, respostas) };
     for (const p of perguntas) {
       const r = respostas?.[p.id];
-      const n = r && !r.pulou ? nota(p, r.valor) : null;
+      const n = r && !r.pulou ? nota(p, r.valor, ctx) : null;
       if (n === null) continue;
       const peso = Number(p.peso) || PESO_PADRAO;
       soma += peso * (n + 2); total += peso * 4;
@@ -1358,7 +1399,7 @@ NutriDudu.checkin = (function () {
 
   return {
     TIPOS, CARINHAS, CATEGORIAS, BIBLIOTECA, QUESTIONARIOS_PADRAO, PESO_PADRAO, EMOJI_FAIXA, ROTULO_FAIXA,
-    configuracao, carinhasDe, nota, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
+    configuracao, carinhasDe, nota, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
   };
 })();
 

@@ -20,7 +20,8 @@ NutriDudu.checkinTela = (function () {
     let enviando = false;
     let erro = '';
 
-    const precisaExplicar = (p, r) => p.explicacao?.ativo && r && !r.pulou && (C.nota(p, r.valor) ?? 0) < 0;
+    const ctx = () => ({ pesoKg: C.pesoDe(perguntas, respostas) });
+    const precisaExplicar = (p, r) => p.explicacao?.ativo && r && !r.pulou && (C.nota(p, r.valor, ctx()) ?? 0) < 0;
     const respondida = (p) => {
       const r = respostas[p.id];
       if (p.tipo === 'texto') return true; // resposta livre é opcional
@@ -57,8 +58,10 @@ NutriDudu.checkinTela = (function () {
           <div class="ckt-escala-rot"><span>(${esc(p.min ?? 0)}) ${esc(p.rotuloMin || '')}</span><span>(${esc(p.max ?? 10)}) ${esc(p.rotuloMax || '')}</span></div>`;
       }
       if (p.tipo === 'numero') {
-        return `<p class="ckt-dica">Informe em ${esc(p.unidade || '')}</p>
-          <div class="ckt-medida"><input inputmode="decimal" data-numero placeholder="0,0" value="${r.pulou ? '' : esc(r.valor ?? '')}" ${r.pulou ? 'disabled' : ''} aria-label="${esc(p.titulo)}"><span>${esc(p.unidade || '')}</span></div>
+        const m = C.metaDe(p, ctx());
+        const dicaMeta = m?.tipo === 'porPeso' ? `<p class="ckt-dica" style="font-weight:500">Pra você, o ideal é cerca de <strong>${String(m.alvo).replace('.', ',')} L por dia</strong>${m.pelaPeso ? ' (pelo seu peso)' : ''} 💧</p>` : '';
+        return `${dicaMeta}<p class="ckt-dica">Informe em ${esc(p.unidade || '')}</p>
+          <div class="ckt-medida"><input inputmode="decimal" data-numero placeholder="0,0" value="${r.pulou ? '' : esc(String(r.valor ?? '').replace('.', ','))}" ${r.pulou ? 'disabled' : ''} aria-label="${esc(p.titulo)}"><span>${esc(p.unidade || '')}</span></div>
           <label class="ckt-pular"><input type="checkbox" data-pular ${r.pulou ? 'checked' : ''}> Prefiro não informar</label>`;
       }
       return `<textarea data-texto placeholder="Escreva aqui (opcional)" aria-label="${esc(p.titulo)}">${esc(r.valor || '')}</textarea>`;
@@ -93,10 +96,11 @@ NutriDudu.checkinTela = (function () {
       const itens = perguntas.map((p) => {
         const r = respostas[p.id];
         if (!r || r.pulou) return '';
-        const n = C.nota(p, r.valor);
+        const n = C.nota(p, r.valor, ctx());
         if (n === null) return p.tipo === 'numero' ? `<li><span>${esc(p.icone || '')} ${esc(p.titulo)}</span><b>${esc(C.textoResposta(p, r))}</b></li>` : '';
         const f = C.faixa(n);
-        return `<li><span>${esc(p.icone || '')} ${esc(p.titulo)}</span><b class="ckt-f-${f}">${C.ROTULO_FAIXA[f]} ${C.EMOJI_FAIXA[f]}</b></li>`;
+        const valor = p.tipo === 'numero' ? `${esc(C.textoResposta(p, r))} · ` : '';
+        return `<li><span>${esc(p.icone || '')} ${esc(p.titulo)}</span><b class="ckt-f-${f}">${valor}${C.ROTULO_FAIXA[f]} ${C.EMOJI_FAIXA[f]}</b></li>`;
       }).join('');
       raiz.innerHTML = `<div class="ckt">${topo()}<div class="ckt-corpo ckt-resultado">
         <h2 style="margin:4px 0 2px">Valeu${opcoes.nome ? `, ${esc(opcoes.nome)}` : ''}! 💚</h2>
@@ -133,10 +137,12 @@ NutriDudu.checkinTela = (function () {
       }));
       const num = raiz.querySelector('[data-numero]');
       num?.addEventListener('input', () => {
-        respostas[p.id] = { valor: num.value.replace(',', '.') };
+        respostas[p.id] = { ...(respostas[p.id] || {}), valor: num.value.replace(',', '.') };
         const btn = raiz.querySelector('[data-proximo]');
         if (btn) btn.disabled = !respondida(p);
       });
+      // Ao sair do campo, mostra o "por quê?" se a medida ficou abaixo da meta.
+      num?.addEventListener('change', () => { if (precisaExplicar(p, respostas[p.id]) && !raiz.querySelector('[data-explicacao]')) setTimeout(desenhar, 0); });
       raiz.querySelector('[data-pular]')?.addEventListener('change', (e) => { respostas[p.id] = e.target.checked ? { pulou: true } : {}; desenhar(); });
       const txt = raiz.querySelector('[data-texto]');
       txt?.addEventListener('input', () => { respostas[p.id] = { valor: txt.value }; });

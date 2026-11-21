@@ -204,7 +204,10 @@ NutriDudu.pages.checkins = (function () {
           ${f.texto('rotuloMin', 'Rótulo do menor', p.rotuloMin || '')}${f.texto('rotuloMax', 'Rótulo do maior', p.rotuloMax || '')}
           ${f.chave('inverter', 'Número menor é melhor (ex.: refeições fora do plano)', Boolean(p.inverter))}
         </div>
-        <div data-tipo="numero" class="grade-2">${f.texto('unidade', 'Unidade', p.unidade || 'kg', { placeholder: 'kg, cm, km, h…' })}${f.selecao('casas', 'Casas decimais', { 0: '0', 1: '1', 2: '2' }, String(p.casas ?? 1))}</div>
+        <div data-tipo="numero"><div class="grade-2">${f.texto('unidade', 'Unidade', p.unidade || 'kg', { placeholder: 'kg, cm, km, h…' })}${f.selecao('casas', 'Casas decimais', { 0: '0', 1: '1', 2: '2' }, String(p.casas ?? 1))}</div>
+          ${f.selecao('metaTipo', 'Meta (para dar nota)', { '': 'Sem meta (só registra e mostra no gráfico)', porPeso: 'Por peso: ml por kg (ex.: água)', faixa: 'Faixa ideal (ex.: horas de sono)' }, p.meta?.tipo || '')}
+          <div data-meta="porPeso" class="grade-2">${f.texto('mlPorKg', 'ml por kg de peso', p.meta?.mlPorKg ?? 35, { tipo: 'number' })}${f.texto('metaPadrao', 'Meta sem peso informado (L)', p.meta?.padrao ?? 2.5, { tipo: 'number' })}</div>
+          <div data-meta="faixa" class="grade-2">${f.texto('metaMin', 'Ideal: de', p.meta?.min ?? 7, { tipo: 'number' })}${f.texto('metaMax', 'até', p.meta?.max ?? 9, { tipo: 'number' })}</div></div>
         <div data-pontua>${f.chave('explicar', 'Pedir explicação quando a resposta for ruim', Boolean(p.explicacao?.ativo))}
           ${f.texto('explicacaoTexto', 'Texto do pedido de explicação', p.explicacao?.texto || '', { placeholder: 'Ex.: O que tem atrapalhado?' })}</div>
         ${nova ? '' : f.chave('ativa', 'Pergunta ativa', p.ativa !== false)}`,
@@ -223,7 +226,13 @@ NutriDudu.pages.checkins = (function () {
           return { texto, nota: Math.max(-2, Math.min(2, Number(nota) || 0)) };
         });
         if (tipo === 'escala') Object.assign(d, { min: Number(f.valor(form, 'min')) || 0, max: Number(f.valor(form, 'max')) || 10, rotuloMin: f.valor(form, 'rotuloMin'), rotuloMax: f.valor(form, 'rotuloMax'), inverter: f.marcado(form, 'inverter') });
-        if (tipo === 'numero') Object.assign(d, { unidade: f.valor(form, 'unidade'), casas: Number(f.valor(form, 'casas')) });
+        if (tipo === 'numero') {
+          Object.assign(d, { unidade: f.valor(form, 'unidade'), casas: Number(f.valor(form, 'casas')) });
+          const mt = f.valor(form, 'metaTipo');
+          const num = (n, pad) => { const v = Number(String(f.valor(form, n)).replace(',', '.')); return Number.isFinite(v) && v > 0 ? v : pad; };
+          d.meta = mt === 'porPeso' ? { tipo: 'porPeso', mlPorKg: num('mlPorKg', 35), padrao: num('metaPadrao', 2.5) }
+            : mt === 'faixa' ? { tipo: 'faixa', min: num('metaMin', 7), max: num('metaMax', 9) } : null;
+        } else delete d.meta;
         return d;
       },
       validar: (d) => {
@@ -244,9 +253,12 @@ NutriDudu.pages.checkins = (function () {
     const atualizar = () => {
       const tipo = form.elements.tipo.value;
       form.querySelectorAll('[data-tipo]').forEach((el) => { el.hidden = el.dataset.tipo !== tipo; });
-      form.querySelector('[data-pontua]').hidden = !['carinhas', 'opcoes', 'escala'].includes(tipo);
+      const mt = form.elements.metaTipo.value;
+      form.querySelectorAll('[data-meta]').forEach((el) => { el.hidden = el.dataset.meta !== mt; });
+      form.querySelector('[data-pontua]').hidden = !(['carinhas', 'opcoes', 'escala'].includes(tipo) || (tipo === 'numero' && mt));
     };
     form.elements.tipo.addEventListener('change', atualizar);
+    form.elements.metaTipo.addEventListener('change', atualizar);
     atualizar();
   }
 
