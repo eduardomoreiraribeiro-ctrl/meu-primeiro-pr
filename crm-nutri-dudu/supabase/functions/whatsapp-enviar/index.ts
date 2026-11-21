@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: fee869
+// Versão: ce3f0c
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -1157,6 +1157,170 @@ NutriDudu.resumoDia = (function () {
   return { montar };
 })();
 
+// ===== js/avaliacao.js =====
+// Cálculos da avaliação física (sem tela): IMC, relação cintura-quadril,
+// soma de dobras, densidade corporal e % de gordura (equação de Siri).
+window.NutriDudu = window.NutriDudu || {};
+
+NutriDudu.avaliacao = (function () {
+  const CIRCUNFERENCIAS = {
+    bracoRelaxado: 'Braço relaxado',
+    bracoContraido: 'Braço contraído',
+    torax: 'Tórax',
+    cintura: 'Cintura',
+    abdome: 'Abdome',
+    quadril: 'Quadril',
+    coxa: 'Coxa',
+    panturrilha: 'Panturrilha',
+  };
+
+  const DOBRAS = {
+    tricipital: 'Tricipital',
+    bicipital: 'Bicipital',
+    subescapular: 'Subescapular',
+    peitoral: 'Peitoral',
+    axilarMedia: 'Axilar média',
+    suprailiaca: 'Suprailíaca',
+    abdominal: 'Abdominal',
+    coxa: 'Coxa',
+    panturrilha: 'Panturrilha',
+  };
+
+  const METODOS = {
+    bioimpedancia: 'Bioimpedância',
+    dobras: 'Dobras cutâneas',
+    outro: 'Outro método',
+  };
+
+  // Dobras usadas por cada fórmula (a de 3 dobras muda com o sexo).
+  const FORMULAS = {
+    jp7: {
+      nome: 'Jackson & Pollock — 7 dobras',
+      dobras: () => ['peitoral', 'axilarMedia', 'tricipital', 'subescapular', 'abdominal', 'suprailiaca', 'coxa'],
+    },
+    jp3: {
+      nome: 'Jackson & Pollock — 3 dobras',
+      dobras: (sexo) => (sexo === 'M' ? ['peitoral', 'abdominal', 'coxa'] : ['tricipital', 'suprailiaca', 'coxa']),
+    },
+    durnin: {
+      nome: 'Durnin & Womersley — 4 dobras',
+      dobras: () => ['bicipital', 'tricipital', 'subescapular', 'suprailiaca'],
+    },
+  };
+
+  // Durnin & Womersley (1974): D = c − m · log10(soma), por sexo e faixa de idade.
+  const DURNIN = {
+    M: [[19, 1.1620, 0.0630], [29, 1.1631, 0.0632], [39, 1.1422, 0.0544], [49, 1.1620, 0.0700], [Infinity, 1.1715, 0.0779]],
+    F: [[19, 1.1549, 0.0678], [29, 1.1599, 0.0717], [39, 1.1423, 0.0632], [49, 1.1333, 0.0612], [Infinity, 1.1339, 0.0645]],
+  };
+
+  const arred = (n, casas = 1) => (n === null || n === undefined || Number.isNaN(n) ? null : Math.round(n * 10 ** casas) / 10 ** casas);
+  const num = (v) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : null);
+
+  function imc(pesoKg, alturaCm) {
+    if (!num(pesoKg) || !num(alturaCm)) return null;
+    const m = alturaCm / 100;
+    return arred(pesoKg / (m * m));
+  }
+
+  /** Faixa do IMC (adultos, OMS). */
+  function classificarImc(valor) {
+    if (valor === null) return '';
+    if (valor < 18.5) return 'abaixo do peso';
+    if (valor < 25) return 'peso adequado';
+    if (valor < 30) return 'sobrepeso';
+    if (valor < 35) return 'obesidade grau I';
+    if (valor < 40) return 'obesidade grau II';
+    return 'obesidade grau III';
+  }
+
+  function relacaoCinturaQuadril(circ = {}) {
+    if (!num(circ.cintura) || !num(circ.quadril)) return null;
+    return arred(circ.cintura / circ.quadril, 2);
+  }
+
+  function somaDobras(dobras = {}) {
+    const valores = Object.values(dobras).filter(num);
+    return valores.length ? arred(valores.reduce((t, v) => t + v, 0)) : null;
+  }
+
+  /**
+   * Densidade corporal pela fórmula. Devolve { densidade } ou { erro } explicando o que falta.
+   */
+  function densidade(formula, dobras, sexo, idade) {
+    const f = FORMULAS[formula];
+    if (!f) return { erro: 'Escolha a fórmula.' };
+    if (sexo !== 'M' && sexo !== 'F') return { erro: 'Informe o sexo no cadastro para calcular o % de gordura.' };
+    if (!num(idade)) return { erro: 'Informe a data de nascimento no cadastro para calcular o % de gordura.' };
+    const necessarias = f.dobras(sexo);
+    const faltando = necessarias.filter((d) => !num(dobras?.[d]));
+    if (faltando.length) return { erro: `Faltam as dobras: ${faltando.map((d) => DOBRAS[d].toLowerCase()).join(', ')}.` };
+    const s = necessarias.reduce((t, d) => t + dobras[d], 0);
+
+    let d;
+    if (formula === 'jp7') {
+      d = sexo === 'M'
+        ? 1.112 - 0.00043499 * s + 0.00000055 * s * s - 0.00028826 * idade
+        : 1.097 - 0.00046971 * s + 0.00000056 * s * s - 0.00012828 * idade;
+    } else if (formula === 'jp3') {
+      d = sexo === 'M'
+        ? 1.10938 - 0.0008267 * s + 0.0000016 * s * s - 0.0002574 * idade
+        : 1.0994921 - 0.0009929 * s + 0.0000023 * s * s - 0.0001392 * idade;
+    } else {
+      const [, c, m] = DURNIN[sexo].find(([ate]) => idade <= ate);
+      d = c - m * Math.log10(s);
+    }
+    return { densidade: d, soma: s };
+  }
+
+  /** Equação de Siri: % de gordura a partir da densidade. */
+  const siri = (d) => (4.95 / d - 4.5) * 100;
+
+  /**
+   * Resultado completo de uma avaliação.
+   * av: { pesoKg, alturaCm, metodo, formula, percentualGordura (manual), circunferencias, dobras }
+   * pessoa: { sexo, idade }
+   */
+  function calcular(av, pessoa = {}) {
+    const r = {
+      imc: imc(av.pesoKg, av.alturaCm),
+      rcq: relacaoCinturaQuadril(av.circunferencias),
+      somaDobras: somaDobras(av.dobras),
+      percentualGordura: null,
+      origemPercentual: null,
+      erroPercentual: null,
+    };
+    r.classificacaoImc = classificarImc(r.imc);
+
+    if (av.metodo === 'dobras') {
+      const d = densidade(av.formula, av.dobras, pessoa.sexo, pessoa.idade);
+      if (d.erro) r.erroPercentual = d.erro;
+      else {
+        r.percentualGordura = arred(siri(d.densidade));
+        r.densidade = arred(d.densidade, 4);
+        r.origemPercentual = FORMULAS[av.formula].nome;
+      }
+    } else if (num(av.percentualGordura)) {
+      r.percentualGordura = arred(av.percentualGordura);
+      r.origemPercentual = METODOS[av.metodo] || 'informado';
+    }
+
+    if (r.percentualGordura !== null && num(av.pesoKg)) {
+      r.massaGorda = arred((av.pesoKg * r.percentualGordura) / 100);
+      r.massaMagra = arred(av.pesoKg - r.massaGorda);
+    } else {
+      r.massaGorda = null;
+      r.massaMagra = null;
+    }
+    return r;
+  }
+
+  return {
+    CIRCUNFERENCIAS, DOBRAS, METODOS, FORMULAS,
+    imc, classificarImc, relacaoCinturaQuadril, somaDobras, densidade, siri, calcular,
+  };
+})();
+
 // ===== js/checkin.js =====
 // Check-ins de acompanhamento: perguntas, questionários e cálculo da nota.
 // Usado pelo sistema (telas), pela página do paciente (checkin.html) e pelo servidor
@@ -1491,6 +1655,111 @@ NutriDudu.checkin = (function () {
     TIPOS, CARINHAS, CATEGORIAS, BIBLIOTECA, QUESTIONARIOS_PADRAO, PESO_PADRAO, EMOJI_FAIXA, ROTULO_FAIXA,
     configuracao, carinhasDe, nota, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
   };
+})();
+
+// ===== js/area-paciente.js =====
+// Área do paciente: monta SÓ o que o paciente pode ver dele mesmo (sem anotações da consulta,
+// anamnese ou financeiro). Usado pelo servidor (link pessoal) e pela prévia dentro do sistema.
+window.NutriDudu = window.NutriDudu || {};
+
+NutriDudu.areaPaciente = (function () {
+  const STATUS_FUTURO = ['agendada', 'confirmada'];
+  const num = (v) => (v === null || v === undefined || v === '' || !Number.isFinite(Number(v)) ? null : Number(v));
+  const primeiroNome = (nome) => String(nome || '').trim().split(/\s+/)[0] || '';
+
+  function idade(dataNascimento, agora) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(dataNascimento || ''));
+    if (!m) return null;
+    let anos = agora.getFullYear() - Number(m[1]);
+    if (agora.getMonth() + 1 < Number(m[2]) || (agora.getMonth() + 1 === Number(m[2]) && agora.getDate() < Number(m[3]))) anos -= 1;
+    return anos;
+  }
+
+  /**
+   * d: { pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, whatsappClinica, agora }
+   * (listas já filtradas para a pessoa). Devolve um objeto pronto para a tela.
+   */
+  function montar(d) {
+    const agora = d.agora || new Date();
+    const pessoa = d.pessoa || {};
+    const servicoPorId = Object.fromEntries((d.servicos || []).map((s) => [s.id, s]));
+    const consultas = (d.consultas || []).filter((c) => c.status !== 'cancelada').sort((a, b) => String(a.inicio).localeCompare(String(b.inicio)));
+    const nomeServico = (id) => servicoPorId[id]?.nome || '';
+
+    const proxima = consultas.find((c) => STATUS_FUTURO.includes(c.status) && new Date(c.inicio) >= new Date(agora.getTime() - 3600000));
+    const realizadas = consultas.filter((c) => c.status === 'realizada');
+
+    // Plano: o ativo mais recente (ou o último, se nenhum estiver ativo).
+    let plano = null;
+    const pacotes = (d.pacotes || []).filter((p) => p.status !== 'cancelado').sort((a, b) => String(b.inicio).localeCompare(String(a.inicio)));
+    const pac = pacotes.find((p) => p.status === 'ativo') || pacotes[0];
+    if (pac) {
+      const doPacote = consultas.filter((c) => c.pacoteId === pac.id);
+      const uso = NutriDudu.calculos?.usoDoPacote ? NutriDudu.calculos.usoDoPacote(pac, doPacote)
+        : { usadas: doPacote.filter((c) => c.status === 'realizada').length, total: pac.qtdConsultas };
+      const total = Number(pac.qtdConsultas) || 0;
+      const vencido = pac.validade && String(pac.validade).slice(0, 10) < agora.toISOString().slice(0, 10);
+      plano = {
+        nome: nomeServico(pac.servicoId) || 'Seu plano', total, usadas: Math.min(total, uso.usadas || 0),
+        restantes: Math.max(0, total - (uso.usadas || 0)), inicio: pac.inicio || null, validade: pac.validade || null,
+        ativo: pac.status === 'ativo' && !vencido && (total === 0 || (uso.usadas || 0) < total),
+      };
+    }
+
+    // Evolução das avaliações físicas (data da consulta da avaliação).
+    const A = NutriDudu.avaliacao;
+    const dadosFormula = { sexo: pessoa.sexo, idade: idade(pessoa.dataNascimento, agora) };
+    const evolucao = (d.avaliacoes || []).map((av) => {
+      const data = consultas.find((c) => c.id === av.consultaId)?.inicio || av.data || av.criadoEm;
+      const r = A ? A.calcular(av, dadosFormula) : {};
+      const circ = av.circunferencias || {};
+      return {
+        data, peso: num(av.pesoKg), gordura: num(r.percentualGordura), massaMagra: num(r.massaMagra),
+        cintura: num(circ.cintura), abdome: num(circ.abdome), quadril: num(circ.quadril),
+      };
+    }).filter((x) => x.data && (x.peso !== null || x.gordura !== null || x.cintura !== null))
+      .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+
+    // Check-ins respondidos, do mais antigo pro mais novo.
+    const C = NutriDudu.checkin;
+    const todos = d.checkins || [];
+    const respondidos = todos.filter((c) => c.respondidoEm).sort((a, b) => String(a.respondidoEm).localeCompare(String(b.respondidoEm)));
+    const checkins = respondidos.map((c) => ({ data: c.respondidoEm, titulo: c.titulo || 'Check-in', score: num(c.score) }));
+    let ultimoCheckin = null;
+    const ult = respondidos[respondidos.length - 1];
+    if (ult && C) {
+      const perguntas = ult.perguntas || [];
+      const respostas = ult.respostas || {};
+      const ctx = { pesoKg: C.pesoDe(perguntas, respostas) };
+      const itens = perguntas.map((p) => {
+        const r = respostas[p.id];
+        if (!r || r.pulou || p.tipo === 'texto') return null;
+        const n = C.nota(p, r.valor, ctx);
+        const f = n === null ? null : C.faixa(n);
+        return { icone: p.icone || '', titulo: p.titulo, resposta: p.tipo === 'numero' ? C.textoResposta(p, r) : '', faixa: f };
+      }).filter(Boolean);
+      ultimoCheckin = { data: ult.respondidoEm, titulo: ult.titulo || 'Check-in', score: num(ult.score), itens };
+    }
+    const aberto = todos.filter((c) => !c.respondidoEm && !c.cancelado && c.codigo && (!c.prazo || new Date(c.prazo) >= agora))
+      .sort((a, b) => String(b.enviadoEm).localeCompare(String(a.enviadoEm)))[0];
+
+    return {
+      nome: primeiroNome(pessoa.nome),
+      sexo: pessoa.sexo || '',
+      profissional: d.profissional?.nome || '',
+      whatsapp: String(d.whatsappClinica || '').replace(/\D/g, ''),
+      proxima: proxima ? { inicio: proxima.inicio, servico: nomeServico(proxima.servicoId), confirmada: proxima.status === 'confirmada', online: proxima.tipo === 'online' || proxima.modalidade === 'online' } : null,
+      consultas: realizadas.map((c) => ({ data: c.inicio, servico: nomeServico(c.servicoId) })),
+      plano,
+      evolucao,
+      checkins,
+      ultimoCheckin,
+      checkinAberto: aberto ? { titulo: aberto.titulo || 'Check-in', prazo: aberto.prazo || null, codigo: aberto.codigo } : null,
+      geradoEm: agora.toISOString(),
+    };
+  }
+
+  return { montar };
 })();
 
 // ===== supabase/fonte/nucleo.js =====
@@ -4189,8 +4458,48 @@ const NutriDuduAutomacoes = (() => {
     return { atender };
   }
 
-  function criarServidor({ automacoes, preAnamnese, site = null, checkin = null, chave }) {
+  // ---------------------------------------------------------------------
+  // Área do paciente (paciente.html#código): só leitura, só os dados da própria pessoa.
+  // ---------------------------------------------------------------------
+  function criarAreaPaciente({ repo, relogio = S.criarRelogio(), whatsappPadrao = '5527997498446' }) {
+    const CORS = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'content-type',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    };
+    const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+
+    async function atender(req) {
+      if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+      if (req.method !== 'GET') return json({ erro: 'Método não permitido' }, 405);
+      const codigo = new URL(req.url).searchParams.get('area');
+      const invalido = { erro: 'Esse link não vale mais. Peça um novo pelo WhatsApp da clínica 😊', titulo: 'Link inválido' };
+      if (!codigo || String(codigo).length < 20) return json(invalido, 404);
+      const pessoa = (await repo.porCampo('pessoas', 'areaHash', await resumo(codigo)))[0];
+      if (!pessoa || !pessoa.areaAtiva) return json(invalido, 404);
+      const [consultas, pacotes, avaliacoes, checkins, site] = await Promise.all([
+        repo.porCampo('consultas', 'pessoaId', pessoa.id),
+        repo.porCampo('pacotes', 'pessoaId', pessoa.id),
+        repo.porCampo('avaliacoes', 'pessoaId', pessoa.id),
+        repo.porCampo('checkins', 'pessoaId', pessoa.id),
+        repo.pega('configuracoes', 'agendamento_site'),
+      ]);
+      const idsServico = [...new Set([...consultas, ...pacotes].map((x) => x.servicoId).filter(Boolean))];
+      const servicos = (await Promise.all(idsServico.map((id) => repo.pega('servicos', id)))).filter(Boolean);
+      const profissional = pessoa.profissionalId ? await repo.pega('profissionais', pessoa.profissionalId) : null;
+      const dados = NutriDudu.areaPaciente.montar({
+        pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: relogio.agora(),
+        whatsappClinica: utils.soDigitos(site?.whatsappClinica || '') || whatsappPadrao,
+      });
+      return json({ ok: true, ...dados });
+    }
+
+    return { atender };
+  }
+
+  function criarServidor({ automacoes, preAnamnese, site = null, checkin = null, area = null, chave }) {
     return async function atender(req) {
+      if (req.method === 'GET' && area && new URL(req.url).searchParams.has('area')) return area.atender(req);
       if (req.method === 'GET' && site && new URL(req.url).searchParams.has('site')) return site.atender(req);
       if (req.method === 'GET' && checkin && new URL(req.url).searchParams.has('checkin')) return checkin.atender(req);
       if (req.method === 'OPTIONS' || req.method === 'GET') return preAnamnese.atender(req);
@@ -4207,7 +4516,7 @@ const NutriDuduAutomacoes = (() => {
     };
   }
 
-  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarAgendamentoSite, criarCheckin, criarServidor, tempoDesde, resumo };
+  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarAgendamentoSite, criarCheckin, criarAreaPaciente, criarServidor, tempoDesde, resumo };
 })();
 
 // ---- Entrada da função whatsapp-enviar (Deno, Supabase Edge Functions) ----

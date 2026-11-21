@@ -574,6 +574,7 @@ NutriDudu.pages.cliente = (function () {
             ${conversa
               ? `<a class="btn btn-pequeno" href="#/conversas/${encodeURIComponent(conversa.id)}" data-ver-conversa>Conversa${conversa.naoLidas ? ` (${conversa.naoLidas})` : ''}</a>`
               : `<a class="btn btn-pequeno" href="https://wa.me/55${utils.soDigitos(pessoa.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`}
+            ${NutriDudu.permissoes.pode('verClinico') ? `<button type="button" class="btn btn-pequeno" data-area-paciente>${pessoa.areaAtiva ? '🔗 ' : ''}Área do paciente</button>` : ''}
             <button type="button" class="btn btn-pequeno" data-editar-cadastro>Editar cadastro</button>
             ${NutriDudu.permissoes.pode('gerenciarDados') ? '<button type="button" class="btn btn-pequeno btn-texto-perigo" data-excluir-cadastro>Excluir</button>' : ''}
           </div>
@@ -615,6 +616,7 @@ NutriDudu.pages.cliente = (function () {
       const alvo = (sel) => e.target.closest(sel);
       if (alvo('[data-agendar]')) NutriDudu.agendamento.abrir({ pessoaId: pessoa.id });
       else if (alvo('[data-editar-cadastro]')) NutriDudu.cadastroPessoa.abrir({ pessoa });
+      else if (alvo('[data-area-paciente]')) NutriDudu.areaPacienteFicha.abrir(pessoa);
       else if (alvo('[data-excluir-cadastro]')) await excluirCadastro(pessoa);
       else if (alvo('[data-atender]')) NutriDudu.atendimento.abrir(alvo('[data-atender]').dataset.atender);
       else if (alvo('[data-detalhes]')) NutriDudu.agendamento.detalhes(alvo('[data-detalhes]').dataset.detalhes);

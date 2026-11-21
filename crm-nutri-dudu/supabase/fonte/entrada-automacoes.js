@@ -18,6 +18,7 @@ const servidor = NutriDuduAutomacoes.criarServidor({
   preAnamnese: NutriDuduAutomacoes.criarPreAnamnese({ repo, relogio }),
   site: NutriDuduAutomacoes.criarAgendamentoSite({ repo, relogio }),
   checkin: NutriDuduAutomacoes.criarCheckin({ repo, relogio }),
+  area: NutriDuduAutomacoes.criarAreaPaciente({ repo, relogio }),
   chave: variavel('AUTOMACOES_CHAVE'),
 });
 

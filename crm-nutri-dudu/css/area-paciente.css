@@ -1,0 +1,69 @@
+/* Área do paciente (página pública e prévia no sistema). Escopo .ap para não vazar. */
+.ap {
+  --ap-primary: var(--primary, #15803d);
+  --ap-primary-soft: var(--primary-soft, #dcfce7);
+  --ap-on: var(--sobre-primaria, #fff);
+  --ap-surface: var(--surface, #fff);
+  --ap-surface-2: var(--surface-2, #f3f6f4);
+  --ap-border: var(--border, #dce3df);
+  --ap-text: var(--text, #17211b);
+  --ap-muted: var(--text-muted, #55625b);
+  --ap-verde: #16a34a; --ap-amarelo: #d97706; --ap-vermelho: #dc2626;
+  max-width: 520px; margin: 0 auto; color: var(--ap-text); display: flex; flex-direction: column; gap: 14px;
+}
+.ap * { box-sizing: border-box; }
+.ap-topo { display: flex; align-items: center; gap: 12px; }
+.ap-topo strong { display: block; line-height: 1.2; }
+.ap-topo span { font-size: 0.82rem; color: var(--ap-muted); }
+.ap-foto { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex: none; display: grid; place-items: center; background: var(--ap-primary-soft); color: var(--ap-primary); font-weight: 700; }
+.ap-ola h1 { font-size: 1.6rem; margin: 6px 0 2px; letter-spacing: -0.01em; }
+.ap-ola p { margin: 0; color: var(--ap-muted); }
+.ap-cartao { background: var(--ap-surface); border: 1px solid var(--ap-border); border-radius: 18px; padding: 16px 16px 14px; box-shadow: 0 6px 24px rgba(16, 24, 20, 0.06); }
+.ap-cartao h2 { font-size: 1.02rem; margin: 0 0 12px; }
+.ap-cartao h3 { font-size: 0.92rem; margin: 16px 0 6px; }
+.ap-muted { color: var(--ap-muted); margin: 0 0 6px; }
+.ap .small { font-size: 0.84rem; }
+.ap-destaque { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; background: var(--ap-primary-soft); border-color: transparent; }
+.ap-destaque strong, .ap-destaque span { display: block; }
+.ap-destaque span { font-size: 0.86rem; color: var(--ap-muted); }
+.ap-btn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 18px; border-radius: 12px; background: var(--ap-primary); color: var(--ap-on); font-weight: 600; text-decoration: none; border: 0; }
+.ap-btn-sec { background: var(--ap-surface-2); color: var(--ap-text); width: 100%; margin-top: 12px; }
+.ap-consulta { display: flex; gap: 14px; align-items: center; }
+.ap-consulta strong { display: block; }
+.ap-consulta > div > span { color: var(--ap-muted); font-size: 0.9rem; }
+.ap-cal { width: 58px; flex: none; text-align: center; border-radius: 14px; overflow: hidden; border: 1px solid var(--ap-border); }
+.ap-consulta .ap-cal span { display: block; background: var(--ap-primary); color: var(--ap-on); font-size: 0.72rem; font-weight: 700; text-transform: uppercase; padding: 2px 0; }
+.ap-cal strong { font-size: 1.5rem; padding: 4px 0; }
+.ap-chips { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.ap-chip { font-size: 0.76rem; font-weight: 600; padding: 2px 9px; border-radius: 99px; background: var(--ap-surface-2); color: var(--ap-muted); }
+.ap-chip.ok { background: var(--ap-primary-soft); color: var(--ap-primary); }
+.ap-plano { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.ap-prog { height: 10px; border-radius: 99px; background: var(--ap-surface-2); overflow: hidden; margin-bottom: 8px; }
+.ap-prog i { display: block; height: 100%; background: var(--ap-primary); border-radius: 99px; }
+.ap-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 10px; }
+.ap-tile { text-align: left; font: inherit; color: inherit; background: var(--ap-surface-2); border: 2px solid transparent; border-radius: 14px; padding: 10px 12px; cursor: pointer; }
+.ap-tile[aria-pressed="true"] { border-color: var(--ap-primary); background: var(--ap-surface); }
+.ap-tile-rot { display: block; font-size: 0.78rem; color: var(--ap-muted); }
+.ap-tile strong { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
+.ap-tile small { font-size: 0.8rem; font-weight: 500; color: var(--ap-muted); }
+.ap-tile-dif { display: block; font-size: 0.74rem; color: var(--ap-muted); }
+.ap-graf { width: 100%; height: auto; display: block; }
+.ap-graf-area { fill: var(--ap-primary); opacity: 0.08; }
+.ap-graf-linha { fill: none; stroke: var(--ap-primary); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.ap-graf-ponto { fill: var(--ap-surface); stroke: var(--ap-primary); stroke-width: 2.5; }
+.ap-graf-valor { font-size: 11px; font-weight: 700; fill: var(--ap-text); }
+.ap-graf-data { font-size: 10px; fill: var(--ap-muted); }
+.ap-barras { display: flex; align-items: flex-end; gap: 6px; height: 140px; }
+.ap-barra { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; min-width: 0; }
+.ap-barra-v { font-size: 0.72rem; font-weight: 700; }
+.ap-barra-c { flex: 1; width: 100%; max-width: 30px; display: flex; align-items: flex-end; }
+.ap-barra-c i { display: block; width: 100%; border-radius: 6px 6px 3px 3px; }
+.ap-barra-d { font-size: 0.66rem; color: var(--ap-muted); margin-top: 4px; white-space: nowrap; }
+.ap-lista { list-style: none; margin: 0; padding: 0; }
+.ap-lista li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--ap-border); font-size: 0.9rem; }
+.ap-lista li:last-child { border-bottom: 0; }
+.ap-lista b { font-weight: 600; text-align: right; }
+.ap-f-otimo, .ap-f-bom { color: var(--ap-verde); }
+.ap-f-neutro { color: var(--ap-amarelo); }
+.ap-f-ruim, .ap-f-pessimo { color: var(--ap-vermelho); }
+.ap-rodape { text-align: center; font-size: 0.8rem; color: var(--ap-muted); margin: 4px 8px 0; }

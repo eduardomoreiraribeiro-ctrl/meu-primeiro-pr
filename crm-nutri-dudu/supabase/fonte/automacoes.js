@@ -1245,8 +1245,48 @@ const NutriDuduAutomacoes = (() => {
     return { atender };
   }
 
-  function criarServidor({ automacoes, preAnamnese, site = null, checkin = null, chave }) {
+  // ---------------------------------------------------------------------
+  // Área do paciente (paciente.html#código): só leitura, só os dados da própria pessoa.
+  // ---------------------------------------------------------------------
+  function criarAreaPaciente({ repo, relogio = S.criarRelogio(), whatsappPadrao = '5527997498446' }) {
+    const CORS = {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'content-type',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+    };
+    const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+
+    async function atender(req) {
+      if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
+      if (req.method !== 'GET') return json({ erro: 'Método não permitido' }, 405);
+      const codigo = new URL(req.url).searchParams.get('area');
+      const invalido = { erro: 'Esse link não vale mais. Peça um novo pelo WhatsApp da clínica 😊', titulo: 'Link inválido' };
+      if (!codigo || String(codigo).length < 20) return json(invalido, 404);
+      const pessoa = (await repo.porCampo('pessoas', 'areaHash', await resumo(codigo)))[0];
+      if (!pessoa || !pessoa.areaAtiva) return json(invalido, 404);
+      const [consultas, pacotes, avaliacoes, checkins, site] = await Promise.all([
+        repo.porCampo('consultas', 'pessoaId', pessoa.id),
+        repo.porCampo('pacotes', 'pessoaId', pessoa.id),
+        repo.porCampo('avaliacoes', 'pessoaId', pessoa.id),
+        repo.porCampo('checkins', 'pessoaId', pessoa.id),
+        repo.pega('configuracoes', 'agendamento_site'),
+      ]);
+      const idsServico = [...new Set([...consultas, ...pacotes].map((x) => x.servicoId).filter(Boolean))];
+      const servicos = (await Promise.all(idsServico.map((id) => repo.pega('servicos', id)))).filter(Boolean);
+      const profissional = pessoa.profissionalId ? await repo.pega('profissionais', pessoa.profissionalId) : null;
+      const dados = NutriDudu.areaPaciente.montar({
+        pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: relogio.agora(),
+        whatsappClinica: utils.soDigitos(site?.whatsappClinica || '') || whatsappPadrao,
+      });
+      return json({ ok: true, ...dados });
+    }
+
+    return { atender };
+  }
+
+  function criarServidor({ automacoes, preAnamnese, site = null, checkin = null, area = null, chave }) {
     return async function atender(req) {
+      if (req.method === 'GET' && area && new URL(req.url).searchParams.has('area')) return area.atender(req);
       if (req.method === 'GET' && site && new URL(req.url).searchParams.has('site')) return site.atender(req);
       if (req.method === 'GET' && checkin && new URL(req.url).searchParams.has('checkin')) return checkin.atender(req);
       if (req.method === 'OPTIONS' || req.method === 'GET') return preAnamnese.atender(req);
@@ -1263,5 +1303,5 @@ const NutriDuduAutomacoes = (() => {
     };
   }
 
-  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarAgendamentoSite, criarCheckin, criarServidor, tempoDesde, resumo };
+  return { MODELOS, PADRAO, configuracao, preencher, criar, criarPreAnamnese, criarAgendamentoSite, criarCheckin, criarAreaPaciente, criarServidor, tempoDesde, resumo };
 })();
