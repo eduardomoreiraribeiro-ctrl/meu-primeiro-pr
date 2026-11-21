@@ -94,7 +94,7 @@ NutriDudu.checkin = (function () {
       id: 'qs_semanal', titulo: 'Check-in semanal', descricao: 'Revisão rápida da semana: alimentação, corpo, treino e bem-estar.',
       itens: [
         ['q_peso', 3], ['q_aderencia', 5], ['q_livres', 4], ['q_pular', 3], ['q_fome', 3], ['q_agua', 3],
-        ['q_intestino', 2], ['q_sono', 3], ['q_disposicao', 3], ['q_treino', 4], ['q_evolucao', 3], ['q_recado', 1],
+        ['q_intestino', 2], ['q_sono', 3], ['q_horas_sono', 2], ['q_disposicao', 3], ['q_treino', 4], ['q_evolucao', 3], ['q_recado', 1],
       ].map(([perguntaId, peso]) => ({ perguntaId, peso, ativo: true })),
     },
     {
