@@ -146,7 +146,7 @@ NutriDudu.mensagensAutomaticas = (function () {
     },
     resumoDia: {
       titulo: 'Resumo do dia (para a equipe)',
-      quando: 'Uma vez por dia, de segunda a sábado, logo no começo do horário de envio. Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',
+      quando: 'Todo dia (inclusive sábado e domingo), no horário escolhido acima (padrão: 7h). Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',
       nomePadrao: 'nutridudu_resumo_dia',
       categoria: 'UTILITY',
       corpo: () => 'Bom dia, Nutri! Resumo de {{1}} no sistema: {{2}}. Abra o sistema para ver os detalhes.',
@@ -162,6 +162,7 @@ NutriDudu.mensagensAutomaticas = (function () {
     idioma: 'pt_BR',
     horaInicio: 8,
     horaFim: 20,
+    horaResumo: 7, // o resumo do dia tem horário próprio, todos os dias (inclusive domingo)
     linkSistema: '',
     telefonesEquipe: '',
     linkAvaliacao: '',

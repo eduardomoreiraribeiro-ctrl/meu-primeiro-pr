@@ -779,6 +779,7 @@ NutriDudu.pages.configuracoes = (function () {
     if (d.linkAvaliacao && !/^https:\/\/\S+$/.test(d.linkAvaliacao)) erros.linkAvaliacao = 'Cole o link completo, começando com https://.';
     if ((d.ativas.avisoEquipe || d.ativas.resumoDia) && !NutriDudu.mensagensAutomaticas.telefonesDaEquipe(d.telefonesEquipe).length) erros.telefonesEquipe = 'Informe pelo menos um celular com DDD.';
     if (!(Number.isInteger(d.horaInicio) && d.horaInicio >= 6 && d.horaInicio <= 12)) erros.horaInicio = 'Entre 6 e 12.';
+    if (!(Number.isInteger(d.horaResumo) && d.horaResumo >= 5 && d.horaResumo <= 12)) erros.horaResumo = 'Entre 5 e 12.';
     if (!(Number.isInteger(d.horaFim) && d.horaFim >= 14 && d.horaFim <= 22 && d.horaFim > d.horaInicio)) erros.horaFim = 'Entre 14 e 22.';
     Object.entries(d.modelos).forEach(([id, nome]) => {
       if (nome && !/^[a-z0-9_]{1,512}$/.test(nome)) erros[`modelo_${id}`] = 'Só letras minúsculas, números e _ (como na Meta).';
@@ -815,6 +816,7 @@ NutriDudu.pages.configuracoes = (function () {
           ${f.texto('horaInicio', 'Enviar a partir das (hora)', cfg.horaInicio, { tipo: 'number', atributos: 'min="6" max="12" step="1"' })}
           ${f.texto('horaFim', 'Até as (hora)', cfg.horaFim, { tipo: 'number', atributos: 'min="14" max="22" step="1"' })}
         </div>
+        ${f.texto('horaResumo', 'Resumo do dia para a equipe às (hora)', cfg.horaResumo ?? 7, { tipo: 'number', atributos: 'min="5" max="12" step="1"', ajuda: 'Sai todo dia nesse horário, inclusive sábado e domingo.' })}
         <p class="muted small">Ligue cada mensagem só depois que o modelo dela estiver <strong>aprovado</strong> na Meta (o botão "Texto para a Meta" mostra o que cadastrar).</p>
         ${linhas}`,
       ler: (form) => ({
@@ -823,6 +825,7 @@ NutriDudu.pages.configuracoes = (function () {
         linkAvaliacao: f.valor(form, 'linkAvaliacao'),
         horaInicio: f.numero(form, 'horaInicio'),
         horaFim: f.numero(form, 'horaFim'),
+        horaResumo: f.numero(form, 'horaResumo'),
         ativas: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.marcado(form, `ativa_${id}`)])),
         modelos: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.valor(form, `modelo_${id}`)])),
       }),
