@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-automacoes" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 9f1d0f
+// Versão: c92b8f
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -935,7 +935,7 @@ NutriDudu.mensagensAutomaticas = (function () {
     },
     resumoDia: {
       titulo: 'Resumo do dia (para a equipe)',
-      quando: 'Uma vez por dia, de segunda a sábado, logo no começo do horário de envio. Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',
+      quando: 'Todo dia (inclusive sábado e domingo), no horário escolhido acima (padrão: 7h). Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',
       nomePadrao: 'nutridudu_resumo_dia',
       categoria: 'UTILITY',
       corpo: () => 'Bom dia, Nutri! Resumo de {{1}} no sistema: {{2}}. Abra o sistema para ver os detalhes.',
@@ -951,6 +951,7 @@ NutriDudu.mensagensAutomaticas = (function () {
     idioma: 'pt_BR',
     horaInicio: 8,
     horaFim: 20,
+    horaResumo: 7, // o resumo do dia tem horário próprio, todos os dias (inclusive domingo)
     linkSistema: '',
     telefonesEquipe: '',
     linkAvaliacao: '',
@@ -3551,6 +3552,16 @@ const NutriDuduAutomacoes = (() => {
       const profPor = Object.fromEntries(profissionais.map((p) => [p.id, p]));
       const relatorio = { em: inicio.toISOString(), manual, por, enviados: [], pulados: [], erros: [], foraDoHorario: false };
 
+      // Resumo do dia para a equipe: horário próprio (padrão 7h), todos os dias, uma vez por dia.
+      // Vem antes da checagem do horário de envio, que vale só para as mensagens dos pacientes.
+      const horaResumo = Number.isFinite(Number(cfg.horaResumo)) ? Number(cfg.horaResumo) : 7;
+      if (cfg.ativas.resumoDia && relogio.agoraLocal().getHours() >= horaResumo) {
+        const r = await enviarResumoDia({ cfg, configuracoes, pessoas, consultas, lancamentos, conversas, profissionais });
+        if (r?.ok) relatorio.enviados.push({ automacao: 'resumoDia', pessoa: 'equipe', via: r.via });
+        else if (r?.erro) relatorio.erros.push({ automacao: 'resumoDia', pessoa: 'equipe', motivo: r.motivo });
+        else if (r?.motivo) relatorio.pulados.push({ automacao: 'resumoDia', pessoa: 'equipe', motivo: r.motivo });
+      }
+
       if (!dentroDoHorario(cfg)) {
         relatorio.foraDoHorario = true;
         await salvarStatus(relatorio, configuracoes);
@@ -3835,14 +3846,6 @@ const NutriDuduAutomacoes = (() => {
           await marcar('pessoas', pessoa.id, 'posConsulta', marca);
           return r;
         }, relogio.descrever(c.inicio));
-      }
-
-      // 12. Resumo do dia para a equipe (uma vez por dia, no começo do horário de envio).
-      if (cfg.ativas.resumoDia) {
-        const r = await enviarResumoDia({ cfg, configuracoes, pessoas, consultas, lancamentos, conversas, profissionais });
-        if (r?.ok) relatorio.enviados.push({ automacao: 'resumoDia', pessoa: 'equipe', via: r.via });
-        else if (r?.erro) relatorio.erros.push({ automacao: 'resumoDia', pessoa: 'equipe', motivo: r.motivo });
-        else if (r?.motivo) relatorio.pulados.push({ automacao: 'resumoDia', pessoa: 'equipe', motivo: r.motivo });
       }
 
       await salvarStatus(relatorio, configuracoes);
