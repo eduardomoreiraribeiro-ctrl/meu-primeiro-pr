@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: d15a23
+// Versão: 2a58c0
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -635,7 +635,29 @@ NutriDudu.alertas = (function () {
     sem_retorno: { nome: 'Sem retorno marcado', variante: 'alerta' },
     retorno_vencido: { nome: 'Retorno vencido', variante: 'alerta' },
     pacote_atrasado: { nome: 'Pacote atrasado', variante: 'alerta' },
+    checkin_queda: { nome: 'Check-in em queda', variante: 'alerta' },
   };
+
+  /**
+   * Queda na nota dos check-ins (só olha os respondidos nas últimas 3 semanas).
+   * Avisa quando o último check-in ficou 15 pontos ou mais abaixo da média dos 3 anteriores,
+   * ou quando caiu 2 vezes seguidas somando 10 pontos ou mais.
+   * Devolve { de, para, data, seguidas } ou null.
+   */
+  function quedaCheckin(checkins = [], agora = new Date()) {
+    const s = checkins.filter((c) => c.respondidoEm && !c.cancelado && Number.isFinite(Number(c.score)) && c.score !== null)
+      .sort((a, b) => String(a.respondidoEm).localeCompare(String(b.respondidoEm)));
+    if (s.length < 2) return null;
+    const n = s.length;
+    const ult = s[n - 1];
+    if (agora - new Date(ult.respondidoEm) > 21 * 864e5) return null;
+    const anteriores = s.slice(Math.max(0, n - 4), n - 1).map((c) => Number(c.score));
+    const media = anteriores.reduce((t, v) => t + v, 0) / anteriores.length;
+    const seguidas = n >= 3 && ult.score < s[n - 2].score && s[n - 2].score < s[n - 3].score && s[n - 3].score - ult.score >= 10;
+    if (ult.score <= media - 15) return { de: Math.round(media), para: Number(ult.score), data: ult.respondidoEm, seguidas: false };
+    if (seguidas) return { de: Number(s[n - 3].score), para: Number(ult.score), data: ult.respondidoEm, seguidas: true };
+    return null;
+  }
 
   const PADROES = { diasRetornoPadrao: 60, diasClienteSumido: 120, diasFaltaRemarcar: 7, diasLeadParado: 7 };
   const regras = (geral = {}) => ({ ...PADROES, ...Object.fromEntries(Object.entries(geral).filter(([, v]) => v !== null && v !== undefined)) });
@@ -696,6 +718,17 @@ NutriDudu.alertas = (function () {
       }
     }
 
+    // Check-in em queda (só quando quem chama manda os check-ins da pessoa).
+    if (pessoa.status === 'ativo' && ctx.checkins) {
+      const q = quedaCheckin(ctx.checkins, agora);
+      if (q) {
+        add('checkin_queda', q.seguidas
+          ? `a nota caiu 2 check-ins seguidos: de ${q.de}% para ${q.para}% (${utils.data(q.data)}). Vale chamar pra conversar`
+          : `a nota do último check-in foi ${q.para}% (${utils.data(q.data)}), bem abaixo da média de ${q.de}% das semanas anteriores. Vale chamar pra conversar`,
+        utils.diasEntre(q.data, agora));
+      }
+    }
+
     const ordem = Object.keys(TIPOS);
     return lista
       .filter((a) => incluirDispensados || !a.dispensado)
@@ -750,7 +783,7 @@ NutriDudu.alertas = (function () {
     await store.update('pessoas', pessoa.id, { alertasDispensados: resto });
   }
 
-  return { TIPOS, PADROES, regras, daPessoa, todos, dispensar, reativar, dispensado };
+  return { TIPOS, PADROES, regras, quedaCheckin, daPessoa, todos, dispensar, reativar, dispensado };
 })();
 
 // ===== js/mensagens-automaticas.js =====
@@ -890,6 +923,15 @@ NutriDudu.mensagensAutomaticas = (function () {
       corpo: () => 'Oi, {{1}}! Passando pra lembrar do seu {{2}}: o prazo termina {{3}} ⏰ É só tocar aqui: {{4}} Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚',
       variaveis: ['primeiro nome', 'nome do questionário', 'quando (ex.: hoje)', 'link pessoal'],
       exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html#abc123'],
+    },
+    aniversario: {
+      titulo: 'Feliz aniversário',
+      quando: 'No dia do aniversário (data de nascimento do cadastro), logo no começo do horário de envio, uma vez por ano. Vai para clientes ativos e ex-clientes; leads não recebem.',
+      nomePadrao: 'nutridudu_aniversario',
+      categoria: 'MARKETING',
+      corpo: () => 'Oi, {{1}}! Hoje é o seu dia! 🎉 Feliz aniversário! Que esse novo ciclo venha com muita saúde, energia e conquistas. Conta sempre comigo 💚',
+      variaveis: ['primeiro nome'],
+      exemplo: ['Mariana'],
     },
     resumoDia: {
       titulo: 'Resumo do dia (para a equipe)',
@@ -1093,6 +1135,10 @@ NutriDudu.resumoDia = (function () {
     // Check-ins respondidos e ainda não revisados (com nota baixa destacada).
     const ckRevisar = (dados.checkins || []).filter((c) => c.respondidoEm && !c.revisadoEm && !c.cancelado);
     const ckBaixos = ckRevisar.filter((c) => c.score !== null && c.score !== undefined && c.score < 55);
+    // Notas de check-in caindo (mesma regra do alerta da ficha).
+    const quedas = (dados.pessoas || []).filter((p) => p.status === 'ativo'
+      && NutriDudu.alertas?.quedaCheckin((dados.checkins || []).filter((c) => c.pessoaId === p.id), agora)
+      && !NutriDudu.alertas.dispensado(p, 'checkin_queda', agora));
     const aniversarios = (dados.pessoas || []).filter((p) => p.status !== 'lead' && p.dataNascimento && String(p.dataNascimento).slice(5, 10) === mesDia);
 
     const descreverConsulta = (c, curto = false) => {
@@ -1126,6 +1172,7 @@ NutriDudu.resumoDia = (function () {
     if (naEspera.length) avisos.push(`⏳ Lista de espera: ${naEspera.length} ${naEspera.length === 1 ? 'pessoa' : 'pessoas'}`);
     if (leadsSite.length) avisos.push(`🆕 Cadastros novos pelo site: ${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (ckRevisar.length) avisos.push(`📋 Check-ins para revisar: ${ckRevisar.length}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
+    if (quedas.length) avisos.push(`📉 Check-in em queda: ${quedas.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (aniversarios.length) avisos.push(`🎂 Aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (avisos.length) linhas.push('', ...avisos);
     linhas.push('', 'Abra o sistema para ver os detalhes.');
@@ -1142,6 +1189,7 @@ NutriDudu.resumoDia = (function () {
     if (naEspera.length) partes.push(`${naEspera.length} na lista de espera`);
     if (leadsSite.length) partes.push(`${leadsSite.length} ${leadsSite.length === 1 ? 'cadastro novo' : 'cadastros novos'} pelo site (${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')})`);
     if (ckRevisar.length) partes.push(`${ckRevisar.length} ${ckRevisar.length === 1 ? 'check-in para revisar' : 'check-ins para revisar'}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
+    if (quedas.length) partes.push(`check-in em queda: ${quedas.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (aniversarios.length) partes.push(`aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     let resumo = partes.join('; ').replace(/\s+/g, ' ').trim();
     if (resumo.length > MAX_PARAMETRO) resumo = `${resumo.slice(0, MAX_PARAMETRO - 1)}…`;
@@ -3573,6 +3621,27 @@ const NutriDuduAutomacoes = (() => {
           await marcar('lancamentos', l.id, 'cobranca', { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
           return r;
         }, l.descricao);
+      }
+
+      // 3b. Feliz aniversário: clientes e ex-clientes, uma vez por ano (vem antes das outras de relacionamento).
+      if (cfg.ativas.aniversario) {
+        const hojeAniv = relogio.agoraLocal();
+        const mesDia = `${String(hojeAniv.getMonth() + 1).padStart(2, '0')}-${String(hojeAniv.getDate()).padStart(2, '0')}`;
+        const chaveAno = `aniversario_${hojeAniv.getFullYear()}`;
+        for (const pessoa of pessoas) {
+          if (!['ativo', 'inativo'].includes(pessoa.status) || !pessoa.dataNascimento) continue;
+          const md = String(pessoa.dataNascimento).slice(5, 10);
+          // Quem nasceu em 29/02 recebe em 28/02 nos anos que não são bissextos.
+          const bissexto = new Date(hojeAniv.getFullYear(), 1, 29).getMonth() === 1;
+          if (md !== mesDia && !(md === '02-29' && !bissexto && mesDia === '02-28')) continue;
+          if (jaFeito(pessoa.automacoes?.[chaveAno]) || marketingHoje.has(pessoa.id)) continue;
+          await tentar('aniversario', pessoa, async () => {
+            const r = await enviar({ cfg, automacao: 'aniversario', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome)] });
+            await marcar('pessoas', pessoa.id, chaveAno, { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
+            if (r.ok) marketingHoje.add(pessoa.id);
+            return r;
+          }, 'aniversário');
+        }
       }
 
       // 4 e 5. Retorno pendente e reativação (regras de alertas do sistema, no relógio da clínica).
