@@ -94,7 +94,10 @@ NutriDudu.planosClientes = (function () {
       semPlano: 'Clientes ativos sem nenhum plano registrado (ex.: consultas avulsas ou plano ainda não lançado).',
       inativos: 'Clientes que encerraram o acompanhamento. Dá para reativar quando voltarem.',
     };
+    const semPlanoPendente = por('semPlano').filter((l) => !l.pessoa.atendeAvulso).length;
     return `
+      ${pode && semPlanoPendente ? `<div class="pl-cadastro"><span>📝 <strong>${semPlanoPendente} ${semPlanoPendente === 1 ? 'cliente ativo está' : 'clientes ativos estão'} sem plano no sistema.</strong> Cadastre os planos atuais num passo a passo rápido, um de cada vez.</span>
+        <button type="button" class="btn btn-pequeno btn-primary" data-pl-cadastrar>Cadastrar planos atuais</button></div>` : ''}
       <div class="acoes-linha pl-abas" role="tablist">${Object.entries(GRUPOS).map(([g, nome]) => {
         const n = por(g).length;
         const alerta = (g === 'finalizados' || g === 'acabando') && n ? ' pl-alerta' : '';
@@ -103,7 +106,7 @@ NutriDudu.planosClientes = (function () {
       <p class="muted small">${AJUDA[estado.grupo]}</p>
       ${lista.length ? `<div class="tabela-rolagem"><table class="tabela-simples"><thead><tr><th>Cliente</th><th>Plano</th><th>Situação</th><th>Próxima consulta</th><th>WhatsApp</th>${pode ? '<th>Ações</th>' : ''}</tr></thead><tbody>
         ${lista.map((l) => `<tr>
-          <td><a href="#/clientes/${encodeURIComponent(l.pessoa.id)}">${esc(l.pessoa.nome)}</a>${l.pessoa.permuta ? ` ${ui.badge('Permuta', 'info')}` : ''}</td>
+          <td><a href="#/clientes/${encodeURIComponent(l.pessoa.id)}">${esc(l.pessoa.nome)}</a>${l.pessoa.permuta ? ` ${ui.badge('Permuta', 'info')}` : ''}${l.grupo === 'semPlano' && l.pessoa.atendeAvulso ? ` ${ui.badge('Avulso', 'neutro')}` : ''}</td>
           <td>${plano(l)}</td>
           <td class="small">${situacao(l)}</td>
           <td class="small">${l.proxima ? `${utils.data(l.proxima.inicio)} ${utils.hora(l.proxima.inicio)}` : '<span class="muted">nada marcado</span>'}</td>
@@ -115,6 +118,7 @@ NutriDudu.planosClientes = (function () {
   function ligar(raiz, dados) {
     const { store, modal, ui, permissoes, financeiro } = NutriDudu;
     const achar = (id) => dados.pessoas.find((p) => p.id === id);
+    raiz.querySelector('[data-pl-cadastrar]')?.addEventListener('click', () => NutriDudu.planosAtuais.abrir());
     raiz.querySelectorAll('[data-pl-grupo]').forEach((b) => b.addEventListener('click', () => { estado.grupo = b.dataset.plGrupo; NutriDudu.recarregarPagina(); }));
     raiz.querySelectorAll('[data-pl-renovar]').forEach((b) => b.addEventListener('click', () => {
       const pessoa = achar(b.dataset.plRenovar);

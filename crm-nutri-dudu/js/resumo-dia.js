@@ -42,6 +42,10 @@ NutriDudu.resumoDia = (function () {
     // Check-ins respondidos e ainda não revisados (com nota baixa destacada).
     const ckRevisar = (dados.checkins || []).filter((c) => c.respondidoEm && !c.revisadoEm && !c.cancelado);
     const ckBaixos = ckRevisar.filter((c) => c.score !== null && c.score !== undefined && c.score < 55);
+    // Notas de check-in caindo (mesma regra do alerta da ficha).
+    const quedas = (dados.pessoas || []).filter((p) => p.status === 'ativo'
+      && NutriDudu.alertas?.quedaCheckin((dados.checkins || []).filter((c) => c.pessoaId === p.id), agora)
+      && !NutriDudu.alertas.dispensado(p, 'checkin_queda', agora));
     const aniversarios = (dados.pessoas || []).filter((p) => p.status !== 'lead' && p.dataNascimento && String(p.dataNascimento).slice(5, 10) === mesDia);
 
     const descreverConsulta = (c, curto = false) => {
@@ -75,6 +79,7 @@ NutriDudu.resumoDia = (function () {
     if (naEspera.length) avisos.push(`⏳ Lista de espera: ${naEspera.length} ${naEspera.length === 1 ? 'pessoa' : 'pessoas'}`);
     if (leadsSite.length) avisos.push(`🆕 Cadastros novos pelo site: ${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (ckRevisar.length) avisos.push(`📋 Check-ins para revisar: ${ckRevisar.length}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
+    if (quedas.length) avisos.push(`📉 Check-in em queda: ${quedas.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (aniversarios.length) avisos.push(`🎂 Aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (avisos.length) linhas.push('', ...avisos);
     linhas.push('', 'Abra o sistema para ver os detalhes.');
@@ -91,6 +96,7 @@ NutriDudu.resumoDia = (function () {
     if (naEspera.length) partes.push(`${naEspera.length} na lista de espera`);
     if (leadsSite.length) partes.push(`${leadsSite.length} ${leadsSite.length === 1 ? 'cadastro novo' : 'cadastros novos'} pelo site (${leadsSite.map((p) => primeiroNome(p.nome)).join(', ')})`);
     if (ckRevisar.length) partes.push(`${ckRevisar.length} ${ckRevisar.length === 1 ? 'check-in para revisar' : 'check-ins para revisar'}${ckBaixos.length ? ` (atenção: ${ckBaixos.map((c) => primeiroNome(pessoaPor[c.pessoaId]?.nome)).join(', ')})` : ''}`);
+    if (quedas.length) partes.push(`check-in em queda: ${quedas.map((p) => primeiroNome(p.nome)).join(', ')}`);
     if (aniversarios.length) partes.push(`aniversário: ${aniversarios.map((p) => primeiroNome(p.nome)).join(', ')}`);
     let resumo = partes.join('; ').replace(/\s+/g, ' ').trim();
     if (resumo.length > MAX_PARAMETRO) resumo = `${resumo.slice(0, MAX_PARAMETRO - 1)}…`;

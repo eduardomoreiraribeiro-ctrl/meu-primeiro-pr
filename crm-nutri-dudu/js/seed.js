@@ -418,6 +418,24 @@ NutriDudu.seed = (function () {
           respostas, score: C.score(perguntas, respostas), respondidoEm: quando, revisadoEm: i < semanas.length - 1 ? quando : null,
         });
       });
+      // Diego: nota caindo nas últimas 3 semanas (mostra o alerta "Check-in em queda").
+      [
+        { ade: 1, liv: 1, pul: 0, fom: 1, agua: 2.6, int: 1, sono: 1, dis: 1, tre: 4, evo: 1 },
+        { ade: 0, liv: 2, pul: 1, fom: 0, agua: 2, int: 0, sono: 0, dis: 0, tre: 3, evo: 0 },
+        { ade: -1, liv: 4, pul: 2, fom: -1, agua: 1.2, int: 0, sono: -1, dis: -1, tre: 1, evo: -1, exp: 'Muito trabalho, comendo na rua.' },
+      ].forEach((w, i) => {
+        const quando = diaHora(-7 * (3 - i) + 2, '21:00');
+        const respostas = {
+          q_peso: { valor: 94.6 + i * 0.4 }, q_aderencia: { valor: w.ade }, q_livres: { valor: w.liv }, q_pular: { valor: w.pul }, q_fome: { valor: w.fom },
+          q_agua: { valor: w.agua }, q_intestino: { valor: w.int }, q_sono: { valor: w.sono, ...(w.exp ? { explicacao: w.exp } : {}) },
+          q_disposicao: { valor: w.dis }, q_treino: { valor: w.tre }, q_evolucao: { valor: w.evo },
+        };
+        checkins.push({
+          id: `chk_demo_d${i + 1}`, pessoaId: 'pes_12', questionarioId: q.id, titulo: q.titulo, perguntas, codigo: `demod${i}`,
+          enviadoEm: diaHora(-7 * (3 - i), '09:00'), prazo: diaHora(-7 * (3 - i) + 3, '23:59'),
+          respostas, score: C.score(perguntas, respostas), respondidoEm: quando, revisadoEm: i < 2 ? quando : null,
+        });
+      });
       checkins.push({ id: 'chk_demo_7', pessoaId: 'pes_2', questionarioId: q.id, titulo: q.titulo, perguntas, codigo: 'demo7', enviadoEm: diaHora(-1, '09:00'), prazo: diaHora(2, '23:59'), respostas: null, score: null });
     }
 

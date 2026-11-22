@@ -30,8 +30,9 @@ NutriDudu.pages.clientes = (function () {
   /** Monta uma linha de dados por pessoa, com tudo que a tabela, os filtros e o CSV precisam. */
   function montarLinhas(dados) {
     const { calculos, config, utils } = NutriDudu;
-    const { pessoas, consultas, pacotes, lancamentos, profissionais, servicos, anamneses, geral } = dados;
+    const { pessoas, consultas, pacotes, lancamentos, profissionais, servicos, anamneses, checkins = [], geral } = dados;
     const consultasDe = calculos.agruparPorPessoa(consultas);
+    const checkinsDe = calculos.agruparPorPessoa(checkins);
     const pacotesDe = calculos.agruparPorPessoa(pacotes);
     const lancamentosDe = calculos.agruparPorPessoa(lancamentos);
     const anamnesesDe = calculos.agruparPorPessoa(anamneses);
@@ -55,7 +56,7 @@ NutriDudu.pages.clientes = (function () {
       return {
         pessoa: p,
         resumo: r,
-        alertas: NutriDudu.alertas.daPessoa(p, { consultas: consultasDe(p.id), pacotes: pacotesDe(p.id) }, geral),
+        alertas: NutriDudu.alertas.daPessoa(p, { consultas: consultasDe(p.id), pacotes: pacotesDe(p.id), ...(checkins.length ? { checkins: checkinsDe(p.id) } : {}) }, geral),
         profissional: prof[p.profissionalId] || null,
         pacoteNome: r.pacote ? nomeServico[r.pacote.servicoId] || 'Pacote' : '',
         origem: config.ORIGENS[p.origem] || '',
@@ -281,16 +282,17 @@ NutriDudu.pages.clientes = (function () {
 
   async function render(container) {
     const { store, ui, config, utils, permissoes } = NutriDudu;
-    const [pessoas, consultas, pacotes, lancamentos, profissionais, servicos, anamneses, geral] = await Promise.all([
+    const [pessoas, consultas, pacotes, lancamentos, profissionais, servicos, anamneses, geral, checkins] = await Promise.all([
       store.list('pessoas'), store.list('consultas'), store.list('pacotes'), store.list('lancamentos'),
       store.list('profissionais'), store.list('servicos'),
       permissoes.pode('verClinico') ? store.list('anamneses') : [],
       store.get('configuracoes', 'geral'),
+      permissoes.pode('verClinico') ? store.list('checkins') : [],
     ]);
     const verClinico = permissoes.pode('verClinico');
     if (!verClinico) estado.filtros.clinico = '';
 
-    const linhas = montarLinhas({ pessoas, consultas, pacotes, lancamentos, profissionais, servicos, anamneses, geral: geral || {} });
+    const linhas = montarLinhas({ pessoas, consultas, pacotes, lancamentos, profissionais, servicos, anamneses, checkins, geral: geral || {} });
     const tags = [...new Set(pessoas.flatMap((p) => p.tags || []))].sort((a, b) => a.localeCompare(b, 'pt-BR'));
     const fl = estado.filtros;
 

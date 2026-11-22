@@ -135,6 +135,15 @@ NutriDudu.mensagensAutomaticas = (function () {
       variaveis: ['primeiro nome', 'nome do questionário', 'quando (ex.: hoje)', 'link pessoal'],
       exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html#abc123'],
     },
+    aniversario: {
+      titulo: 'Feliz aniversário',
+      quando: 'No dia do aniversário (data de nascimento do cadastro), logo no começo do horário de envio, uma vez por ano. Vai para clientes ativos e ex-clientes; leads não recebem.',
+      nomePadrao: 'nutridudu_aniversario',
+      categoria: 'MARKETING',
+      corpo: () => 'Oi, {{1}}! Hoje é o seu dia! 🎉 Feliz aniversário! Que esse novo ciclo venha com muita saúde, energia e conquistas. Conta sempre comigo 💚',
+      variaveis: ['primeiro nome'],
+      exemplo: ['Mariana'],
+    },
     resumoDia: {
       titulo: 'Resumo do dia (para a equipe)',
       quando: 'Uma vez por dia, de segunda a sábado, logo no começo do horário de envio. Vai para os celulares da equipe: consultas de hoje, quem não confirmou, pré-anamneses para revisar, conversas aguardando, pagamentos atrasados, lista de espera e aniversariantes.',

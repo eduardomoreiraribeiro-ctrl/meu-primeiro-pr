@@ -359,6 +359,27 @@ const NutriDuduAutomacoes = (() => {
         }, l.descricao);
       }
 
+      // 3b. Feliz aniversário: clientes e ex-clientes, uma vez por ano (vem antes das outras de relacionamento).
+      if (cfg.ativas.aniversario) {
+        const hojeAniv = relogio.agoraLocal();
+        const mesDia = `${String(hojeAniv.getMonth() + 1).padStart(2, '0')}-${String(hojeAniv.getDate()).padStart(2, '0')}`;
+        const chaveAno = `aniversario_${hojeAniv.getFullYear()}`;
+        for (const pessoa of pessoas) {
+          if (!['ativo', 'inativo'].includes(pessoa.status) || !pessoa.dataNascimento) continue;
+          const md = String(pessoa.dataNascimento).slice(5, 10);
+          // Quem nasceu em 29/02 recebe em 28/02 nos anos que não são bissextos.
+          const bissexto = new Date(hojeAniv.getFullYear(), 1, 29).getMonth() === 1;
+          if (md !== mesDia && !(md === '02-29' && !bissexto && mesDia === '02-28')) continue;
+          if (jaFeito(pessoa.automacoes?.[chaveAno]) || marketingHoje.has(pessoa.id)) continue;
+          await tentar('aniversario', pessoa, async () => {
+            const r = await enviar({ cfg, automacao: 'aniversario', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome)] });
+            await marcar('pessoas', pessoa.id, chaveAno, { em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }) });
+            if (r.ok) marketingHoje.add(pessoa.id);
+            return r;
+          }, 'aniversário');
+        }
+      }
+
       // 4 e 5. Retorno pendente e reativação (regras de alertas do sistema, no relógio da clínica).
       const local2 = (lista) => lista.map((x) => ({ ...x, inicio: x.inicio && x.inicio.length > 10 ? relogio.paraLocal(x.inicio).toISOString() : x.inicio }));
       const comAlerta = alertas.todos({ pessoas, consultas: local2(consultas), pacotes, geral }, relogio.agoraLocal());

@@ -520,7 +520,7 @@ NutriDudu.pages.cliente = (function () {
 
     const porId = (lista) => Object.fromEntries(lista.map((x) => [x.id, x]));
     const resumo = calculos.resumoPessoa(pessoa, { consultas, pacotes, lancamentos }, geral || {});
-    const avisosRetorno = NutriDudu.alertas.daPessoa(pessoa, { consultas, pacotes }, geral || {}, new Date(), { incluirDispensados: true });
+    const avisosRetorno = NutriDudu.alertas.daPessoa(pessoa, { consultas, pacotes, checkins }, geral || {}, new Date(), { incluirDispensados: true });
     const dadosFormula = { sexo: pessoa.sexo, idade: utils.idade(pessoa.dataNascimento) };
     const avaliacoesOrdenadas = avaliacoes
       .map((av) => ({ av, data: consultas.find((x) => x.id === av.consultaId)?.inicio || av.criadoEm, r: NutriDudu.avaliacao.calcular(av, dadosFormula) }))

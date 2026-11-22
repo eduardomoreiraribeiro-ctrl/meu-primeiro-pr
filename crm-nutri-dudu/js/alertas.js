@@ -13,7 +13,29 @@ NutriDudu.alertas = (function () {
     sem_retorno: { nome: 'Sem retorno marcado', variante: 'alerta' },
     retorno_vencido: { nome: 'Retorno vencido', variante: 'alerta' },
     pacote_atrasado: { nome: 'Pacote atrasado', variante: 'alerta' },
+    checkin_queda: { nome: 'Check-in em queda', variante: 'alerta' },
   };
+
+  /**
+   * Queda na nota dos check-ins (só olha os respondidos nas últimas 3 semanas).
+   * Avisa quando o último check-in ficou 15 pontos ou mais abaixo da média dos 3 anteriores,
+   * ou quando caiu 2 vezes seguidas somando 10 pontos ou mais.
+   * Devolve { de, para, data, seguidas } ou null.
+   */
+  function quedaCheckin(checkins = [], agora = new Date()) {
+    const s = checkins.filter((c) => c.respondidoEm && !c.cancelado && Number.isFinite(Number(c.score)) && c.score !== null)
+      .sort((a, b) => String(a.respondidoEm).localeCompare(String(b.respondidoEm)));
+    if (s.length < 2) return null;
+    const n = s.length;
+    const ult = s[n - 1];
+    if (agora - new Date(ult.respondidoEm) > 21 * 864e5) return null;
+    const anteriores = s.slice(Math.max(0, n - 4), n - 1).map((c) => Number(c.score));
+    const media = anteriores.reduce((t, v) => t + v, 0) / anteriores.length;
+    const seguidas = n >= 3 && ult.score < s[n - 2].score && s[n - 2].score < s[n - 3].score && s[n - 3].score - ult.score >= 10;
+    if (ult.score <= media - 15) return { de: Math.round(media), para: Number(ult.score), data: ult.respondidoEm, seguidas: false };
+    if (seguidas) return { de: Number(s[n - 3].score), para: Number(ult.score), data: ult.respondidoEm, seguidas: true };
+    return null;
+  }
 
   const PADROES = { diasRetornoPadrao: 60, diasClienteSumido: 120, diasFaltaRemarcar: 7, diasLeadParado: 7 };
   const regras = (geral = {}) => ({ ...PADROES, ...Object.fromEntries(Object.entries(geral).filter(([, v]) => v !== null && v !== undefined)) });
@@ -74,6 +96,17 @@ NutriDudu.alertas = (function () {
       }
     }
 
+    // Check-in em queda (só quando quem chama manda os check-ins da pessoa).
+    if (pessoa.status === 'ativo' && ctx.checkins) {
+      const q = quedaCheckin(ctx.checkins, agora);
+      if (q) {
+        add('checkin_queda', q.seguidas
+          ? `a nota caiu 2 check-ins seguidos: de ${q.de}% para ${q.para}% (${utils.data(q.data)}). Vale chamar pra conversar`
+          : `a nota do último check-in foi ${q.para}% (${utils.data(q.data)}), bem abaixo da média de ${q.de}% das semanas anteriores. Vale chamar pra conversar`,
+        utils.diasEntre(q.data, agora));
+      }
+    }
+
     const ordem = Object.keys(TIPOS);
     return lista
       .filter((a) => incluirDispensados || !a.dispensado)
@@ -128,5 +161,5 @@ NutriDudu.alertas = (function () {
     await store.update('pessoas', pessoa.id, { alertasDispensados: resto });
   }
 
-  return { TIPOS, PADROES, regras, daPessoa, todos, dispensar, reativar, dispensado };
+  return { TIPOS, PADROES, regras, quedaCheckin, daPessoa, todos, dispensar, reativar, dispensado };
 })();

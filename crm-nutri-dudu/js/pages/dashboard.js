@@ -112,6 +112,18 @@ NutriDudu.pages.dashboard = (function () {
          <button type="button" class="btn btn-pequeno" data-dispensar="${p.id}" data-tipo="${a.tipo}">Dispensar</button>`,
       ));
 
+    // 1b. Check-ins em queda (só para quem vê dados clínicos).
+    const quedas = (d.checkins ? d.pessoas.filter((p) => p.status === 'ativo') : [])
+      .map((p) => ({ p, q: alertas.quedaCheckin(d.checkinsDe(p.id), agora) }))
+      .filter((x) => x.q && !alertas.dispensado(x.p, 'checkin_queda', agora))
+      .sort((a, b) => a.q.para - b.q.para)
+      .map(({ p, q }) => itemAcao(
+        `${linkPessoa(p)} <strong class="texto-perigo">${q.para}%</strong>`,
+        q.seguidas ? `caiu 2 check-ins seguidos: ${q.de}% → ${q.para}% · ${utils.data(q.data).slice(0, 5)}` : `média anterior ${q.de}% → ${q.para}% no último check-in · ${utils.data(q.data).slice(0, 5)}`,
+        `<a class="btn btn-pequeno btn-primary" href="#/clientes/${encodeURIComponent(p.id)}/checkins">Ver check-ins</a> ${whatsapp(p)}
+         <button type="button" class="btn btn-pequeno" data-dispensar="${p.id}" data-tipo="checkin_queda">Dispensar</button>`,
+      ));
+
     // 2. Consultas a confirmar: ainda "agendada", de agora até o fim de amanhã.
     const limite = new Date(hoje);
     limite.setDate(limite.getDate() + 2);
@@ -211,6 +223,7 @@ NutriDudu.pages.dashboard = (function () {
       <div class="grid-acoes">
         ${cartaoAcao({ id: 'conversas', titulo: 'Conversas aguardando equipe', sub: 'WhatsApp: o assistente chamou alguém ou está desligado', itens: aguardando, vazio: 'Nenhuma conversa esperando a equipe.', verTodos: '#/conversas' })}
         ${cartaoAcao({ id: 'retornos', titulo: 'Retornos pendentes', sub: 'Clientes sem próximo passo: sem retorno, faltas sem remarcar, sumidos', itens: retornos, vazio: 'Todos os clientes ativos têm próximo passo.', verTodos: '#/clientes' })}
+        ${d.checkins ? cartaoAcao({ id: 'quedas', titulo: 'Check-ins em queda', sub: 'Nota caindo nas últimas semanas: vale chamar pra conversar', itens: quedas, vazio: 'Ninguém com a nota dos check-ins caindo. 💪' }) : ''}
         ${cartaoAcao({ id: 'confirmar', titulo: 'Consultas a confirmar', sub: 'Hoje e amanhã, ainda não confirmadas', itens: aConfirmar, vazio: 'Nada para confirmar até amanhã.' })}
         ${cartaoAcao({ id: 'atrasados', titulo: 'Pagamentos atrasados', sub: 'Do mais antigo para o mais recente', itens: atrasados, vazio: 'Nenhum pagamento atrasado.' })}
         ${cartaoAcao({ id: 'pacotes', titulo: 'Pacotes para renovar', sub: 'Acabando, vencendo em até 15 dias, vencidos ou atrasados no ritmo', itens: pacotesAtencao, vazio: 'Nenhum pacote pedindo atenção.' })}
@@ -275,6 +288,7 @@ NutriDudu.pages.dashboard = (function () {
       store.get('configuracoes', 'geral'),
       store.list('conversas'),
     ]);
+    const checkins = NutriDudu.permissoes.pode('verClinico') ? await store.list('checkins') : null;
 
     // Filtro por profissional: pessoas (responsável), consultas e lançamentos dela.
     // O perfil Profissional vê sempre só os seus números (seção 2 do planejamento).
@@ -361,6 +375,7 @@ NutriDudu.pages.dashboard = (function () {
           pacotesDe: calculos.agruparPorPessoa(pacotesFiltrados),
           consultasDe: calculos.agruparPorPessoa(consultas.filter((c) => c.status !== 'cancelada')),
           conversas,
+          checkins, checkinsDe: calculos.agruparPorPessoa(checkins || []),
         })}
 
         <h2 class="titulo-secao">Gráficos</h2>
