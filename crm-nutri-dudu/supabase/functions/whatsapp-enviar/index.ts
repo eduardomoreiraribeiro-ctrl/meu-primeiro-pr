@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: e51836
+// Versão: c37b98
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -2743,7 +2743,13 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
       if (ultimo && ultimo.role === role) ultimo.content += `\n${texto}`;
       else turnos.push({ role, content: texto });
     }
-    while (turnos.length && turnos[0].role !== 'user') turnos.shift();
+    // A API exige começar pelo paciente. Mensagens da clínica ANTES da 1ª fala dele (ex.: a reativação
+    // automática) não podem sumir: viram contexto no começo da 1ª fala, senão "Vamos" fica sem sentido.
+    const antes = [];
+    while (turnos.length && turnos[0].role !== 'user') antes.push(turnos.shift().content);
+    if (antes.length && turnos.length) {
+      turnos[0].content = `[Contexto do sistema: antes desta resposta, a clínica tinha enviado ao paciente esta mensagem: "${antes.join('\n').slice(-1500)}"]\n${turnos[0].content}`;
+    }
     return turnos;
   }
 
