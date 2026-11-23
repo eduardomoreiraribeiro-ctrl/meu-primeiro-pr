@@ -167,7 +167,7 @@ const NutriDuduAutomacoes = (() => {
         id: await resumo(codigo), pessoaId: pessoa.id, consultaId: consulta.id,
         expiraEm: relogio.deLocal(fimDoDia).toISOString(), usadoEm: null, criadoEm: agora, atualizadoEm: agora,
       });
-      return `${base}/pre-anamnese.html#${codigo}`;
+      return `${base}/pre-anamnese.html?c=${codigo}`;
     }
 
     /** Precisa de pré-anamnese? Primeira consulta (sem nenhuma realizada), futura e ainda não preenchida. */
@@ -476,7 +476,7 @@ const NutriDuduAutomacoes = (() => {
                 id, pessoaId: pessoa.id, questionarioId: q.id, titulo: q.titulo, perguntas: CK.montarPerguntas(q, ckCfg.perguntas), codigo,
                 enviadoEm: agora, prazo, enviadoPor: 'automatico', automatico: true, respostas: null, score: null, criadoEm: agora, atualizadoEm: agora,
               });
-              const link = `${base}/checkin.html#${codigo}`;
+              const link = `${base}/checkin.html?c=${codigo}`;
               const r = await enviar({ cfg, automacao: 'checkinDisponivel', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), q.titulo.toLowerCase(), link, prazoTexto(prazo)] });
               const atual = await repo.pega('pessoas', pessoa.id);
               const progAtual = { ...(atual.checkinProgramado || prog) };
@@ -500,7 +500,7 @@ const NutriDuduAutomacoes = (() => {
             const pessoa = pessoaPor[ck.pessoaId];
             if (!pessoa) continue;
             await tentar('checkinLembrete', pessoa, async () => {
-              const r = await enviar({ cfg, automacao: 'checkinLembrete', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), String(ck.titulo || 'check-in').toLowerCase(), 'hoje', `${base}/checkin.html#${ck.codigo}`] });
+              const r = await enviar({ cfg, automacao: 'checkinLembrete', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), String(ck.titulo || 'check-in').toLowerCase(), 'hoje', `${base}/checkin.html?c=${ck.codigo}`] });
               const atual = await repo.pega('checkins', ck.id);
               if (atual && r.ok) await repo.grava('checkins', { ...atual, lembreteEm: agoraIso(), atualizadoEm: agoraIso() });
               return r;

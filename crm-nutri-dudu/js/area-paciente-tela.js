@@ -82,7 +82,7 @@ NutriDudu.areaPacienteTela = (function () {
     let metrica = 'peso';
     const emoji = d.sexo === 'M' ? '💪' : '💚';
     const prof = { nome: d.profissional || 'Seu nutricionista', foto: opcoes.foto || '' };
-    const linkCheckin = (codigo) => (opcoes.linkCheckin ? opcoes.linkCheckin(codigo) : `checkin.html#${encodeURIComponent(codigo)}`);
+    const linkCheckin = (codigo) => (opcoes.linkCheckin ? opcoes.linkCheckin(codigo) : `checkin.html?c=${encodeURIComponent(codigo)}`);
     const zap = d.whatsapp ? `https://wa.me/${d.whatsapp}` : '';
 
     function desenhar() {

@@ -15,7 +15,7 @@ NutriDudu.checkinFicha = (function () {
     const dig = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(codigo)));
     return [...dig].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
-  const linkDe = (codigo) => `${location.origin}${location.pathname.replace(/[^/]*$/, '')}checkin.html#${codigo}`;
+  const linkDe = (codigo) => `${location.origin}${location.pathname.replace(/[^/]*$/, '')}checkin.html?c=${codigo}`;
 
   const janelaAberta = (conversa) => Boolean(conversa?.ultimaMensagemContatoEm && Date.now() - new Date(conversa.ultimaMensagemContatoEm).getTime() < 23.5 * 3600 * 1000);
 

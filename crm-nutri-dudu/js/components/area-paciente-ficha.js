@@ -15,7 +15,7 @@ NutriDudu.areaPacienteFicha = (function () {
     return [...dig].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
   const base = () => `${location.origin}${location.pathname.replace(/[^/]*$/, '')}`;
-  const linkDe = (codigo) => `${base()}paciente.html#${codigo}`;
+  const linkDe = (codigo) => `${base()}paciente.html?c=${codigo}`;
   const janelaAberta = (conversa) => Boolean(conversa?.ultimaMensagemContatoEm && Date.now() - new Date(conversa.ultimaMensagemContatoEm).getTime() < 23.5 * 3600 * 1000);
 
   function textoConvite(pessoa, link) {
@@ -44,7 +44,7 @@ NutriDudu.areaPacienteFicha = (function () {
     dialog.classList.add('modal-largo');
     NutriDudu.areaPacienteTela.montar(dialog.querySelector('[data-ap-previa]'), await dadosDaPessoa(pessoa), {
       foto: '../nutri/img/avatar.jpg',
-      linkCheckin: (codigo) => `${base()}checkin.html#${codigo}`,
+      linkCheckin: (codigo) => `${base()}checkin.html?c=${codigo}`,
     });
   }
 

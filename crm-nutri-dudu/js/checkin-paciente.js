@@ -3,7 +3,8 @@
 // Endereço de teste, sem servidor: checkin.html#demo
 (function () {
   const cfg = (window.NutriDudu && window.NutriDudu.NUVEM) || {};
-  const codigo = decodeURIComponent(location.hash.replace(/^#/, ''));
+  // O código vem em ?c= (o navegador do WhatsApp perde o que vem depois do #); links antigos com # continuam valendo.
+  const codigo = (new URLSearchParams(location.search).get('c') || decodeURIComponent(location.hash.replace(/^#/, ''))).trim();
   const endereco = cfg.url ? `${cfg.url.replace(/\/+$/, '')}/functions/v1/whatsapp-automacoes` : '';
   const raiz = document.getElementById('checkin');
   const foto = '../nutri/img/avatar.jpg';
