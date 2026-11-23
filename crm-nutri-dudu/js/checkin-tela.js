@@ -100,7 +100,7 @@ NutriDudu.checkinTela = (function () {
         if (n === null) return p.tipo === 'numero' ? `<li><span>${esc(p.icone || '')} ${esc(p.titulo)}</span><b>${esc(C.textoResposta(p, r))}</b></li>` : '';
         const f = C.faixa(n);
         const valor = p.tipo === 'numero' ? `${esc(C.textoResposta(p, r))} · ` : '';
-        return `<li><span>${esc(p.icone || '')} ${esc(p.titulo)}</span><b class="ckt-f-${f}">${valor}${C.ROTULO_FAIXA[f]} ${C.EMOJI_FAIXA[f]}</b></li>`;
+        return `<li><span>${esc(p.icone || '')} ${esc(p.titulo)}</span><b class="ckt-f-${f}">${valor}${p.tipo === 'escala' ? `${esc(C.quantidade(p, r.valor))} · ` : ''}${esc(C.rotuloResposta(p, r.valor, ctx()))} ${C.EMOJI_FAIXA[f]}</b></li>`;
       }).join('');
       raiz.innerHTML = `<div class="ckt">${topo()}<div class="ckt-corpo ckt-resultado">
         <h2 style="margin:4px 0 2px">Valeu${opcoes.nome ? `, ${esc(opcoes.nome)}` : ''}! 💚</h2>

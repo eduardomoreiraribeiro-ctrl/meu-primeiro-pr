@@ -325,7 +325,7 @@ NutriDudu.checkinFicha = (function () {
         <div><strong>${esc(p.titulo)}</strong><span class="muted small bloco">${esc(p.texto)}</span>
           <span class="${f ? `ck-f-${f}` : ''}">${esc(C().textoResposta(p, r))}</span>${metaTxt}
           ${r?.explicacao ? `<blockquote class="ck-msg">${esc(r.explicacao)}</blockquote>` : ''}</div>
-        ${f ? `<span class="ck-resp-emo" title="${C().ROTULO_FAIXA[f]}">${C().EMOJI_FAIXA[f]}</span>` : ''}
+        ${f ? `<span class="ck-resp-emo" title="${esc(C().rotuloResposta(p, r?.valor, ctx))}">${C().EMOJI_FAIXA[f]}</span>` : ''}
       </li>`;
     }).join('');
     modal.painel({

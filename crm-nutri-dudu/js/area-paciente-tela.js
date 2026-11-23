@@ -71,7 +71,7 @@ NutriDudu.areaPacienteTela = (function () {
     const barras = lista.length ? `<div class="ap-barras" role="img" aria-label="Pontuação dos últimos check-ins">${lista.map((c) => `
       <div class="ap-barra"><span class="ap-barra-v">${c.score}</span><div class="ap-barra-c"><i style="height:${Math.max(4, c.score)}%;background:${corScore(c.score)}"></i></div><span class="ap-barra-d">${dataCurta(c.data)}</span></div>`).join('')}</div>` : '';
     const C = NutriDudu.checkin;
-    const itens = u ? u.itens.map((i) => `<li><span>${esc(i.icone)} ${esc(i.titulo)}</span><b class="ap-f-${i.faixa || 'sem'}">${i.resposta ? `${esc(i.resposta)}${i.faixa ? ' · ' : ''}` : ''}${i.faixa && C ? `${C.ROTULO_FAIXA[i.faixa]} ${C.EMOJI_FAIXA[i.faixa]}` : ''}</b></li>`).join('') : '';
+    const itens = u ? u.itens.map((i) => `<li><span>${esc(i.icone)} ${esc(i.titulo)}</span><b class="ap-f-${i.faixa || 'sem'}">${i.resposta ? `${esc(i.resposta)}${i.faixa ? ' · ' : ''}` : ''}${i.faixa && C ? `${esc(i.rotulo || C.ROTULO_FAIXA[i.faixa])} ${C.EMOJI_FAIXA[i.faixa]}` : ''}</b></li>`).join('') : '';
     return `<section class="ap-cartao"><h2>📋 Seus check-ins</h2>
       ${barras}
       ${u ? `<h3>Último check-in · ${dataCurta(u.data)}${u.score !== null ? ` · <span style="color:${corScore(u.score)}">${u.score}%</span>` : ''}</h3><ul class="ap-lista">${itens}</ul>` : ''}

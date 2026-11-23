@@ -79,7 +79,7 @@ NutriDudu.areaPaciente = (function () {
         if (!r || r.pulou || p.tipo === 'texto') return null;
         const n = C.nota(p, r.valor, ctx);
         const f = n === null ? null : C.faixa(n);
-        return { icone: p.icone || '', titulo: p.titulo, resposta: p.tipo === 'numero' ? C.textoResposta(p, r) : '', faixa: f };
+        return { icone: p.icone || '', titulo: p.titulo, resposta: p.tipo === 'numero' ? C.textoResposta(p, r) : p.tipo === 'escala' ? C.quantidade(p, r.valor) : '', faixa: f, rotulo: f ? C.rotuloResposta(p, r.valor, ctx) : '' };
       }).filter(Boolean);
       ultimoCheckin = { data: ult.respondidoEm, titulo: ult.titulo || 'Check-in', score: num(ult.score), itens };
     }

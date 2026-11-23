@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-automacoes" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 5165f9
+// Versão: b54156
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -1454,10 +1454,13 @@ NutriDudu.checkin = (function () {
     { id: 'q_horas_sono', categoria: 'sono', icone: '🌙', sigla: 'HSO', titulo: 'Horas de sono', texto: 'Quantas horas você está dormindo por noite, em média?', tipo: 'numero', unidade: 'h', casas: 1,
       meta: { tipo: 'faixa', min: 7, max: 9 }, explicacao: { ativo: true, texto: 'O que tem atrapalhado o seu sono?' } },
     { id: 'q_disposicao', categoria: 'sono', icone: '⚡', sigla: 'DIS', titulo: 'Disposição', texto: 'Como está a sua disposição no dia a dia?', tipo: 'carinhas', rotulos: ['Muita disposição', 'Boa', 'Depende do dia', 'Geralmente indisposto(a)', 'Zero disposição'], explicacao: { ativo: true, texto: 'Em quais situações você sente mais cansaço?' } },
-    // Treino separado em força e cardio (pedido do Eduardo): força com nota máxima a partir de 5x
-    // na semana ("alvo"); cardio contado em dias, nota máxima só com os 7 dias.
-    { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'FOR', titulo: 'Treino de força', texto: 'Quantos treinos de força você fez na última semana? (musculação, crossfit, hyrox, funcional, calistenia…)', tipo: 'escala', min: 0, max: 7, alvo: 5, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais', explicacao: { ativo: true, texto: 'O que atrapalhou os treinos nessa semana?' } },
-    { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'CAR', titulo: 'Cardio e esportes', texto: 'E de cardio ou esporte, em quantos dias da semana? (corrida, bike, natação, caminhada, futebol, futevôlei, beach tennis, lutas…)', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum dia', rotuloMax: 'Todos os dias' },
+    // Treino separado em força e cardio (pedido do Eduardo). "valores": nota e nome de cada número
+    // (força: ótimo a partir de 5x na semana; cardio em dias: excelente só com os 7).
+    { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'FOR', titulo: 'Treino de força', texto: 'Quantos treinos de força você fez na última semana? (musculação, crossfit, hyrox, funcional, calistenia…)', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais',
+      valores: [[-2, 'Péssimo'], [-1, 'Ruim'], [0, 'Neutro'], [1, 'Bom'], [1.5, 'Muito bom'], [2, 'Ótimo'], [2, 'Ótimo'], [2, 'Ótimo']].map(([nota, rotulo]) => ({ nota, rotulo })),
+      explicacao: { ativo: true, texto: 'O que atrapalhou os treinos nessa semana?' } },
+    { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'CAR', titulo: 'Cardio e esportes', texto: 'E de cardio ou esporte, em quantos dias da semana? (corrida, bike, natação, caminhada, futebol, futevôlei, beach tennis, lutas…)', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum dia', rotuloMax: 'Todos os dias', emDias: true,
+      valores: [[-2, 'Péssimo'], [-1.5, 'Muito ruim'], [-1, 'Ruim'], [0, 'Neutro'], [1, 'Bom'], [1.5, 'Muito bom'], [1.8, 'Ótimo'], [2, 'Excelente']].map(([nota, rotulo]) => ({ nota, rotulo })) },
     { id: 'q_desempenho', categoria: 'treino', icone: '🚀', sigla: 'DES', titulo: 'Desempenho no treino', texto: 'Como você sentiu o seu rendimento nos treinos?', tipo: 'carinhas' },
     { id: 'q_evolucao', categoria: 'bemestar', icone: '🪞', sigla: 'EVO', titulo: 'Percepção corporal', texto: 'Você consegue notar evolução no corpo em direção ao seu objetivo?', tipo: 'carinhas', rotulos: ['Bastante evolução', 'Consigo notar evolução', 'Não noto evolução', 'Talvez esteja regredindo', 'Estou regredindo'] },
     { id: 'q_humor', categoria: 'bemestar', icone: '💚', sigla: 'HUM', titulo: 'Humor e ansiedade', texto: 'Como você se sentiu emocionalmente nos últimos dias?', tipo: 'carinhas', explicacao: { ativo: true, texto: 'Quer me contar um pouco? Só eu vejo.' } },
@@ -1550,6 +1553,8 @@ NutriDudu.checkin = (function () {
     if (p.tipo === 'escala') {
       const min = Number(p.min ?? 0); const max = Number(p.max ?? 10); const v = Number(valor);
       if (!Number.isFinite(v) || max <= min) return null;
+      const fixo = valorFixo(p, v);
+      if (fixo) return Math.max(-2, Math.min(2, Number(fixo.nota) || 0));
       // Com meta ("alvo"): chegou na meta = nota máxima; abaixo, proporcional até a meta.
       const alvo = Number(p.alvo);
       if (!p.inverter && Number.isFinite(alvo) && alvo > min && alvo <= max) {
@@ -1570,8 +1575,27 @@ NutriDudu.checkin = (function () {
     if (p.tipo === 'carinhas') { const c = carinhasDe(p).find((x) => x.nota === Number(v)); return c ? `${c.emoji} ${c.rotulo}` : '—'; }
     if (p.tipo === 'opcoes') return (p.opcoes || [])[Number(v)]?.texto || '—';
     if (p.tipo === 'numero') return `${Number(String(v).replace(',', '.')).toLocaleString('pt-BR', { maximumFractionDigits: p.casas ?? 1 })} ${p.unidade || ''}`.trim();
-    if (p.tipo === 'escala') return String(v);
+    if (p.tipo === 'escala') { const fixo = valorFixo(p, v); return fixo?.rotulo ? `${v} · ${fixo.rotulo}` : String(v); }
     return String(v || '—');
+  }
+
+  /** Escala com nota e nome definidos para cada número (p.valores, a partir de p.min). */
+  function valorFixo(p, v) {
+    if (p.tipo !== 'escala' || !Array.isArray(p.valores) || !p.valores.length) return null;
+    const i = Math.round(Number(v)) - Number(p.min ?? 0);
+    if (!Number.isFinite(i)) return null;
+    return p.valores[Math.max(0, Math.min(p.valores.length - 1, i))] || null;
+  }
+
+  /** Quantidade de uma escala: "4x" ou, quando conta dias, "1 dia" / "6 dias". */
+  const quantidade = (p, v) => (p.emDias ? `${v} ${Number(v) === 1 ? 'dia' : 'dias'}` : `${v}x`);
+
+  /** Nome da avaliação de uma resposta ("Muito bom", "Ruim"…): o da pergunta, se houver; senão o da faixa. */
+  function rotuloResposta(p, valor, ctx = {}) {
+    const fixo = valorFixo(p, valor);
+    if (fixo?.rotulo) return fixo.rotulo;
+    const f = faixa(nota(p, valor, ctx));
+    return f ? ROTULO_FAIXA[f] : '';
   }
 
   /** Cor de uma nota: 'otimo' | 'bom' | 'neutro' | 'ruim' | 'pessimo' | null. */
@@ -1717,7 +1741,7 @@ NutriDudu.checkin = (function () {
   return {
     FREQUENCIAS, proximosEnvios, ultimoEnvioDevido, descreverProgramacao, isoLocal, diaComHora,
     TIPOS, CARINHAS, CATEGORIAS, BIBLIOTECA, QUESTIONARIOS_PADRAO, PESO_PADRAO, EMOJI_FAIXA, ROTULO_FAIXA,
-    configuracao, carinhasDe, nota, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
+    configuracao, carinhasDe, nota, rotuloResposta, quantidade, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
   };
 })();
 
@@ -1803,7 +1827,7 @@ NutriDudu.areaPaciente = (function () {
         if (!r || r.pulou || p.tipo === 'texto') return null;
         const n = C.nota(p, r.valor, ctx);
         const f = n === null ? null : C.faixa(n);
-        return { icone: p.icone || '', titulo: p.titulo, resposta: p.tipo === 'numero' ? C.textoResposta(p, r) : '', faixa: f };
+        return { icone: p.icone || '', titulo: p.titulo, resposta: p.tipo === 'numero' ? C.textoResposta(p, r) : p.tipo === 'escala' ? C.quantidade(p, r.valor) : '', faixa: f, rotulo: f ? C.rotuloResposta(p, r.valor, ctx) : '' };
       }).filter(Boolean);
       ultimoCheckin = { data: ult.respondidoEm, titulo: ult.titulo || 'Check-in', score: num(ult.score), itens };
     }
