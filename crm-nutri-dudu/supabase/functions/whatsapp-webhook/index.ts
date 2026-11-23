@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-webhook" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: afe2d8
+// Versão: dc3ab4
 
 import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
@@ -1455,10 +1455,10 @@ NutriDudu.checkin = (function () {
     { id: 'q_horas_sono', categoria: 'sono', icone: '🌙', sigla: 'HSO', titulo: 'Horas de sono', texto: 'Quantas horas você está dormindo por noite, em média?', tipo: 'numero', unidade: 'h', casas: 1,
       meta: { tipo: 'faixa', min: 7, max: 9 }, explicacao: { ativo: true, texto: 'O que tem atrapalhado o seu sono?' } },
     { id: 'q_disposicao', categoria: 'sono', icone: '⚡', sigla: 'DIS', titulo: 'Disposição', texto: 'Como está a sua disposição no dia a dia?', tipo: 'carinhas', rotulos: ['Muita disposição', 'Boa', 'Depende do dia', 'Geralmente indisposto(a)', 'Zero disposição'], explicacao: { ativo: true, texto: 'Em quais situações você sente mais cansaço?' } },
-    // Treino separado em força e cardio. "alvo": a partir desse número a nota já é máxima
-    // (OMS 2020: força em 2 ou mais dias e 150–300 min de aeróbico por semana; 3 sessões ≈ 150 min).
-    { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'FOR', titulo: 'Treino de força', texto: 'Quantos treinos de força você fez na última semana? (musculação, crossfit, hyrox, funcional, calistenia…)', tipo: 'escala', min: 0, max: 7, alvo: 3, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais', explicacao: { ativo: true, texto: 'O que atrapalhou os treinos nessa semana?' } },
-    { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'CAR', titulo: 'Cardio e esportes', texto: 'E de cardio ou esporte, quantas vezes? (corrida, bike, natação, caminhada, futebol, futevôlei, beach tennis, lutas…)', tipo: 'escala', min: 0, max: 7, alvo: 3, rotuloMin: 'Nenhuma', rotuloMax: '7 ou mais' },
+    // Treino separado em força e cardio (pedido do Eduardo): força com nota máxima a partir de 5x
+    // na semana ("alvo"); cardio contado em dias, nota máxima só com os 7 dias.
+    { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'FOR', titulo: 'Treino de força', texto: 'Quantos treinos de força você fez na última semana? (musculação, crossfit, hyrox, funcional, calistenia…)', tipo: 'escala', min: 0, max: 7, alvo: 5, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais', explicacao: { ativo: true, texto: 'O que atrapalhou os treinos nessa semana?' } },
+    { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'CAR', titulo: 'Cardio e esportes', texto: 'E de cardio ou esporte, em quantos dias da semana? (corrida, bike, natação, caminhada, futebol, futevôlei, beach tennis, lutas…)', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum dia', rotuloMax: 'Todos os dias' },
     { id: 'q_desempenho', categoria: 'treino', icone: '🚀', sigla: 'DES', titulo: 'Desempenho no treino', texto: 'Como você sentiu o seu rendimento nos treinos?', tipo: 'carinhas' },
     { id: 'q_evolucao', categoria: 'bemestar', icone: '🪞', sigla: 'EVO', titulo: 'Percepção corporal', texto: 'Você consegue notar evolução no corpo em direção ao seu objetivo?', tipo: 'carinhas', rotulos: ['Bastante evolução', 'Consigo notar evolução', 'Não noto evolução', 'Talvez esteja regredindo', 'Estou regredindo'] },
     { id: 'q_humor', categoria: 'bemestar', icone: '💚', sigla: 'HUM', titulo: 'Humor e ansiedade', texto: 'Como você se sentiu emocionalmente nos últimos dias?', tipo: 'carinhas', explicacao: { ativo: true, texto: 'Quer me contar um pouco? Só eu vejo.' } },
