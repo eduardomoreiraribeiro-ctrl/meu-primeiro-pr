@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 1f84c5
+// Versão: d0df30
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -816,7 +816,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       categoria: 'UTILITY',
       corpo: () => 'Oi, {{1}}! Que bom que você vai começar comigo 💚 Pra nossa consulta de {{2}} render ao máximo, preenche esse formulário rapidinho (uns 5 minutos): {{3}} Só eu vejo suas respostas, tá?',
       variaveis: ['primeiro nome', 'dia e hora da consulta', 'link do formulário'],
-      exemplo: ['Mariana', 'quinta-feira, 29/10 às 16:00', 'https://exemplo.com/pre-anamnese.html?c=abc123'],
+      exemplo: ['Mariana', 'quinta-feira, 29/10 às 16:00', 'https://exemplo.com/p/abc123'],
     },
     cobranca: {
       titulo: 'Pagamento em atraso',
@@ -912,7 +912,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       categoria: 'UTILITY',
       corpo: () => 'Oi, {{1}}! Seu {{2}} tá disponível 😊 Responde rapidinho, leva uns 2 minutos: {{3}} Vale até {{4}}, tá?',
       variaveis: ['primeiro nome', 'nome do questionário (ex.: check-in semanal)', 'link pessoal', 'prazo (ex.: quinta (27/11))'],
-      exemplo: ['Mariana', 'check-in semanal', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html?c=abc123', 'quinta (27/11)'],
+      exemplo: ['Mariana', 'check-in semanal', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/c/abc123', 'quinta (27/11)'],
     },
     checkinLembrete: {
       titulo: 'Lembrete do check-in',
@@ -922,7 +922,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       // A Meta não aceita variável no fim do texto: o link fica antes da última frase.
       corpo: () => 'Oi, {{1}}! Passando pra lembrar do seu {{2}}: o prazo termina {{3}} ⏰ É só tocar aqui: {{4}} Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚',
       variaveis: ['primeiro nome', 'nome do questionário', 'quando (ex.: hoje)', 'link pessoal'],
-      exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html?c=abc123'],
+      exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/c/abc123'],
     },
     aniversario: {
       titulo: 'Feliz aniversário',
@@ -3485,7 +3485,7 @@ const NutriDuduAutomacoes = (() => {
         id: await resumo(codigo), pessoaId: pessoa.id, consultaId: consulta.id,
         expiraEm: relogio.deLocal(fimDoDia).toISOString(), usadoEm: null, criadoEm: agora, atualizadoEm: agora,
       });
-      return `${base}/pre-anamnese.html?c=${codigo}`;
+      return `${base}/p/${codigo}`;
     }
 
     /** Precisa de pré-anamnese? Primeira consulta (sem nenhuma realizada), futura e ainda não preenchida. */
@@ -3779,7 +3779,7 @@ const NutriDuduAutomacoes = (() => {
             if (!slot) continue;
             const chaveSlot = CK.isoLocal(slot);
             if (prog.ultimoSlot === chaveSlot) continue;
-            if (agoraLocal - slot > 12 * HORA) continue; // envio muito atrasado: espera o próximo
+            if (agoraLocal - slot > 24 * HORA) continue; // envio muito atrasado (mais de 1 dia): espera o próximo
             const tentativa = prog.tentativa;
             if (tentativa?.slot === chaveSlot && relogio.agora().getTime() - new Date(tentativa.em).getTime() < NOVA_TENTATIVA_APOS_ERRO) continue;
             const q = ckCfg.questionarios.find((x) => x.id === prog.questionarioId && x.ativo !== false);
@@ -3794,7 +3794,7 @@ const NutriDuduAutomacoes = (() => {
                 id, pessoaId: pessoa.id, questionarioId: q.id, titulo: q.titulo, perguntas: CK.montarPerguntas(q, ckCfg.perguntas), codigo,
                 enviadoEm: agora, prazo, enviadoPor: 'automatico', automatico: true, respostas: null, score: null, criadoEm: agora, atualizadoEm: agora,
               });
-              const link = `${base}/checkin.html?c=${codigo}`;
+              const link = `${base}/c/${codigo}`;
               const r = await enviar({ cfg, automacao: 'checkinDisponivel', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), q.titulo.toLowerCase(), link, prazoTexto(prazo)] });
               const atual = await repo.pega('pessoas', pessoa.id);
               const progAtual = { ...(atual.checkinProgramado || prog) };
@@ -3818,7 +3818,7 @@ const NutriDuduAutomacoes = (() => {
             const pessoa = pessoaPor[ck.pessoaId];
             if (!pessoa) continue;
             await tentar('checkinLembrete', pessoa, async () => {
-              const r = await enviar({ cfg, automacao: 'checkinLembrete', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), String(ck.titulo || 'check-in').toLowerCase(), 'hoje', `${base}/checkin.html?c=${ck.codigo}`] });
+              const r = await enviar({ cfg, automacao: 'checkinLembrete', pessoa, dados, conversas, valores: [primeiroNome(pessoa.nome), String(ck.titulo || 'check-in').toLowerCase(), 'hoje', `${base}/c/${ck.codigo}`] });
               const atual = await repo.pega('checkins', ck.id);
               if (atual && r.ok) await repo.grava('checkins', { ...atual, lembreteEm: agoraIso(), atualizadoEm: agoraIso() });
               return r;

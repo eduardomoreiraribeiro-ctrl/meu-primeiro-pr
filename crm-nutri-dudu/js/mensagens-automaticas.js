@@ -27,7 +27,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       categoria: 'UTILITY',
       corpo: () => 'Oi, {{1}}! Que bom que você vai começar comigo 💚 Pra nossa consulta de {{2}} render ao máximo, preenche esse formulário rapidinho (uns 5 minutos): {{3}} Só eu vejo suas respostas, tá?',
       variaveis: ['primeiro nome', 'dia e hora da consulta', 'link do formulário'],
-      exemplo: ['Mariana', 'quinta-feira, 29/10 às 16:00', 'https://exemplo.com/pre-anamnese.html?c=abc123'],
+      exemplo: ['Mariana', 'quinta-feira, 29/10 às 16:00', 'https://exemplo.com/p/abc123'],
     },
     cobranca: {
       titulo: 'Pagamento em atraso',
@@ -123,7 +123,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       categoria: 'UTILITY',
       corpo: () => 'Oi, {{1}}! Seu {{2}} tá disponível 😊 Responde rapidinho, leva uns 2 minutos: {{3}} Vale até {{4}}, tá?',
       variaveis: ['primeiro nome', 'nome do questionário (ex.: check-in semanal)', 'link pessoal', 'prazo (ex.: quinta (27/11))'],
-      exemplo: ['Mariana', 'check-in semanal', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html?c=abc123', 'quinta (27/11)'],
+      exemplo: ['Mariana', 'check-in semanal', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/c/abc123', 'quinta (27/11)'],
     },
     checkinLembrete: {
       titulo: 'Lembrete do check-in',
@@ -133,7 +133,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       // A Meta não aceita variável no fim do texto: o link fica antes da última frase.
       corpo: () => 'Oi, {{1}}! Passando pra lembrar do seu {{2}}: o prazo termina {{3}} ⏰ É só tocar aqui: {{4}} Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚',
       variaveis: ['primeiro nome', 'nome do questionário', 'quando (ex.: hoje)', 'link pessoal'],
-      exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/checkin.html?c=abc123'],
+      exemplo: ['Mariana', 'check-in semanal', 'hoje', 'https://nutriduduribeiro.com.br/crm-nutri-dudu/c/abc123'],
     },
     aniversario: {
       titulo: 'Feliz aniversário',

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Página não encontrada</title>
+<script>
+  // Links curtos dos pacientes (vão dentro das mensagens do WhatsApp, sem "?" nem "#",
+  // que a Meta recusa ou o navegador do WhatsApp perde):
+  //   /crm-nutri-dudu/c/CÓDIGO → check-in · /p/ → pré-anamnese · /a/ → área do paciente
+  (function () {
+    var m = location.pathname.match(/^(.*\/crm-nutri-dudu\/)([cpa])\/([A-Za-z0-9_-]{20,100})\/?$/);
+    if (!m) return;
+    var pagina = { c: 'checkin.html', p: 'pre-anamnese.html', a: 'paciente.html' }[m[2]];
+    location.replace(m[1] + pagina + '?c=' + m[3]);
+  })();
+</script>
+<style>
+  :root { --bg: #f5f7f6; --text: #17211b; --muted: #55625b; --link: #15803d; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0e1311; --text: #e3eae6; --muted: #a3b0a8; --link: #22c55e; } }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--text);
+    font-family: -apple-system, 'Segoe UI', Roboto, Arial, sans-serif; text-align: center; padding: 24px; box-sizing: border-box; }
+  p { color: var(--muted); }
+  a { color: var(--link); font-weight: 600; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Página não encontrada</h1>
+    <p>Confira o endereço. <a href="/">Ir para o início</a></p>
+  </main>
+</body>
+</html>
