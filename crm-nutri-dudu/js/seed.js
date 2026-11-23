@@ -409,7 +409,7 @@ NutriDudu.seed = (function () {
         const respostas = {
           q_peso: { valor: w.peso }, q_aderencia: { valor: w.ade }, q_livres: { valor: w.liv }, q_pular: { valor: w.pul }, q_fome: { valor: w.fom },
           q_agua: { valor: w.agua }, q_intestino: { valor: w.int }, q_sono: { valor: w.sono, ...(w.exp ? { explicacao: w.exp } : {}) },
-          q_disposicao: { valor: w.dis }, q_treino: { valor: w.tre }, q_evolucao: { valor: w.evo },
+          q_disposicao: { valor: w.dis }, q_treino: { valor: w.tre }, q_aerobico: { valor: Math.max(0, w.tre - 2) }, q_evolucao: { valor: w.evo },
           ...(i === semanas.length - 1 ? { q_recado: { valor: 'Essa semana foi a melhor até agora! 💪' } } : {}),
         };
         checkins.push({
@@ -428,7 +428,7 @@ NutriDudu.seed = (function () {
         const respostas = {
           q_peso: { valor: 94.6 + i * 0.4 }, q_aderencia: { valor: w.ade }, q_livres: { valor: w.liv }, q_pular: { valor: w.pul }, q_fome: { valor: w.fom },
           q_agua: { valor: w.agua }, q_intestino: { valor: w.int }, q_sono: { valor: w.sono, ...(w.exp ? { explicacao: w.exp } : {}) },
-          q_disposicao: { valor: w.dis }, q_treino: { valor: w.tre }, q_evolucao: { valor: w.evo },
+          q_disposicao: { valor: w.dis }, q_treino: { valor: w.tre }, q_aerobico: { valor: Math.max(0, w.tre - 2) }, q_evolucao: { valor: w.evo },
         };
         checkins.push({
           id: `chk_demo_d${i + 1}`, pessoaId: 'pes_12', questionarioId: q.id, titulo: q.titulo, perguntas, codigo: `demod${i}`,

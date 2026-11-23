@@ -211,6 +211,7 @@ NutriDudu.pages.checkins = (function () {
           ${f.texto('min', 'Menor número', p.min ?? 0, { tipo: 'number' })}${f.texto('max', 'Maior número', p.max ?? 10, { tipo: 'number' })}
           ${f.texto('rotuloMin', 'Rótulo do menor', p.rotuloMin || '')}${f.texto('rotuloMax', 'Rótulo do maior', p.rotuloMax || '')}
           ${f.chave('inverter', 'Número menor é melhor (ex.: refeições fora do plano)', Boolean(p.inverter))}
+          ${f.texto('alvo', 'Meta: a partir de quanto já é ótimo (opcional)', p.alvo ?? '', { tipo: 'number', ajuda: 'Ex.: 3 treinos na semana já valem a nota máxima. Em branco: só o maior número é ótimo.' })}
         </div>
         <div data-tipo="numero"><div class="grade-2">${f.texto('unidade', 'Unidade', p.unidade || 'kg', { placeholder: 'kg, cm, km, h…' })}${f.selecao('casas', 'Casas decimais', { 0: '0', 1: '1', 2: '2' }, String(p.casas ?? 1))}</div>
           ${f.selecao('metaTipo', 'Meta (para dar nota)', { '': 'Sem meta (só registra e mostra no gráfico)', porPeso: 'Por peso: ml por kg (ex.: água)', faixa: 'Faixa ideal (ex.: horas de sono)' }, p.meta?.tipo || '')}
@@ -227,13 +228,13 @@ NutriDudu.pages.checkins = (function () {
           explicacao: { ativo: f.marcado(form, 'explicar'), texto: f.valor(form, 'explicacaoTexto') },
           ativa: nova ? true : f.marcado(form, 'ativa'),
         };
-        delete d.opcoes; delete d.rotulos; delete d.min; delete d.max; delete d.rotuloMin; delete d.rotuloMax; delete d.inverter; delete d.unidade; delete d.casas;
+        delete d.opcoes; delete d.rotulos; delete d.min; delete d.max; delete d.rotuloMin; delete d.rotuloMax; delete d.inverter; delete d.alvo; delete d.unidade; delete d.casas;
         if (tipo === 'carinhas') d.rotulos = [0, 1, 2, 3, 4].map((i) => f.valor(form, `rot${i}`) || C().CARINHAS[i].rotulo);
         if (tipo === 'opcoes') d.opcoes = f.valor(form, 'opcoesTxt').split('\n').map((l) => l.trim()).filter(Boolean).map((l) => {
           const [texto, nota] = l.split('|').map((x) => x.trim());
           return { texto, nota: Math.max(-2, Math.min(2, Number(nota) || 0)) };
         });
-        if (tipo === 'escala') Object.assign(d, { min: Number(f.valor(form, 'min')) || 0, max: Number(f.valor(form, 'max')) || 10, rotuloMin: f.valor(form, 'rotuloMin'), rotuloMax: f.valor(form, 'rotuloMax'), inverter: f.marcado(form, 'inverter') });
+        if (tipo === 'escala') Object.assign(d, { min: Number(f.valor(form, 'min')) || 0, max: Number(f.valor(form, 'max')) || 10, rotuloMin: f.valor(form, 'rotuloMin'), rotuloMax: f.valor(form, 'rotuloMax'), inverter: f.marcado(form, 'inverter'), alvo: f.valor(form, 'alvo') === '' ? null : Number(f.valor(form, 'alvo')) });
         if (tipo === 'numero') {
           Object.assign(d, { unidade: f.valor(form, 'unidade'), casas: Number(f.valor(form, 'casas')) });
           const mt = f.valor(form, 'metaTipo');

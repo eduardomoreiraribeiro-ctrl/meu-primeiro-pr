@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-automacoes" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: cbe217
+// Versão: 0f43e3
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -1454,8 +1454,10 @@ NutriDudu.checkin = (function () {
     { id: 'q_horas_sono', categoria: 'sono', icone: '🌙', sigla: 'HSO', titulo: 'Horas de sono', texto: 'Quantas horas você está dormindo por noite, em média?', tipo: 'numero', unidade: 'h', casas: 1,
       meta: { tipo: 'faixa', min: 7, max: 9 }, explicacao: { ativo: true, texto: 'O que tem atrapalhado o seu sono?' } },
     { id: 'q_disposicao', categoria: 'sono', icone: '⚡', sigla: 'DIS', titulo: 'Disposição', texto: 'Como está a sua disposição no dia a dia?', tipo: 'carinhas', rotulos: ['Muita disposição', 'Boa', 'Depende do dia', 'Geralmente indisposto(a)', 'Zero disposição'], explicacao: { ativo: true, texto: 'Em quais situações você sente mais cansaço?' } },
-    { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'TRE', titulo: 'Frequência de treino', texto: 'Quantos treinos (musculação ou esporte) você fez na última semana?', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais' },
-    { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'AER', titulo: 'Frequência de aeróbico', texto: 'Quantas sessões de aeróbico (corrida, bike, caminhada…) você fez na última semana?', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhuma', rotuloMax: '7 ou mais' },
+    // Treino separado em força e cardio. "alvo": a partir desse número a nota já é máxima
+    // (OMS 2020: força em 2 ou mais dias e 150–300 min de aeróbico por semana; 3 sessões ≈ 150 min).
+    { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'FOR', titulo: 'Treino de força', texto: 'Quantos treinos de força você fez na última semana? (musculação, crossfit, funcional, calistenia…)', tipo: 'escala', min: 0, max: 7, alvo: 3, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais', explicacao: { ativo: true, texto: 'O que atrapalhou os treinos nessa semana?' } },
+    { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'CAR', titulo: 'Cardio e esportes', texto: 'E de cardio ou esporte, quantas vezes? (corrida, bike, natação, caminhada, futebol, beach tennis, lutas…)', tipo: 'escala', min: 0, max: 7, alvo: 3, rotuloMin: 'Nenhuma', rotuloMax: '7 ou mais' },
     { id: 'q_desempenho', categoria: 'treino', icone: '🚀', sigla: 'DES', titulo: 'Desempenho no treino', texto: 'Como você sentiu o seu rendimento nos treinos?', tipo: 'carinhas' },
     { id: 'q_evolucao', categoria: 'bemestar', icone: '🪞', sigla: 'EVO', titulo: 'Percepção corporal', texto: 'Você consegue notar evolução no corpo em direção ao seu objetivo?', tipo: 'carinhas', rotulos: ['Bastante evolução', 'Consigo notar evolução', 'Não noto evolução', 'Talvez esteja regredindo', 'Estou regredindo'] },
     { id: 'q_humor', categoria: 'bemestar', icone: '💚', sigla: 'HUM', titulo: 'Humor e ansiedade', texto: 'Como você se sentiu emocionalmente nos últimos dias?', tipo: 'carinhas', explicacao: { ativo: true, texto: 'Quer me contar um pouco? Só eu vejo.' } },
@@ -1467,7 +1469,7 @@ NutriDudu.checkin = (function () {
       id: 'qs_semanal', titulo: 'Check-in semanal', descricao: 'Revisão rápida da semana: alimentação, corpo, treino e bem-estar.',
       itens: [
         ['q_peso', 3], ['q_aderencia', 5], ['q_livres', 4], ['q_pular', 3], ['q_fome', 3], ['q_agua', 3],
-        ['q_intestino', 2], ['q_sono', 3], ['q_horas_sono', 2], ['q_disposicao', 3], ['q_treino', 4], ['q_evolucao', 3], ['q_recado', 1],
+        ['q_intestino', 2], ['q_sono', 3], ['q_horas_sono', 2], ['q_disposicao', 3], ['q_treino', 3], ['q_aerobico', 3], ['q_evolucao', 3], ['q_recado', 1],
       ].map(([perguntaId, peso]) => ({ perguntaId, peso, ativo: true })),
     },
     {
@@ -1486,7 +1488,14 @@ NutriDudu.checkin = (function () {
     const minhas = Array.isArray(doc.perguntas) ? doc.perguntas : [];
     const ids = new Set(minhas.map((p) => p.id));
     const perguntas = [...minhas, ...BIBLIOTECA.filter((p) => !ids.has(p.id))];
-    const meusQ = Array.isArray(doc.questionarios) ? doc.questionarios : [];
+    const meusQ = (Array.isArray(doc.questionarios) ? doc.questionarios : []).map((q) => {
+      // Treino separado em força + cardio: o semanal salvo antes ganha o cardio (uma vez só).
+      if (q.id !== 'qs_semanal' || q.comCardio || !Array.isArray(q.itens)) return q;
+      const itens = [...q.itens];
+      const i = itens.findIndex((x) => x.perguntaId === 'q_treino');
+      if (i >= 0 && !itens.some((x) => x.perguntaId === 'q_aerobico')) itens.splice(i + 1, 0, { perguntaId: 'q_aerobico', peso: 3, ativo: true });
+      return { ...q, itens, comCardio: true };
+    });
     const idsQ = new Set(meusQ.map((q) => q.id));
     const questionarios = [...meusQ, ...QUESTIONARIOS_PADRAO.filter((q) => !idsQ.has(q.id) && !(doc.removidos || []).includes(q.id))];
     return { ...PADRAO, ...doc, perguntas, questionarios };
@@ -1541,6 +1550,12 @@ NutriDudu.checkin = (function () {
     if (p.tipo === 'escala') {
       const min = Number(p.min ?? 0); const max = Number(p.max ?? 10); const v = Number(valor);
       if (!Number.isFinite(v) || max <= min) return null;
+      // Com meta ("alvo"): chegou na meta = nota máxima; abaixo, proporcional até a meta.
+      const alvo = Number(p.alvo);
+      if (!p.inverter && Number.isFinite(alvo) && alvo > min && alvo <= max) {
+        if (v >= alvo) return 2;
+        return Math.round((((Math.max(min, v) - min) / (alvo - min)) * 4 - 2) * 10) / 10;
+      }
       let frac = (Math.min(max, Math.max(min, v)) - min) / (max - min);
       if (p.inverter) frac = 1 - frac;
       return Math.round((frac * 4 - 2) * 10) / 10;
