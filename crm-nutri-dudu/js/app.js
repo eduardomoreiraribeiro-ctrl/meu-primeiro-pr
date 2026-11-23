@@ -228,6 +228,12 @@
   const btnReset = document.getElementById('btn-reset');
 
   // ---------- Tema (claro/escuro) ----------
+  // Botão de atualizar: recarrega a página (pega a versão mais nova do sistema e os dados do momento).
+  document.getElementById('btn-atualizar')?.addEventListener('click', (e) => {
+    e.currentTarget.classList.add('girando');
+    location.reload();
+  });
+
   const btnTema = document.getElementById('btn-tema');
   function mostrarTema(efetivo) {
     const escuro = efetivo === 'escuro';

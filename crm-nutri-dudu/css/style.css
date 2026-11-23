@@ -899,6 +899,10 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 .btn-tema { width: 2.5rem; height: 2.5rem; padding: 0; display: inline-grid; place-items: center; flex-shrink: 0; }
 .btn-tema svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .btn-tema .icone-sol { display: none; }
+.btn-icone { width: 2.5rem; height: 2.5rem; padding: 0; display: inline-grid; place-items: center; flex-shrink: 0; }
+.btn-icone svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-atualizar.girando svg { animation: girar 0.8s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
 .btn-tema[data-efetivo="escuro"] .icone-sol { display: block; }
 .btn-tema[data-efetivo="escuro"] .icone-lua { display: none; }
 
@@ -1616,7 +1620,7 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
   }
   .search { max-width: none; flex-basis: 100%; order: 2; }
   .topbar-actions { width: 100%; justify-content: space-between; margin-left: 0; }
-  .topbar-actions .btn-tema { margin-left: auto; }
+  .topbar-actions .btn-atualizar { margin-left: auto; }
   .usuario-nome { display: none; }
   .usuario-botao { padding-right: 0.3rem; }
 
