@@ -225,7 +225,7 @@ NutriDudu.pages.checkins = (function () {
         const d = {
           ...p, categoria: f.valor(form, 'categoria'), icone: f.valor(form, 'icone') || '•', sigla: f.valor(form, 'sigla').toUpperCase(),
           titulo: f.valor(form, 'titulo'), texto: f.valor(form, 'texto'), tipo,
-          explicacao: { ativo: f.marcado(form, 'explicar'), texto: f.valor(form, 'explicacaoTexto') },
+          explicacao: { ...(p.explicacao || {}), ativo: f.marcado(form, 'explicar'), texto: f.valor(form, 'explicacaoTexto') },
           ativa: nova ? true : f.marcado(form, 'ativa'),
         };
         delete d.opcoes; delete d.rotulos; delete d.min; delete d.max; delete d.rotuloMin; delete d.rotuloMax; delete d.inverter; delete d.alvo; delete d.unidade; delete d.casas;

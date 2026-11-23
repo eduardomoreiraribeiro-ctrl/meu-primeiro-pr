@@ -85,7 +85,7 @@ NutriDudu.checkin = (function () {
     // (força: ótimo a partir de 5x na semana; cardio em dias: excelente só com os 7).
     { id: 'q_treino', categoria: 'treino', icone: '🏋️', sigla: 'FOR', titulo: 'Treino de força', texto: 'Quantos treinos de força você fez na última semana? (musculação, crossfit, hyrox, funcional, calistenia…)', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum', rotuloMax: '7 ou mais',
       valores: [[-2, 'Péssimo'], [-1, 'Ruim'], [0, 'Neutro'], [1, 'Bom'], [1.5, 'Muito bom'], [2, 'Ótimo'], [2, 'Ótimo'], [2, 'Ótimo']].map(([nota, rotulo]) => ({ nota, rotulo })),
-      explicacao: { ativo: true, texto: 'O que atrapalhou os treinos nessa semana?' } },
+      explicacao: { ativo: true, ate: 2, texto: 'O que atrapalhou os treinos nessa semana?' } },
     { id: 'q_aerobico', categoria: 'treino', icone: '🏃', sigla: 'CAR', titulo: 'Cardio e esportes', texto: 'E de cardio ou esporte, em quantos dias da semana? (corrida, bike, natação, caminhada, futebol, futevôlei, beach tennis, lutas…)', tipo: 'escala', min: 0, max: 7, rotuloMin: 'Nenhum dia', rotuloMax: 'Todos os dias', emDias: true,
       valores: [[-2, 'Péssimo'], [-1.5, 'Muito ruim'], [-1, 'Ruim'], [0, 'Neutro'], [1, 'Bom'], [1.5, 'Muito bom'], [1.8, 'Ótimo'], [2, 'Excelente']].map(([nota, rotulo]) => ({ nota, rotulo })) },
     { id: 'q_desempenho', categoria: 'treino', icone: '🚀', sigla: 'DES', titulo: 'Desempenho no treino', texto: 'Como você sentiu o seu rendimento nos treinos?', tipo: 'carinhas' },
@@ -212,6 +212,14 @@ NutriDudu.checkin = (function () {
     const i = Math.round(Number(v)) - Number(p.min ?? 0);
     if (!Number.isFinite(i)) return null;
     return p.valores[Math.max(0, Math.min(p.valores.length - 1, i))] || null;
+  }
+
+  /** Pede o "por quê?" desta resposta? (nota negativa, ou escala até o número em explicacao.ate) */
+  function pedeExplicacao(p, valor, ctx = {}) {
+    if (!p.explicacao?.ativo || valor === null || valor === undefined || valor === '') return false;
+    const ate = Number(p.explicacao.ate);
+    if (p.tipo === 'escala' && p.explicacao.ate !== undefined && Number.isFinite(ate)) return Number(valor) <= ate;
+    return (nota(p, valor, ctx) ?? 0) < 0;
   }
 
   /** Quantidade de uma escala: "4x" ou, quando conta dias, "1 dia" / "6 dias". */
@@ -368,6 +376,6 @@ NutriDudu.checkin = (function () {
   return {
     FREQUENCIAS, proximosEnvios, ultimoEnvioDevido, descreverProgramacao, isoLocal, diaComHora,
     TIPOS, CARINHAS, CATEGORIAS, BIBLIOTECA, QUESTIONARIOS_PADRAO, PESO_PADRAO, EMOJI_FAIXA, ROTULO_FAIXA,
-    configuracao, carinhasDe, nota, rotuloResposta, quantidade, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
+    configuracao, carinhasDe, nota, rotuloResposta, quantidade, pedeExplicacao, metaDe, pesoDe, textoResposta, faixa, score, corScore, montarPerguntas, validarRespostas, situacao,
   };
 })();

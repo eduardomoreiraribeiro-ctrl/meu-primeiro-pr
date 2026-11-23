@@ -21,7 +21,7 @@ NutriDudu.checkinTela = (function () {
     let erro = '';
 
     const ctx = () => ({ pesoKg: C.pesoDe(perguntas, respostas) });
-    const precisaExplicar = (p, r) => p.explicacao?.ativo && r && !r.pulou && (C.nota(p, r.valor, ctx()) ?? 0) < 0;
+    const precisaExplicar = (p, r) => Boolean(r && !r.pulou && C.pedeExplicacao(p, r.valor, ctx()));
     const respondida = (p) => {
       const r = respostas[p.id];
       if (p.tipo === 'texto') return true; // resposta livre é opcional
