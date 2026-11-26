@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: a51494
+// Versão: d57bb3
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -4702,9 +4702,15 @@ const NutriDuduAutomacoes = (() => {
       const email = String(corpo.email || '').trim().slice(0, 120);
       if (nome.length < 3 || !/\s/.test(nome)) return { erro: 'Informe o seu nome completo.' };
       if (!/^\d{2}9\d{8}$/.test(telefone)) return { erro: 'Informe um celular com DDD, por exemplo (27) 99999-0000.' };
-      if (email && !utils.emailValido(email)) return { erro: 'E-mail inválido.' };
+      if (!email) return { erro: 'Informe o seu e-mail.' };
+      if (!utils.emailValido(email)) return { erro: 'E-mail inválido.' };
+      const sexo = corpo.sexo === 'F' || corpo.sexo === 'M' ? corpo.sexo : '';
+      if (!sexo) return { erro: 'Informe o sexo.' };
+      const nasc = String(corpo.dataNascimento || '').slice(0, 10);
+      const anos = /^\d{4}-\d{2}-\d{2}$/.test(nasc) ? utils.idade(nasc) : null;
+      if (anos === null || anos < 1 || anos > 110) return { erro: 'Informe a data de nascimento.' };
       if (corpo.consentimento !== true) return { erro: 'Para continuar, é preciso concordar com o uso dos dados.' };
-      return { nome, telefone, email };
+      return { nome, telefone, email, sexo, dataNascimento: nasc };
     }
 
     /** Passo 1 da página: cadastro simples. A pessoa vira lead na hora e recebe os planos com os preços. */
@@ -4758,7 +4764,7 @@ const NutriDuduAutomacoes = (() => {
       return json({ ok: true, horarios: lista, poucos: Boolean(r.poucos_horarios && lista.length), temMais: proxima < fimMax.getTime() && semana < 10 });
     }
 
-    async function acharOuCriarPessoa({ nome, telefone, email, consentimento }) {
+    async function acharOuCriarPessoa({ nome, telefone, email, consentimento, sexo = '', dataNascimento = '' }) {
       const pessoas = await repo.todos('pessoas');
       const chave = S.chaveTelefone(telefone);
       const achada = pessoas.filter((p) => S.chaveTelefone(p.telefone) === chave).sort((a, b) => (a.status === 'lead') - (b.status === 'lead'))[0];
@@ -4767,6 +4773,8 @@ const NutriDuduAutomacoes = (() => {
         const mudancas = {
           ...(consentimento && !achada.automacoesDesligadas ? { consentimentos: { ...(achada.consentimentos || {}), whatsapp: true } } : {}),
           ...(!achada.email && email ? { email } : {}),
+          ...(!achada.sexo && sexo ? { sexo } : {}),
+          ...(!achada.dataNascimento && dataNascimento ? { dataNascimento } : {}),
           atualizadoEm: agora,
         };
         const atualizada = { ...achada, ...mudancas };
@@ -4774,7 +4782,7 @@ const NutriDuduAutomacoes = (() => {
         return atualizada;
       }
       const nova = {
-        id: utils.uid('pes'), nome, nomeConfirmado: true, telefone: utils.formatarTelefone(telefone), email: email || '', cpf: '', endereco: '', cidade: '',
+        id: utils.uid('pes'), nome, nomeConfirmado: true, telefone: utils.formatarTelefone(telefone), email: email || '', sexo: sexo || '', dataNascimento: dataNascimento || '', cpf: '', endereco: '', cidade: '',
         indicadoPorId: null, profissionalId: null, motivoPerda: null, servicoInteresseId: null, retornoDias: null, observacoes: '', tags: [],
         origem: 'site', objetivo: '', funil: 'comercial', etapa: 'novo', etapaDesde: agora, status: 'lead', clienteDesde: null,
         consentimentos: { saude: false, whatsapp: Boolean(consentimento), fotos: false, divulgacao: false }, consentimentoDadosEm: agora,

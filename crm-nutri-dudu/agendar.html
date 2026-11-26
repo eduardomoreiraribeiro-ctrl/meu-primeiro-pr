@@ -57,7 +57,7 @@
     .linha, .linha.med { grid-template-columns: 1fr 1fr auto; }
     .linha > :first-child { grid-column: 1 / -1; }
   }
-  input[type="tel"], input[type="email"] {
+  input[type="tel"], input[type="email"], input[type="date"] {
     width: 100%; padding: 0.65rem 0.75rem; border: 1px solid var(--border); border-radius: 10px;
     background: var(--surface); color: var(--text); font: inherit; font-size: 16px;
   }
@@ -117,10 +117,14 @@
     <input type="text" id="nome" name="nome" autocomplete="name" maxlength="100" required>
     <label for="telefone">WhatsApp (com DDD)</label>
     <input type="tel" id="telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(27) 99999-0000" maxlength="20" required>
-    <label for="email">E-mail <span class="muted small">(opcional)</span></label>
-    <input type="email" id="email" name="email" autocomplete="email" maxlength="120">
+    <label for="email">E-mail</label>
+    <input type="email" id="email" name="email" autocomplete="email" maxlength="120" required>
+    <label for="nascimento">Data de nascimento</label>
+    <input type="date" id="nascimento" name="nascimento" autocomplete="bday" required>
+    <label for="sexo">Sexo</label>
+    <select id="sexo" name="sexo" required><option value="">Escolha…</option><option value="F">Feminino</option><option value="M">Masculino</option></select>
     <div class="escondido" aria-hidden="true"><label for="site">Não preencha</label><input type="text" id="site" name="site" tabindex="-1" autocomplete="off"></div>
-    <label class="consentimento" style="margin-top:1rem"><input type="checkbox" name="consentimento"> <span>Concordo que <span data-clinica>o consultório</span> use estes dados para o meu atendimento e me envie mensagens pelo WhatsApp (confirmação e lembrete da consulta). Posso pedir para parar a qualquer momento. <a href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></span></label>
+    <label class="consentimento" style="margin-top:1rem"><input type="checkbox" name="consentimento"> <span>Concordo que <span data-clinica>o consultório</span> use estes dados para o meu atendimento e me envie mensagens pelo WhatsApp e por e-mail (confirmação e lembrete da consulta). Posso pedir para parar a qualquer momento. <a href="privacidade.html" target="_blank" rel="noopener">Política de privacidade</a></span></label>
     <p class="erro" data-erro-cadastro role="alert" hidden></p>
     <button type="submit" class="btn btn-primario" style="margin-top:1rem">Continuar</button>
   </form>
@@ -164,6 +168,6 @@
   </div>
 </main>
 <script src="js/nuvem-config.js"></script>
-<script src="js/agendar.js?v=7"></script>
+<script src="js/agendar.js?v=8"></script>
 </body>
 </html>

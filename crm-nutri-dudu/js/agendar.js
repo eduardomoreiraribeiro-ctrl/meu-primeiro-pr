@@ -99,10 +99,15 @@
       nome: f.nome.value.replace(/\s+/g, ' ').trim(),
       telefone: f.telefone.value.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, ''),
       email: f.email.value.trim(),
+      dataNascimento: f.nascimento.value,
+      sexo: f.sexo.value,
     };
     if (contato.nome.length < 3 || !contato.nome.includes(' ')) { falha('Informe o seu nome completo.', f.nome); return; }
     if (!/^\d{2}9\d{8}$/.test(contato.telefone)) { falha('Informe um celular com DDD, por exemplo (27) 99999-0000.', f.telefone); return; }
-    if (contato.email && !/\S+@\S+\.\S+/.test(contato.email)) { falha('E-mail inválido.', f.email); return; }
+    if (!/\S+@\S+\.\S+/.test(contato.email)) { falha(contato.email ? 'E-mail inválido.' : 'Informe o seu e-mail.', f.email); return; }
+    const anoNasc = Number(contato.dataNascimento.slice(0, 4));
+    if (!contato.dataNascimento || anoNasc < 1915 || anoNasc > new Date().getFullYear()) { falha('Informe a sua data de nascimento.', f.nascimento); return; }
+    if (!contato.sexo) { falha('Informe o sexo.', f.sexo); return; }
     if (!f.consentimento.checked) { falha('Para continuar, marque a caixa de concordância.', f.consentimento); return; }
     const botao = formCadastro.querySelector('[type="submit"]');
     botao.disabled = true;
