@@ -1221,14 +1221,18 @@ const NutriDuduAutomacoes = (() => {
     const limiteInicio = (cfg) => new Date(relogio.agora().getTime() + Number(cfg.antecedenciaHoras || 0) * HORA);
     const limiteFim = (cfg) => new Date(relogio.agora().getTime() + Number(cfg.diasFrente || 30) * DIA);
 
+    // Botão do WhatsApp da clínica: some quando o WhatsApp oficial está desligado (número fora do ar).
+    const whatsDoSite = (dados, cfg) => (dados.automacoesCfg?.whatsappOficial === false ? '' : utils.soDigitos(cfg.whatsappClinica || ''));
+
     async function catalogo() {
       const { dados, cfg, servicos } = await carregar();
-      if (!cfg.ativo || !servicos.length) return json({ erro: 'O agendamento pelo site está fechado no momento. Fale com a clínica pelo WhatsApp.', clinica: dados.geral.nomeClinica || '', whatsapp: utils.soDigitos(cfg.whatsappClinica || '') }, 404);
+      const zap = whatsDoSite(dados, cfg);
+      if (!cfg.ativo || !servicos.length) return json({ erro: `O agendamento pelo site está fechado no momento.${zap ? ' Fale com a clínica pelo WhatsApp.' : ''}`, clinica: dados.geral.nomeClinica || '', whatsapp: zap }, 404);
       return json({
         ok: true,
         clinica: dados.geral.nomeClinica || 'Clínica',
         mensagem: String(cfg.mensagem || '').slice(0, 500),
-        whatsapp: utils.soDigitos(cfg.whatsappClinica || ''),
+        whatsapp: zap,
         servicos: servicos.map((x) => ({ id: x.id, nome: x.nome, modalidades: modalidadesDo(x) })),
       });
     }
@@ -1378,7 +1382,7 @@ const NutriDuduAutomacoes = (() => {
       return json({
         ok: true, quando: r.consulta.quando, profissional: r.consulta.profissional, servico: r.consulta.servico, modalidade,
         ...(link ? { linkOnline: link } : {}),
-        whatsapp: utils.soDigitos(cfg.whatsappClinica || ''),
+        whatsapp: whatsDoSite(dados, cfg),
         clinica: dados.geral.nomeClinica || 'Clínica',
       });
     }
@@ -1495,19 +1499,20 @@ const NutriDuduAutomacoes = (() => {
       if (!codigo || String(codigo).length < 20) return json(invalido, 404);
       const pessoa = (await repo.porCampo('pessoas', 'areaHash', await resumo(codigo)))[0];
       if (!pessoa || !pessoa.areaAtiva) return json(invalido, 404);
-      const [consultas, pacotes, avaliacoes, checkins, site] = await Promise.all([
+      const [consultas, pacotes, avaliacoes, checkins, site, autom] = await Promise.all([
         repo.porCampo('consultas', 'pessoaId', pessoa.id),
         repo.porCampo('pacotes', 'pessoaId', pessoa.id),
         repo.porCampo('avaliacoes', 'pessoaId', pessoa.id),
         repo.porCampo('checkins', 'pessoaId', pessoa.id),
         repo.pega('configuracoes', 'agendamento_site'),
+        repo.pega('configuracoes', 'automacoes'),
       ]);
       const idsServico = [...new Set([...consultas, ...pacotes].map((x) => x.servicoId).filter(Boolean))];
       const servicos = (await Promise.all(idsServico.map((id) => repo.pega('servicos', id)))).filter(Boolean);
       const profissional = pessoa.profissionalId ? await repo.pega('profissionais', pessoa.profissionalId) : null;
       const dados = NutriDudu.areaPaciente.montar({
         pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: relogio.agora(),
-        whatsappClinica: utils.soDigitos(site?.whatsappClinica || '') || whatsappPadrao,
+        whatsappClinica: autom?.whatsappOficial === false ? '' : (utils.soDigitos(site?.whatsappClinica || '') || whatsappPadrao),
       });
       return json({ ok: true, ...dados });
     }

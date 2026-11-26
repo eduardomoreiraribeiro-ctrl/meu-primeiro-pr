@@ -28,14 +28,14 @@ NutriDudu.areaPacienteFicha = (function () {
   async function dadosDaPessoa(pessoa) {
     const { store } = NutriDudu;
     const doPaciente = (x) => x.pessoaId === pessoa.id;
-    const [consultas, pacotes, servicos, avaliacoes, checkins, site] = await Promise.all([
+    const [consultas, pacotes, servicos, avaliacoes, checkins, site, autom] = await Promise.all([
       store.list('consultas', doPaciente), store.list('pacotes', doPaciente), store.list('servicos'),
-      store.list('avaliacoes', doPaciente), store.list('checkins', doPaciente), store.get('configuracoes', 'agendamento_site'),
+      store.list('avaliacoes', doPaciente), store.list('checkins', doPaciente), store.get('configuracoes', 'agendamento_site'), store.get('configuracoes', 'automacoes'),
     ]);
     const profissional = pessoa.profissionalId ? await store.get('profissionais', pessoa.profissionalId) : null;
     return NutriDudu.areaPaciente.montar({
       pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: new Date(),
-      whatsappClinica: U().soDigitos(site?.whatsappClinica || '') || '5527997498446',
+      whatsappClinica: autom?.whatsappOficial === false ? '' : (U().soDigitos(site?.whatsappClinica || '') || '5527997498446'),
     });
   }
 

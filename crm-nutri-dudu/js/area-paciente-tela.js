@@ -105,7 +105,8 @@ NutriDudu.areaPacienteTela = (function () {
             <div><strong>${diaSemana(px.inicio)} às ${hora(px.inicio)}</strong><span>${esc(px.servico || 'Consulta')}</span>
             <div class="ap-chips">${px.confirmada ? '<span class="ap-chip ok">✓ Confirmada</span>' : '<span class="ap-chip">Agendada</span>'}${px.online ? '<span class="ap-chip">💻 Online</span>' : ''}</div></div></div>`
             : '<p class="ap-muted">Nenhuma consulta marcada no momento.</p>'}
-          ${zap ? `<a class="ap-btn ap-btn-sec" href="${zap}" target="_blank" rel="noopener">${px ? 'Remarcar ou tirar dúvida no WhatsApp' : 'Marcar pelo WhatsApp'}</a>` : ''}
+          ${zap ? `<a class="ap-btn ap-btn-sec" href="${zap}" target="_blank" rel="noopener">${px ? 'Remarcar ou tirar dúvida no WhatsApp' : 'Marcar pelo WhatsApp'}</a>`
+            : px ? '' : `<a class="ap-btn ap-btn-sec" href="${esc(opcoes.linkAgendar || 'agendar.html')}">Marcar consulta pelo site</a>`}
         </section>
 
         ${pl ? `<section class="ap-cartao"><h2>🗂️ Seu plano</h2>

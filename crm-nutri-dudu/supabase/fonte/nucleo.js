@@ -1126,7 +1126,8 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
       if (msg.id && (await repo.porCampo('mensagens', 'waId', msg.id)).length) return { ignorada: 'repetida' };
 
       const dados = await carregarContexto(repo);
-      const ativo = Boolean(dados.agenteCfg.ativo);
+      // Com o WhatsApp da clínica desligado, o assistente também fica desligado.
+      const ativo = Boolean(dados.agenteCfg.ativo) && dados.automacoesCfg?.whatsappOficial !== false;
       const nomePerfil = contatos?.find((c) => c.wa_id === msg.from)?.profile?.name;
       const { pessoa, nova: pessoaNova } = await acharOuCriarPessoa(msg.from, nomePerfil);
       const { conversa, nova: conversaNova } = await acharOuCriarConversa(pessoa, msg.from, ativo);

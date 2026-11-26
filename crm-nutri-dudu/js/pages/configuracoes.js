@@ -482,15 +482,17 @@ NutriDudu.pages.configuracoes = (function () {
     return lista.map((d) => NutriDudu.config.DIAS_SEMANA[d]).join(', ');
   };
 
-  function blocoAgente(cfg) {
+  function blocoAgente(cfg, semWhats = false) {
     const { utils, permissoes, ui } = NutriDudu;
     const pode = permissoes.pode('configurarAgente');
+    if (semWhats) cfg = { ...cfg, ativo: false };
     return `
       <section class="card" data-bloco-agente>
         <div class="secao-cabecalho">
           <h2 class="card-title">Assistente do WhatsApp</h2>
           ${ui.badge(cfg.ativo ? 'Ligado' : 'Desligado', cfg.ativo ? 'sucesso' : 'neutro')}
         </div>
+        ${semWhats ? '<div class="alerta alerta-aviso small">Desligado porque o WhatsApp da clínica está desligado (Mensagens automáticas). Volta a funcionar se o WhatsApp da clínica for religado.</div>' : ''}
         <p class="muted small card-sub">O Assistente Nutri Dudu responde no WhatsApp da clínica: tira dúvidas, mostra horários livres, agenda, remarca, confirma e informa saldo de pacote e pagamentos. Nunca dá orientação de saúde: nesses casos (e quando não sabe) chama a equipe.</p>
         <table class="tabela-simples">
           <tr><th scope="row">Horário da equipe</th><td>${utils.escapeHtml(cfg.horarioEquipe || '—')}</td></tr>
@@ -1098,7 +1100,7 @@ NutriDudu.pages.configuracoes = (function () {
           ${naNuvem ? '<p class="muted small">"Começar do zero" apaga pacientes, agenda, prontuários e financeiro (por exemplo, depois do treinamento com dados de exemplo) e mantém serviços, profissionais, horários e regras.</p>' : ''}
         </section>` : ''}
 
-      ${blocoAgente(agenteCfg)}
+      ${blocoAgente(agenteCfg, automacoesCfg.whatsappOficial === false)}
       ${blocoEmails(automacoesCfg, permissoes.pode('configurarAgente'))}
       ${blocoAutomacoes(automacoesCfg, automacoesStatus, geral)}
       ${blocoSite(siteCfg, servicos, agenteCfg)}
