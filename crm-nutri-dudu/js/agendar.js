@@ -1,7 +1,8 @@
-// Página pública de agendamento (agendar.html), em 3 passos:
+// Página pública de agendamento (agendar.html):
 //   1. cadastro rápido (nome, WhatsApp, e-mail): a pessoa já vira lead no sistema;
-//   2. planos com os preços (só aparecem depois do cadastro);
-//   3. presencial ou online, horário e confirmação.
+//   2. sem preços na página: a pessoa escolhe o que interessa e vai para o WhatsApp do Eduardo
+//      com a mensagem pronta (ele passa os valores e marca o horário).
+//   (O agendamento direto com horário continua no código, mas não é mais usado.)
 // Fala só com a função "whatsapp-automacoes" do Supabase. Para ver sem a nuvem: agendar.html#demo
 (function () {
   const cfg = (window.NutriDudu && window.NutriDudu.NUVEM) || {};
@@ -117,7 +118,7 @@
       estado.contato = contato;
       estado.servicos = r.servicos || [];
       try { sessionStorage.setItem(CHAVE_CONTATO, JSON.stringify({ contato, servicos: estado.servicos, nome: r.nome })); } catch (er) { /* sem armazenamento */ }
-      abrirPlanos(r.nome);
+      abrirWhats(r.nome);
     } catch (er) {
       falha('Sem conexão. Confira a internet e tente de novo.');
     } finally {
@@ -126,7 +127,31 @@
     }
   });
 
-  // ---------- Passo 2: planos com preços ----------
+  // ---------- Passo 2: ir para o WhatsApp (sem preços na página) ----------
+  const WHATS_PADRAO = '5527996351353';
+  function abrirWhats(primeiroNome) {
+    const numero = estado.catalogo?.whatsapp || WHATS_PADRAO;
+    const nome = estado.contato?.nome || primeiroNome || '';
+    $('[data-whats-ola]').textContent = primeiroNome ? `Cadastro feito, ${primeiroNome}!` : 'Cadastro feito!';
+    const texto = (interesse) => `Oi, Eduardo! Sou ${nome}, fiz o cadastro no site e ${interesse ? `tenho interesse em: ${interesse}` : 'quero agendar uma consulta'}. Pode me passar os valores e os horários?`;
+    const lugar = $('[data-whats-opcoes]');
+    lugar.innerHTML = '';
+    [...estado.servicos.map((s) => [s.nome, s.consultas ? `${s.consultas} consultas` : (s.descricao || '')]), ['Ainda não sei', 'Quero entender como funciona']].forEach(([titulo, sub]) => {
+      const a = document.createElement('a');
+      a.className = 'opcao';
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.href = linkWhats(numero, titulo === 'Ainda não sei' ? `Oi, Eduardo! Sou ${nome}, fiz o cadastro no site e quero entender como funciona o acompanhamento. Pode me passar os valores e os horários?` : texto(titulo));
+      a.innerHTML = '<div><strong></strong><span class="small muted"></span></div><span aria-hidden="true">💬</span>';
+      a.querySelector('strong').textContent = titulo;
+      a.querySelector('.small').textContent = sub;
+      lugar.appendChild(a);
+    });
+    $('[data-whats-geral]').href = linkWhats(numero, texto(''));
+    mostrar('whats');
+  }
+
+  // ---------- (antigo) Passo 2: planos com preços ----------
   function abrirPlanos(primeiroNome) {
     $('[data-ola]').textContent = primeiroNome ? `${primeiroNome}, escolha o seu plano` : 'Escolha o seu plano';
     desenharServicos();
@@ -345,14 +370,14 @@
     estado.catalogo = catalogo;
     mostrarNome(catalogo.clinica || 'Consultório de nutrição');
     if (catalogo.clinica) document.title = `Agendar consulta · ${catalogo.clinica}`;
-    if (catalogo.mensagem) $('[data-mensagem]').textContent = catalogo.mensagem;
+    // A mensagem salva nas Configurações falava dos planos; agora o texto da página é fixo (vai para o WhatsApp).
     // Já se cadastrou nesta aba (ex.: recarregou a página)? Volta direto para os planos.
     try {
       const salvo = JSON.parse(sessionStorage.getItem(CHAVE_CONTATO) || 'null');
       if (salvo?.contato && Array.isArray(salvo.servicos) && salvo.servicos.length) {
         estado.contato = salvo.contato;
         estado.servicos = salvo.servicos;
-        abrirPlanos(salvo.nome);
+        abrirWhats(salvo.nome);
         return;
       }
     } catch (e) { /* sem armazenamento */ }

@@ -69,6 +69,8 @@
   .opcao .preco { margin-left: auto; font-weight: 700; white-space: nowrap; text-align: right; }
   .opcao .preco small { display: block; font-weight: 500; color: var(--muted); }
   .segmentos { display: flex; gap: 0.5rem; margin-top: 0.6rem; flex-wrap: wrap; }
+  a.opcao { text-decoration: none; align-items: center; }
+  a.opcao > span:last-child { margin-left: auto; font-size: 1.2rem; }
   .segmentos .opcao { width: auto; flex: 1 1 140px; justify-content: center; }
   .dia { margin-top: 0.9rem; }
   .dia h3 { font-size: 0.95rem; margin: 0 0 0.4rem; }
@@ -110,7 +112,7 @@
 
   <form class="card" data-tela="cadastro" data-form-cadastro novalidate hidden>
     <h1>Agende sua consulta</h1>
-    <p class="muted" data-mensagem>Comece com um cadastro rápido. Em seguida, você vê os planos e escolhe o melhor horário.</p>
+    <p class="muted" data-mensagem>Faça um cadastro rápido e me chama no WhatsApp: eu te passo os valores e a gente marca o melhor horário.</p>
     <label for="nome">Nome completo</label>
     <input type="text" id="nome" name="nome" autocomplete="name" maxlength="100" required>
     <label for="telefone">WhatsApp (com DDD)</label>
@@ -122,6 +124,15 @@
     <p class="erro" data-erro-cadastro role="alert" hidden></p>
     <button type="submit" class="btn btn-primario" style="margin-top:1rem">Continuar</button>
   </form>
+
+  <section class="card centro" data-tela="whats" hidden>
+    <div class="icone-grande" aria-hidden="true">✅</div>
+    <h1 data-whats-ola>Cadastro feito!</h1>
+    <p class="muted">Agora me chama no WhatsApp: eu te passo os valores e a gente marca o melhor horário pra você.</p>
+    <p class="small"><strong>Qual opção te interessa?</strong></p>
+    <div class="opcoes" data-whats-opcoes></div>
+    <a class="btn btn-whats" data-whats-geral target="_blank" rel="noopener" style="margin-top:1rem">Falar no WhatsApp</a>
+  </section>
 
   <div data-tela="agendar" hidden>
     <section class="card">
@@ -153,6 +164,6 @@
   </div>
 </main>
 <script src="js/nuvem-config.js"></script>
-<script src="js/agendar.js?v=5"></script>
+<script src="js/agendar.js?v=6"></script>
 </body>
 </html>
