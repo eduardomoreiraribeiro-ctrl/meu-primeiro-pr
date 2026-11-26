@@ -118,7 +118,8 @@
     <label for="telefone">WhatsApp (com DDD)</label>
     <input type="tel" id="telefone" name="telefone" autocomplete="tel" inputmode="tel" placeholder="(27) 99999-0000" maxlength="20" required>
     <label for="email">E-mail</label>
-    <input type="email" id="email" name="email" autocomplete="email" maxlength="120" required>
+    <input type="email" id="email" name="email" autocomplete="email" maxlength="120" required aria-describedby="ajuda-email">
+    <p class="small muted" id="ajuda-email" style="margin:0.35rem 0 0">📧 É por e-mail que chegam, automaticamente, os lembretes e os formulários da sua consulta.</p>
     <label for="nascimento">Data de nascimento</label>
     <input type="date" id="nascimento" name="nascimento" autocomplete="bday" required>
     <label for="sexo">Sexo</label>
@@ -133,6 +134,7 @@
     <div class="icone-grande" aria-hidden="true">✅</div>
     <h1 data-whats-ola>Cadastro feito!</h1>
     <p class="muted">Agora me chama no WhatsApp: eu te passo os valores e a gente marca o melhor horário pra você.</p>
+    <p class="aviso small">📧 <strong>Fica de olho no seu e-mail</strong> (e na caixa de spam): é por lá que você vai receber, de forma automática, as mensagens sobre a sua consulta.</p>
     <p class="small"><strong>Qual opção te interessa?</strong></p>
     <div class="opcoes" data-whats-opcoes></div>
     <a class="btn btn-whats" data-whats-geral target="_blank" rel="noopener" style="margin-top:1rem">Falar no WhatsApp</a>
