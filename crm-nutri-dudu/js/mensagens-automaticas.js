@@ -62,7 +62,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       quando: 'Cliente sumido (sem consulta há mais do que o prazo de "cliente sumido"); no máximo 1 a cada 90 dias.',
       nomePadrao: 'nutridudu_reativacao_v2',
       categoria: 'MARKETING',
-      corpo: () => 'Oi, {{1}}! Tudo bem? Faz um tempo desde o nosso último acompanhamento e quis saber como você está 😊 Se quiser retomar o acompanhamento nutricional, me responde aqui que eu vejo o melhor horário pra você 💚',
+      corpo: () => 'Oi, {{1}}! Tudo bem? Faz um tempo desde o nosso último acompanhamento e quis saber como você está 😊 Se quiser retomar o acompanhamento, me responde aqui que eu vejo o melhor horário pra você 💚',
       variaveis: ['primeiro nome'],
       exemplo: ['Thiago'],
     },
