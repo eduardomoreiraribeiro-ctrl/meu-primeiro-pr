@@ -13,6 +13,7 @@ NutriDudu.mensagensManuais = (function () {
 
   const TIPOS = {
     lembrete: { icone: '📅', nome: 'Lembrete de consulta' },
+    lead: { icone: '🆕', nome: 'Novo cadastro pelo site' },
     pre: { icone: '📝', nome: 'Pré-anamnese' },
     checkin: { icone: '📋', nome: 'Check-in' },
     checkinLembrete: { icone: '⏰', nome: 'Lembrete do check-in' },
@@ -75,6 +76,17 @@ NutriDudu.mensagensManuais = (function () {
         const link = String(profPor[c.profissionalId]?.linkOnline || '').trim();
         if (c.tipo === 'online' && link) t += ` A consulta é online, por esse link: ${link}`;
         add({ chave: `lembrete:${c.id}`, tipo: 'lembrete', pessoa: p, consulta: c, detalhe: `${utils.isoDia(c.inicio) === utils.isoDia(agora) ? 'Hoje' : 'Amanhã'} às ${utils.hora(c.inicio)}${c.tipo === 'online' ? ' · online' : ''}`, texto: t });
+      });
+
+    // 1b. Novo cadastro pelo site (últimos 14 dias), ainda lead, sem consulta marcada e sem contato.
+    const comFutura = new Set(consultas.filter((c) => STATUS_FUTURO.includes(c.status) && new Date(c.inicio) > agora).map((c) => c.pessoaId));
+    d.pessoas.filter((p) => p.origem === 'site' && p.status === 'lead' && p.etapa !== 'perdido' && !comFutura.has(p.id) && !p.manual?.boasVindas
+      && p.criadoEm && agora - new Date(p.criadoEm) < 14 * DIA)
+      .sort((a, b) => String(b.criadoEm).localeCompare(String(a.criadoEm)))
+      .forEach((p) => {
+        const dias = utils.diasEntre(p.criadoEm, agora);
+        const t = NutriDudu.mensagensAutomaticas.paraGenero(`Oi, ${primeiroNome(p.nome)}! Aqui é o Eduardo, nutricionista. Vi que você fez o cadastro pelo site. Posso te ajudar com alguma informação? Tem algo do seu interesse?`, p);
+        add({ chave: `lead:${p.id}`, tipo: 'lead', pessoa: p, detalhe: `Cadastrou ${dias === 0 ? 'hoje' : dias === 1 ? 'ontem' : `há ${dias} dias`} e não marcou consulta`, texto: t });
       });
 
     // 2. Pré-anamnese: primeira consulta futura (mais de 2 h pela frente), sem formulário enviado nem preenchido.
@@ -211,6 +223,10 @@ NutriDudu.mensagensManuais = (function () {
       await store.update('pessoas', p.id, { automacoes: { ...(p.automacoes || {}), [`aniversario_${new Date().getFullYear()}`]: { em: agoraIso, ok: true, via: 'manual' } } });
     }
     if (item.tipo === 'cobranca') await store.update('lancamentos', item.lancamento.id, { manual: { ...(item.lancamento.manual || {}), cobranca: agoraIso } });
+    if (item.tipo === 'lead') {
+      const p = (await store.get('pessoas', item.pessoa.id)) || item.pessoa;
+      await store.update('pessoas', p.id, { manual: { ...(p.manual || {}), boasVindas: agoraIso } });
+    }
     if (item.tipo === 'retorno' || item.tipo === 'reativacao') {
       const p = (await store.get('pessoas', item.pessoa.id)) || item.pessoa;
       await store.update('pessoas', p.id, { automacoes: { ...(p.automacoes || {}), [item.tipo]: { em: agoraIso, ok: true, via: 'manual' } } });
