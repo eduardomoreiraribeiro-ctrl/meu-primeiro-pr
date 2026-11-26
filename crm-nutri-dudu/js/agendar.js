@@ -136,7 +136,9 @@
     const texto = (interesse) => `Oi, Eduardo! Sou ${nome}, fiz o cadastro no site e ${interesse ? `tenho interesse em: ${interesse}` : 'quero agendar uma consulta'}. Pode me passar os valores e os horários?`;
     const lugar = $('[data-whats-opcoes]');
     lugar.innerHTML = '';
-    [...estado.servicos.map((s) => [s.nome, s.consultas ? `${s.consultas} consultas` : (s.descricao || '')]), ['Ainda não sei', 'Quero entender como funciona']].forEach(([titulo, sub]) => {
+    // Pacotes pelo número de consultas (não pelo tempo): "Pacote 3 consultas", com desconto.
+    const opcoes = estado.servicos.map((s) => (s.consultas > 1 ? [`Pacote ${s.consultas} consultas`, 'Com desconto'] : [s.nome, s.descricao || '']));
+    [...opcoes, ['Ainda não sei', 'Quero entender como funciona']].forEach(([titulo, sub]) => {
       const a = document.createElement('a');
       a.className = 'opcao';
       a.target = '_blank';
@@ -145,6 +147,7 @@
       a.innerHTML = '<div><strong></strong><span class="small muted"></span></div><span aria-hidden="true">💬</span>';
       a.querySelector('strong').textContent = titulo;
       a.querySelector('.small').textContent = sub;
+      a.querySelector('.small').hidden = !sub;
       lugar.appendChild(a);
     });
     $('[data-whats-geral]').href = linkWhats(numero, texto(''));
