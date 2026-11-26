@@ -289,6 +289,16 @@ NutriDudu.pages.dashboard = (function () {
       store.list('conversas'),
     ]);
     const checkins = NutriDudu.permissoes.pode('verClinico') ? await store.list('checkins') : null;
+    // WhatsApp da clínica desligado: as mensagens do dia vão pelo WhatsApp do profissional.
+    const autoCfg = NutriDudu.mensagensAutomaticas.configuracao((await store.get('configuracoes', 'automacoes')) || {});
+    let manuais = null;
+    if (autoCfg.whatsappOficial === false && NutriDudu.mensagensManuais) {
+      const [todosProf, ckDoc] = await Promise.all([store.list('profissionais'), store.get('configuracoes', 'checkin')]);
+      manuais = NutriDudu.mensagensManuais.pendentes({
+        pessoas: todasPessoas, consultas: todasConsultas, lancamentos: todosLancamentos, checkins: checkins || [],
+        checkinCfg: checkins ? NutriDudu.checkin.configuracao(ckDoc || {}) : null, geral: geral || {}, profissionais: todosProf,
+      });
+    }
 
     // Filtro por profissional: pessoas (responsável), consultas e lançamentos dela.
     // O perfil Profissional vê sempre só os seus números (seção 2 do planejamento).
@@ -332,6 +342,7 @@ NutriDudu.pages.dashboard = (function () {
       <div class="dashboard">
         ${ui.cabecalho('Dashboard', 'Visão geral da operação da clínica')}
         ${filtrosHtml({ ...filtro, profissionalId: profId }, periodo, proprio ? [] : profissionais)}
+        ${manuais ? NutriDudu.mensagensManuais.cartao(manuais) : ''}
         ${proprio ? `<p class="muted small aviso-perfil">Mostrando só os seus números (${utils.escapeHtml(profissionais.find((p) => p.id === proprio)?.nome || 'você')}).</p>` : ''}
 
         <h2 class="titulo-secao">No período</h2>
@@ -444,6 +455,8 @@ NutriDudu.pages.dashboard = (function () {
       salvarFiltro({ ...filtro, profissionalId: e.target.value });
       NutriDudu.recarregarPagina();
     });
+
+    if (manuais) NutriDudu.mensagensManuais.ligar(raiz, manuais);
 
     // Botões das listas de ação.
     const pessoaPorId = porId(todasPessoas);

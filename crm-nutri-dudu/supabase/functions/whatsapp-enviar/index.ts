@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: d0df30
+// Versão: 0f53fb
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -951,6 +951,7 @@ NutriDudu.mensagensAutomaticas = (function () {
     idioma: 'pt_BR',
     horaInicio: 8,
     horaFim: 20,
+    whatsappOficial: true, // false: o número da clínica está fora do ar; as mensagens vão pelo WhatsApp do profissional
     horaResumo: 7, // o resumo do dia tem horário próprio, todos os dias (inclusive domingo)
     linkSistema: '',
     telefonesEquipe: '',
@@ -3270,6 +3271,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
           return json({ erro: `A Meta recusou: ${erro.message}` }, 502);
         }
       }
+      // Equipe: link pessoal da pré-anamnese, para mandar pelo WhatsApp do profissional.
+      if (corpo?.acao === 'link-pre-anamnese') {
+        if (!automacoes?.linkPreManual) return json({ erro: 'Indisponível nesta função.' }, 500);
+        const r = await automacoes.linkPreManual(String(corpo.consultaId || ''));
+        return r.erro ? json({ erro: r.erro }, 400) : json({ ok: true, link: r.link });
+      }
       // Administrador: mensagem de retorno ou reativação para as pessoas escolhidas.
       if (corpo?.acao === 'enviar-grupo') {
         if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador envia mensagens em grupo.' }, 403);
@@ -3517,11 +3524,26 @@ const NutriDuduAutomacoes = (() => {
       return r;
     }
 
+    /** Link da pré-anamnese pedido pela equipe (vai pelo WhatsApp do profissional, não pelo da clínica). */
+    async function linkPreManual(consultaId) {
+      const configuracoes = await repo.todos('configuracoes');
+      const cfg = configuracao(configuracoes.find((c) => c.id === 'automacoes'));
+      const consulta = consultaId ? await repo.pega('consultas', consultaId) : null;
+      if (!consulta) return { erro: 'Consulta não encontrada.' };
+      const pessoa = await repo.pega('pessoas', consulta.pessoaId);
+      if (!pessoa) return { erro: 'Paciente não encontrado.' };
+      const link = await criarLink({ cfg, pessoa, consulta });
+      if (!link) return { erro: 'Falta o endereço do sistema (Configurações › Mensagens automáticas).' };
+      const atual = await repo.pega('consultas', consulta.id);
+      await repo.grava('consultas', { ...atual, preAnamnese: { ...(atual?.preAnamnese || {}), status: 'enviada', enviadaEm: atual?.preAnamnese?.enviadaEm || agoraIso(), manual: true }, atualizadoEm: agoraIso() });
+      return { link };
+    }
+
     /** Chamado pelo webhook logo depois que o assistente agenda (a conversa está aberta: texto livre, sem custo). */
     async function enviarPreAnamnese({ consulta, pessoa, conversa, imediato = false }) {
       const configuracoes = await repo.todos('configuracoes');
       const cfg = configuracao(configuracoes.find((c) => c.id === 'automacoes'));
-      if (!cfg.ativas.preAnamnese || !podeReceber(pessoa)) return { ok: false, motivo: 'desligada ou sem consentimento' };
+      if (cfg.whatsappOficial === false || !cfg.ativas.preAnamnese || !podeReceber(pessoa)) return { ok: false, motivo: 'desligada ou sem consentimento' };
       const dados = {
         geral: configuracoes.find((c) => c.id === 'geral') || {},
         consultas: await repo.porCampo('consultas', 'pessoaId', pessoa.id),
@@ -3585,7 +3607,7 @@ const NutriDuduAutomacoes = (() => {
     async function avisarEquipe(conversaId) {
       const configuracoes = await repo.todos('configuracoes');
       const cfg = configuracao(configuracoes.find((c) => c.id === 'automacoes'));
-      if (!cfg.ativas.avisoEquipe || !dentroDoHorario(cfg)) return { ok: false, motivo: 'desligado ou fora do horário' };
+      if (cfg.whatsappOficial === false || !cfg.ativas.avisoEquipe || !dentroDoHorario(cfg)) return { ok: false, motivo: 'desligado ou fora do horário' };
       const conversa = await repo.pega('conversas', conversaId);
       if (!conversa || !precisaAviso(conversa)) return { ok: false, motivo: 'não precisa' };
       const [pessoa, conversas] = await Promise.all([repo.pega('pessoas', conversa.pessoaId), repo.todos('conversas')]);
@@ -3604,6 +3626,13 @@ const NutriDuduAutomacoes = (() => {
       const servicoPor = Object.fromEntries(servicos.map((s) => [s.id, s]));
       const profPor = Object.fromEntries(profissionais.map((p) => [p.id, p]));
       const relatorio = { em: inicio.toISOString(), manual, por, enviados: [], pulados: [], erros: [], foraDoHorario: false };
+
+      // WhatsApp oficial da clínica desligado (ex.: número bloqueado): nada sai pelo WhatsApp.
+      if (cfg.whatsappOficial === false) {
+        relatorio.whatsappDesligado = true;
+        await salvarStatus(relatorio, configuracoes);
+        return relatorio;
+      }
 
       // Resumo do dia para a equipe: horário próprio (padrão 7h), todos os dias, uma vez por dia.
       // Vem antes da checagem do horário de envio, que vale só para as mensagens dos pacientes.
@@ -4183,6 +4212,7 @@ const NutriDuduAutomacoes = (() => {
         ['configuracoes', 'pessoas', 'consultas', 'conversas', 'profissionais'].map((t) => repo.todos(t)),
       );
       const cfg = configuracao(configuracoes.find((c) => c.id === 'automacoes'));
+      if (cfg.whatsappOficial === false) return { erro: 'O WhatsApp da clínica está desligado. Use o seu WhatsApp (botão WhatsApp de cada paciente).' };
       if (!dentroDoHorario(cfg)) return { erro: `Fora do horário de envio (segunda a sábado, das ${cfg.horaInicio}h às ${cfg.horaFim}h).` };
       const geral = configuracoes.find((c) => c.id === 'geral') || {};
       const dados = { geral, consultas };
@@ -4208,7 +4238,7 @@ const NutriDuduAutomacoes = (() => {
       return resultado;
     }
 
-    return { rodar, enviarPreAnamnese, enviar, avisarEquipe, responderVaga, responderAvaliacao, enviarManual };
+    return { rodar, enviarPreAnamnese, enviar, avisarEquipe, responderVaga, responderAvaliacao, enviarManual, linkPreManual };
   }
 
   // =====================================================================

@@ -61,6 +61,7 @@ NutriDudu.enviarGrupo = (function () {
     ]);
     const cfg = MA.configuracao(cfgDoc || {});
     const grupos = montarGrupos({ pessoas, consultas, pacotes, geral: geral || {} });
+    if (cfg.whatsappOficial === false) { abrirManual(grupos, consultas); return; }
     const clinica = geral?.nomeClinica || 'clínica';
     let grupo = grupos.retorno.length || !grupos.reativacao.length ? 'retorno' : 'reativacao';
 
@@ -131,6 +132,66 @@ NutriDudu.enviarGrupo = (function () {
       area.querySelector('[data-marcar-todos]')?.addEventListener('click', () => { area.querySelectorAll('input[name="pessoaEnvio"]:not(:disabled)').forEach((i) => { i.checked = true; }); atualizar(); });
       area.querySelector('[data-desmarcar-todos]')?.addEventListener('click', () => { area.querySelectorAll('input[name="pessoaEnvio"]').forEach((i) => { i.checked = false; }); atualizar(); });
       atualizar();
+    }
+    desenhar();
+  }
+
+  const tempoDesde = (dias) => {
+    if (dias < 14) return `${dias} dias`;
+    if (dias < 60) return `${Math.round(dias / 7)} semanas`;
+    const meses = Math.round(dias / 30);
+    return meses === 1 ? '1 mês' : `${meses} meses`;
+  };
+
+  /**
+   * WhatsApp da clínica desligado: lista com o texto pronto de cada pessoa, para mandar uma a uma
+   * pelo WhatsApp do profissional (poucas por dia, para o número pessoal não ser bloqueado).
+   */
+  function abrirManual(grupos, consultas) {
+    const { modal, ui, utils, store, permissoes } = NutriDudu;
+    const MM = NutriDudu.mensagensManuais;
+    const LIMITE_DIA = 10;
+    let grupo = grupos.retorno.length || !grupos.reativacao.length ? 'retorno' : 'reativacao';
+    const dialog = modal.painel({ titulo: 'Enviar mensagens pelo seu WhatsApp', corpo: '<div data-envio-manual></div>' });
+    dialog.classList.add('modal-largo');
+    const area = dialog.querySelector('[data-envio-manual]');
+    const hoje = utils.isoDia(new Date());
+    const enviadasHoje = () => grupos.retorno.concat(grupos.reativacao).filter(({ pessoa }) => ['retorno', 'reativacao'].some((g) => pessoa.automacoes?.[g]?.via === 'manual' && utils.isoDia(pessoa.automacoes[g].em) === hoje)).length;
+
+    function textoDe(pessoa) {
+      const nome = String(pessoa.nome || '').trim().split(/\s+/)[0];
+      if (grupo === 'reativacao') return MM.texto('reativacao', [nome], pessoa);
+      const ultima = consultas.filter((c) => c.pessoaId === pessoa.id && c.status === 'realizada').sort((a, b) => b.inicio.localeCompare(a.inicio))[0];
+      return MM.texto('retorno', [nome, ultima ? tempoDesde(utils.diasEntre(ultima.inicio, new Date())) : 'um tempo'], pessoa);
+    }
+
+    function desenhar() {
+      const feitas = enviadasHoje();
+      const linhas = grupos[grupo].map(({ pessoa, situacao }) => {
+        const motivo = bloqueio(pessoa, grupo);
+        const fone = MM.telefone(pessoa);
+        const pode = !motivo && fone && feitas < LIMITE_DIA;
+        return `<tr${motivo ? ' class="muted"' : ''}>
+          <td><a href="#/clientes/${encodeURIComponent(pessoa.id)}">${utils.escapeHtml(pessoa.nome)}</a><span class="muted small bloco">${utils.escapeHtml(situacao)}</span></td>
+          <td>${motivo ? ui.badge(motivo, 'neutro') : pode ? `<a class="btn btn-pequeno btn-primary" target="_blank" rel="noopener" data-manual-id="${utils.escapeHtml(pessoa.id)}" href="https://wa.me/${fone}?text=${encodeURIComponent(textoDe(pessoa))}">Abrir no WhatsApp</a>` : ui.badge(fone ? 'Limite de hoje' : 'Sem celular', 'neutro')}</td>
+        </tr>`;
+      }).join('');
+      area.innerHTML = `
+        <div class="acoes-linha" role="tablist">
+          ${Object.entries(GRUPOS).map(([id, g]) => `<button type="button" class="btn btn-pequeno${id === grupo ? ' btn-primary' : ''}" data-grupo="${id}" role="tab" aria-selected="${id === grupo}">${utils.escapeHtml(g.nome)} (${grupos[id].length})</button>`).join('')}
+        </div>
+        <div class="alerta alerta-aviso small">O WhatsApp da clínica está desligado: as mensagens vão pelo <strong>seu</strong> WhatsApp, uma de cada vez.
+          Para o seu número não ser bloqueado, mande no máximo <strong>${LIMITE_DIA} por dia</strong> (hoje: ${feitas}) e de preferência para quem conhece bem.</div>
+        ${grupos[grupo].length ? `<div class="tabela-rolagem"><table class="tabela-simples small"><thead><tr><th>Paciente</th><th></th></tr></thead><tbody>${linhas}</tbody></table></div>` : '<p class="small">Ninguém neste grupo agora. 🎉</p>'}`;
+      area.querySelectorAll('[data-grupo]').forEach((b) => b.addEventListener('click', () => { grupo = b.dataset.grupo; desenhar(); }));
+      area.querySelectorAll('[data-manual-id]').forEach((a) => a.addEventListener('click', async () => {
+        const item = grupos[grupo].find((x) => x.pessoa.id === a.dataset.manualId);
+        const agora = new Date().toISOString();
+        item.pessoa.automacoes = { ...(item.pessoa.automacoes || {}), [grupo]: { em: agora, ok: true, via: 'manual' } };
+        await store.update('pessoas', item.pessoa.id, { automacoes: item.pessoa.automacoes });
+        await store.create('interacoes', { pessoaId: item.pessoa.id, dataHora: agora, tipo: 'nota', autor: permissoes.atual(), automatico: true, descricao: `${GRUPOS[grupo].nome}: mensagem aberta no WhatsApp para enviar.` });
+        setTimeout(desenhar, 300);
+      }));
     }
     desenhar();
   }

@@ -374,5 +374,5 @@ NutriDudu.checkinFicha = (function () {
     }));
   }
 
-  return { aba, ligar, enviar, programar, ver, grafico, painelEnvio, linkDe };
+  return { aba, ligar, enviar, programar, ver, grafico, painelEnvio, linkDe, novoCodigo, resumo };
 })();

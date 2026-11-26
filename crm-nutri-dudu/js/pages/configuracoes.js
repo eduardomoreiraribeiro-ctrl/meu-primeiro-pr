@@ -621,8 +621,9 @@ NutriDudu.pages.configuracoes = (function () {
       <section class="card" data-bloco-automacoes>
         <div class="secao-cabecalho">
           <h2 class="card-title">Mensagens automáticas</h2>
-          ${ui.badge(ligadas ? `${ligadas} ligada(s)` : 'Todas desligadas', ligadas ? 'sucesso' : 'neutro')}
+          ${cfg.whatsappOficial === false ? ui.badge('WhatsApp da clínica desligado', 'alerta') : ui.badge(ligadas ? `${ligadas} ligada(s)` : 'Todas desligadas', ligadas ? 'sucesso' : 'neutro')}
         </div>
+        ${cfg.whatsappOficial === false ? '<div class="alerta alerta-aviso small"><strong>WhatsApp da clínica desligado.</strong> Nada sai pelo número da clínica. As mensagens do dia aparecem no <a href="#/">Dashboard › Mensagens pra mandar hoje</a>, com o texto pronto para enviar pelo seu WhatsApp.</div>' : ''}
         <p class="muted small card-sub">Lembretes e avisos que a clínica envia pelo WhatsApp. Se a pessoa escreveu nas últimas 24 horas, vai como mensagem normal (sem custo); se não, usa o <strong>modelo aprovado pela Meta</strong>. Só para quem deu consentimento de WhatsApp e não pediu para PARAR, de segunda a sábado, das ${cfg.horaInicio}h às ${cfg.horaFim}h.</p>
         <ul class="lista-automacoes">${itens}</ul>
         <p class="small"><strong>Avisos para a equipe vão para:</strong> ${MA.telefonesDaEquipe(cfg.telefonesEquipe).length ? utils.escapeHtml(MA.telefonesDaEquipe(cfg.telefonesEquipe).map((t) => utils.formatarTelefone(t.slice(2))).join(', ')) : '<span class="muted">nenhum celular informado (Editar)</span>'}</p>
@@ -783,7 +784,7 @@ NutriDudu.pages.configuracoes = (function () {
     if (!(Number.isInteger(d.horaFim) && d.horaFim >= 14 && d.horaFim <= 22 && d.horaFim > d.horaInicio)) erros.horaFim = 'Entre 14 e 22.';
     Object.entries(d.modelos).forEach(([id, nome]) => {
       if (nome && !/^[a-z0-9_]{1,512}$/.test(nome)) erros[`modelo_${id}`] = 'Só letras minúsculas, números e _ (como na Meta).';
-      else if (!nome && d.ativas[id] && ligadas) erros[`modelo_${id}`] = 'Informe o nome do modelo aprovado.';
+      else if (!nome && d.ativas[id] && ligadas && d.whatsappOficial !== false) erros[`modelo_${id}`] = 'Informe o nome do modelo aprovado.';
     });
     return erros;
   }
@@ -801,6 +802,7 @@ NutriDudu.pages.configuracoes = (function () {
       titulo: 'Mensagens automáticas',
       largo: true,
       corpo: `
+        ${f.chave('whatsappOficial', 'WhatsApp oficial da clínica ligado', cfg.whatsappOficial !== false, { ajuda: 'Desligue se o número da clínica estiver fora do ar: o sistema para de enviar pelo WhatsApp e passa a montar as mensagens do dia para você enviar pelo seu WhatsApp (Dashboard).' })}
         ${f.texto('linkSistema', 'Endereço do sistema (para o link da pré-anamnese)', cfg.linkSistema || (NutriDudu.nuvem.ativa() ? enderecoAtual() : ''), {
           placeholder: 'https://…/crm-nutri-dudu', ajuda: 'O endereço onde a equipe abre o sistema. O paciente recebe um link para a página "pre-anamnese.html" dessa pasta.',
         })}
@@ -826,6 +828,7 @@ NutriDudu.pages.configuracoes = (function () {
         horaInicio: f.numero(form, 'horaInicio'),
         horaFim: f.numero(form, 'horaFim'),
         horaResumo: f.numero(form, 'horaResumo'),
+        whatsappOficial: f.marcado(form, 'whatsappOficial'),
         ativas: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.marcado(form, `ativa_${id}`)])),
         modelos: Object.fromEntries(Object.keys(MA.MODELOS).map((id) => [id, f.valor(form, `modelo_${id}`)])),
       }),

@@ -1406,6 +1406,12 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
           return json({ erro: `A Meta recusou: ${erro.message}` }, 502);
         }
       }
+      // Equipe: link pessoal da pré-anamnese, para mandar pelo WhatsApp do profissional.
+      if (corpo?.acao === 'link-pre-anamnese') {
+        if (!automacoes?.linkPreManual) return json({ erro: 'Indisponível nesta função.' }, 500);
+        const r = await automacoes.linkPreManual(String(corpo.consultaId || ''));
+        return r.erro ? json({ erro: r.erro }, 400) : json({ ok: true, link: r.link });
+      }
       // Administrador: mensagem de retorno ou reativação para as pessoas escolhidas.
       if (corpo?.acao === 'enviar-grupo') {
         if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador envia mensagens em grupo.' }, 403);

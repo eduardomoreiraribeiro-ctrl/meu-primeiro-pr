@@ -370,6 +370,19 @@ NutriDudu.nuvem = (function () {
     return data.resultado;
   }
 
+  /** Cria o link pessoal da pré-anamnese de uma consulta (para mandar pelo WhatsApp do profissional). */
+  async function linkPreAnamnese(consultaId) {
+    if (!ativa()) throw new Error('No modo demonstração o link da pré-anamnese não é criado.');
+    const { data, error } = await obterCliente().functions.invoke('whatsapp-enviar', { body: { acao: 'link-pre-anamnese', consultaId } });
+    if (error) {
+      let msg = '';
+      try { msg = (await error.context?.json())?.erro || ''; } catch (e) { /* sem JSON */ }
+      throw new Error(msg || 'Não foi possível criar o link agora. Tente de novo.');
+    }
+    if (data?.erro) throw new Error(data.erro);
+    return data;
+  }
+
   /** Modelos de mensagem na Meta: situação de cada um; `criar` = ids dos que devem ser criados agora. */
   async function modelosMeta(criar = []) {
     const { data, error } = await obterCliente().functions.invoke('whatsapp-enviar', { body: { acao: 'modelos-meta', criar, conta: NutriDudu.NUVEM?.whatsappContaId || null } });
@@ -390,7 +403,7 @@ NutriDudu.nuvem = (function () {
   }
 
   return {
-    enviarWhatsApp, usoAgente, rodarAutomacoes, enviarGrupo, modelosMeta,
+    enviarWhatsApp, usoAgente, rodarAutomacoes, enviarGrupo, modelosMeta, linkPreAnamnese,
     TABELAS, configurada, ativa, emDemonstracao, problemaNaConfiguracao, traduzir,
     sessaoAtual, entrar, sair, trocarSenha, carregarPerfil, perfilAtual, veClinico, listarPerfis, atualizarPerfil, registrarAcesso,
     carregarTudo, criar, alterar, apagar, gravarLote, substituirTudo, ouvir, parar,
