@@ -49,7 +49,7 @@ NutriDudu.pages.acompanhamento = (function () {
 
     const esc = utils.escapeHtml;
     const link = (p, aba = '') => `#/clientes/${encodeURIComponent(p.id)}${aba ? `/${aba}` : ''}`;
-    const zap = (p) => `<a class="btn btn-pequeno" href="https://wa.me/55${utils.soDigitos(p.telefone)}" target="_blank" rel="noopener">WhatsApp</a>`;
+    const zap = (p, radar) => NutriDudu.mensagensProntas.botao(p, radar.situacao, { consultas: de.consultas(p.id) });
 
     const cartaoGrupo = (nivel) => {
       const itens = grupos[nivel];
@@ -65,7 +65,7 @@ NutriDudu.pages.acompanhamento = (function () {
               <span class="item-acao-texto"><a href="${link(p)}">${esc(p.nome)}</a>
                 <span class="muted small bloco">${esc(radar.motivos.join(' · ') || (plano?.objetivoPrincipal ? `🎯 ${plano.objetivoPrincipal}` : 'Tudo em dia'))}</span></span>
               <span class="item-acao-botoes">
-                ${nivel !== 'verde' ? `<button type="button" class="btn btn-pequeno btn-primary" data-agendar="${p.id}">Agendar</button> ${zap(p)}` : ''}
+                ${nivel !== 'verde' ? `<button type="button" class="btn btn-pequeno btn-primary" data-agendar="${p.id}">Agendar</button> ${zap(p, radar)}` : ''}
                 <a class="btn btn-pequeno" href="${link(p, 'acompanhamento')}">Plano</a>
               </span>
             </li>`).join('')}</ul>` : `<p class="tudo-certo">✓ Ninguém aqui.</p>`}

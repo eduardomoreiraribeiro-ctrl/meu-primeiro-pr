@@ -132,15 +132,19 @@ NutriDudu.acompanhamento = (function () {
    */
   function radar(ctx, agora = new Date()) {
     const { pessoa } = ctx;
-    if (pessoa.status === 'inativo') return { nivel: 'vermelho', rotulo: 'Inativo', motivos: ['Marcado como inativo.'] };
+    if (pessoa.status === 'inativo') return { nivel: 'vermelho', rotulo: 'Inativo', motivos: ['Marcado como inativo.'], situacao: 'inativo' };
     const alertas = NutriDudu.alertas ? NutriDudu.alertas.daPessoa(pessoa, { consultas: ctx.consultas || [], pacotes: ctx.pacotes || [], checkins: ctx.checkins || [] }, ctx.geral || {}, agora) : [];
     const motivos = alertas.map((a) => `${a.nome}: ${a.texto}`);
     // Check-ins sem resposta: os 2 últimos com prazo vencido.
     const vencidos = (ctx.checkins || []).filter((c) => !c.cancelado && c.prazo && new Date(c.prazo) < agora)
       .sort((a, b) => String(b.enviadoEm || b.criadoEm || '').localeCompare(String(a.enviadoEm || a.criadoEm || ''))).slice(0, 2);
-    if (vencidos.length === 2 && vencidos.every((c) => !c.respondidoEm)) motivos.push('Não respondeu os 2 últimos check-ins.');
-    if (alertas.some((a) => a.tipo === 'sumido')) return { nivel: 'vermelho', rotulo: 'Sumindo', motivos };
-    if (motivos.length) return { nivel: 'amarelo', rotulo: 'Atenção', motivos };
+    const semResposta = vencidos.length === 2 && vencidos.every((c) => !c.respondidoEm);
+    if (semResposta) motivos.push('Não respondeu os 2 últimos check-ins.');
+    // Situação principal (para a mensagem pronta do WhatsApp).
+    const tipo = alertas[0]?.tipo;
+    const situacao = alertas.some((a) => a.tipo === 'sumido') ? 'sumido' : tipo === 'pacote_atrasado' ? 'pacote' : tipo || (semResposta ? 'checkin_sem_resposta' : null);
+    if (alertas.some((a) => a.tipo === 'sumido')) return { nivel: 'vermelho', rotulo: 'Sumindo', motivos, situacao };
+    if (motivos.length) return { nivel: 'amarelo', rotulo: 'Atenção', motivos, situacao };
     return { nivel: 'verde', rotulo: 'Em dia', motivos: [] };
   }
 

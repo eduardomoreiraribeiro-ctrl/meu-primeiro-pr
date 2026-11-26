@@ -591,6 +591,7 @@ NutriDudu.pages.cliente = (function () {
           <span><strong>${utils.escapeHtml(a.nome)}:</strong> ${utils.escapeHtml(a.texto)}.</span>
           <span class="acoes-linha sem-margem">
             ${a.tipo === 'sumido' && pessoa.status === 'ativo' ? '<button type="button" class="btn btn-pequeno" data-marcar-inativo>Marcar inativo</button>' : ''}
+            ${NutriDudu.mensagensProntas.botao(pessoa, a.tipo === 'pacote_atrasado' ? 'pacote' : a.tipo, { consultas })}
             <button type="button" class="btn btn-pequeno" data-dispensar="${a.tipo}">Dispensar</button>
           </span>
         </div>`).join('')}

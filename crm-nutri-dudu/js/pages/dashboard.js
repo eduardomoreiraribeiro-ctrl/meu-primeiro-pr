@@ -70,6 +70,9 @@ NutriDudu.pages.dashboard = (function () {
   const linkPessoa = (p) => `<a href="#/clientes/${encodeURIComponent(p.id)}">${NutriDudu.utils.escapeHtml(p.nome)}</a>`;
   const whatsapp = (p) => `<a class="btn btn-pequeno" href="https://wa.me/55${NutriDudu.utils.soDigitos(p.telefone)}" target="_blank" rel="noopener" aria-label="WhatsApp de ${NutriDudu.utils.escapeHtml(p.nome)}">WhatsApp</a>`;
 
+  // WhatsApp com a mensagem pronta da situação (sem o módulo: conversa em branco).
+  const pronta = (p, situacao, ctx) => (NutriDudu.mensagensProntas ? NutriDudu.mensagensProntas.botao(p, situacao, ctx) : whatsapp(p));
+
   /** Cartão de lista de ação: título com contador, itens (até LIMITE_LISTA) e "ver todos". */
   function cartaoAcao({ id, titulo, sub, itens, vazio, verTodos, limite = LIMITE_LISTA }) {
     const { utils } = NutriDudu;
@@ -107,7 +110,7 @@ NutriDudu.pages.dashboard = (function () {
         `${linkPessoa(p)} ${ui.badge(a.nome, a.variante)}`,
         utils.escapeHtml(a.texto),
         `<button type="button" class="btn btn-pequeno btn-primary" data-agendar="${p.id}">Agendar</button>
-         ${whatsapp(p)}
+         ${pronta(p, a.tipo === 'pacote_atrasado' ? 'pacote' : a.tipo, { consultas: d.consultasDe(p.id) })}
          ${a.tipo === 'sumido' ? `<button type="button" class="btn btn-pequeno" data-inativar="${p.id}">Marcar inativo</button>` : ''}
          <button type="button" class="btn btn-pequeno" data-dispensar="${p.id}" data-tipo="${a.tipo}">Dispensar</button>`,
       ));
@@ -120,7 +123,7 @@ NutriDudu.pages.dashboard = (function () {
       .map(({ p, q }) => itemAcao(
         `${linkPessoa(p)} <strong class="texto-perigo">${q.para}%</strong>`,
         q.seguidas ? `caiu 2 check-ins seguidos: ${q.de}% → ${q.para}% · ${utils.data(q.data).slice(0, 5)}` : `média anterior ${q.de}% → ${q.para}% no último check-in · ${utils.data(q.data).slice(0, 5)}`,
-        `<a class="btn btn-pequeno btn-primary" href="#/clientes/${encodeURIComponent(p.id)}/checkins">Ver check-ins</a> ${whatsapp(p)}
+        `<a class="btn btn-pequeno btn-primary" href="#/clientes/${encodeURIComponent(p.id)}/checkins">Ver check-ins</a> ${pronta(p, 'checkin_queda')}
          <button type="button" class="btn btn-pequeno" data-dispensar="${p.id}" data-tipo="checkin_queda">Dispensar</button>`,
       ));
 
@@ -133,7 +136,7 @@ NutriDudu.pages.dashboard = (function () {
       .map((c) => itemAcao(
         `${linkPessoa(pessoa[c.pessoaId])}`,
         `${utils.isoDia(c.inicio) === utils.isoDia(agora) ? 'Hoje' : 'Amanhã'} às ${utils.hora(c.inicio)} · ${utils.escapeHtml(servico[c.servicoId]?.nome || '')}${c.agendadaPor === 'agente' ? ' · 🤖' : ''}`,
-        `<button type="button" class="btn btn-pequeno btn-primary" data-confirmar="${c.id}">Confirmar</button> ${whatsapp(pessoa[c.pessoaId])}`,
+        `<button type="button" class="btn btn-pequeno btn-primary" data-confirmar="${c.id}">Confirmar</button> ${pronta(pessoa[c.pessoaId], 'confirmar', { consulta: c })}`,
       ));
 
     // 3. Pagamentos atrasados.
@@ -144,7 +147,7 @@ NutriDudu.pages.dashboard = (function () {
       .map((l) => itemAcao(
         `${linkPessoa(pessoa[l.pessoaId])} <strong class="texto-perigo">${utils.moeda(calculos.valorLiquido(l))}</strong>`,
         `${utils.escapeHtml(l.descricao)} · venceu ${utils.haDias(utils.diasEntre(l.vencimento, agora))} (${utils.data(l.vencimento)})`,
-        `${podeReceber ? `<button type="button" class="btn btn-pequeno btn-primary" data-receber="${l.id}">Receber</button>` : ''} ${whatsapp(pessoa[l.pessoaId])}`,
+        `${podeReceber ? `<button type="button" class="btn btn-pequeno btn-primary" data-receber="${l.id}">Receber</button>` : ''} ${pronta(pessoa[l.pessoaId], 'cobranca', { lancamento: l, chavePix: d.geral?.chavePix })}`,
       ));
 
     // 4. Pacotes acabando, vencendo, vencidos sem renovar ou atrasados no ritmo.
@@ -170,7 +173,7 @@ NutriDudu.pages.dashboard = (function () {
         pacotesAtencao.push(itemAcao(
           `${linkPessoa(p)} <span class="small">${utils.escapeHtml(nome)}</span>`,
           utils.escapeHtml(motivos.join(' · ')),
-          `<button type="button" class="btn btn-pequeno btn-primary" data-renovar="${ultimo.id}">Renovar</button> ${whatsapp(p)}`,
+          `<button type="button" class="btn btn-pequeno btn-primary" data-renovar="${ultimo.id}">Renovar</button> ${pronta(p, 'pacote', { pacoteNome: nome, motivo: motivos.join(' e ') })}`,
         ));
       }
     });
@@ -185,7 +188,7 @@ NutriDudu.pages.dashboard = (function () {
       .map(({ p, dias }) => itemAcao(
         linkPessoa(p),
         `${utils.escapeHtml(NutriDudu.funil.nomeEtapa('comercial', p.etapa))} há ${utils.dias(dias)} · ${utils.escapeHtml(config.ORIGENS[p.origem] || '')}`,
-        `<a class="btn btn-pequeno" href="#/kanban/comercial">Kanban</a> ${whatsapp(p)}`,
+        `<a class="btn btn-pequeno" href="#/kanban/comercial">Kanban</a> ${pronta(p, 'lead')}`,
       ));
 
     // 6. Aniversariantes dos próximos 7 dias (clientes ativos e leads em aberto).
@@ -202,7 +205,7 @@ NutriDudu.pages.dashboard = (function () {
       .map(({ p, prox, em, idade }) => itemAcao(
         `${linkPessoa(p)}${em === 0 ? ' 🎉' : ''}`,
         `${em === 0 ? 'Hoje' : em === 1 ? 'Amanhã' : utils.diaPorExtenso(prox).split(',')[0]} · ${utils.data(prox).slice(0, 5)} · faz ${idade} anos`,
-        whatsapp(p),
+        em === 0 ? pronta(p, 'aniversario') : whatsapp(p),
       ));
 
     // 7. Conversas do WhatsApp esperando alguém da equipe (o agente chamou ou está desligado).
@@ -397,7 +400,7 @@ NutriDudu.pages.dashboard = (function () {
         .map((l) => itemAcao(
           `${linkPessoa(pessoaPorId[l.pessoaId])} <strong>${utils.moeda(calculos.valorLiquido(l))}</strong>`,
           `${utils.escapeHtml(l.descricao || '')} · vence ${utils.data(l.vencimento)}`,
-          `${podeReceber ? `<button type="button" class="btn btn-pequeno btn-primary" data-receber="${l.id}">Receber</button>` : ''} ${whatsapp(pessoaPorId[l.pessoaId])}`,
+          `${podeReceber ? `<button type="button" class="btn btn-pequeno btn-primary" data-receber="${l.id}">Receber</button>` : ''} ${pronta(pessoaPorId[l.pessoaId], 'cobranca', { lancamento: l, chavePix: (geral || {}).chavePix })}`,
         ));
       corpo = `
         ${ui.cabecalho('Financeiro', 'Recebimentos, cobranças em aberto e pacotes para renovar')}
