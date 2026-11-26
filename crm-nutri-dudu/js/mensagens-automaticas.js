@@ -44,7 +44,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       nomePadrao: 'nutridudu_retorno_v2',
       categoria: 'MARKETING',
       // Em primeira pessoa, do nutricionista (versão 2: a 1ª ficou impessoal).
-      corpo: () => 'Oi, {{1}}! Tudo bem? Já faz {{2}} desde a nossa última consulta e fiquei curioso pra saber como você está 😊 Bora marcar o retorno pra gente ajustar o plano? Me responde aqui que eu vejo um horário pra você 💚',
+      corpo: () => 'Oi, {{1}}! Tudo bem? Já faz {{2}} desde a nossa última consulta e fiquei curioso pra saber como você está 😊 Vamos marcar o retorno pra gente ajustar o plano? Me responde aqui que eu vejo um horário pra você 💚',
       variaveis: ['primeiro nome', 'tempo (ex.: 2 meses)'],
       exemplo: ['Fernanda', '2 meses'],
     },
@@ -62,7 +62,7 @@ NutriDudu.mensagensAutomaticas = (function () {
       quando: 'Cliente sumido (sem consulta há mais do que o prazo de "cliente sumido"); no máximo 1 a cada 90 dias.',
       nomePadrao: 'nutridudu_reativacao_v2',
       categoria: 'MARKETING',
-      corpo: () => 'Oi, {{1}}! Quanto tempo! Lembrei de você por aqui e quis saber como estão as coisas 😊 Se bater vontade de retomar o acompanhamento, me responde aqui que a gente acha um horário que funcione pra você 💚',
+      corpo: () => 'Oi, {{1}}! Tudo bem? Faz um tempo desde o nosso último acompanhamento e quis saber como você está 😊 Se quiser retomar o acompanhamento nutricional, me responde aqui que eu vejo o melhor horário pra você 💚',
       variaveis: ['primeiro nome'],
       exemplo: ['Thiago'],
     },
