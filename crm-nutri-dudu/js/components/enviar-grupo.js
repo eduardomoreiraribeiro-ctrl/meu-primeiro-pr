@@ -150,7 +150,7 @@ NutriDudu.enviarGrupo = (function () {
   function abrirManual(grupos, consultas) {
     const { modal, ui, utils, store, permissoes } = NutriDudu;
     const MM = NutriDudu.mensagensManuais;
-    const LIMITE_DIA = 15;
+    const LIMITE_DIA = MM.LIMITE_RELACIONAMENTO_DIA;
     let grupo = grupos.retorno.length || !grupos.reativacao.length ? 'retorno' : 'reativacao';
     const dialog = modal.painel({ titulo: 'Enviar mensagens pelo seu WhatsApp', corpo: '<div data-envio-manual></div>' });
     dialog.classList.add('modal-largo');

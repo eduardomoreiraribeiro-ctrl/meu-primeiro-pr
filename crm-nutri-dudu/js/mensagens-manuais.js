@@ -18,7 +18,23 @@ NutriDudu.mensagensManuais = (function () {
     checkinLembrete: { icone: '⏰', nome: 'Lembrete do check-in' },
     aniversario: { icone: '🎂', nome: 'Aniversário' },
     cobranca: { icone: '💰', nome: 'Pagamento em atraso' },
+    retorno: { icone: '🔁', nome: 'Retorno' },
+    reativacao: { icone: '👋', nome: 'Reativação' },
   };
+
+  // Retorno e reativação pelo WhatsApp pessoal: no máximo isso por dia (para o número não ser bloqueado).
+  const LIMITE_RELACIONAMENTO_DIA = 15;
+  const tempoDesde = (dias) => {
+    if (dias < 14) return `${dias} dias`;
+    if (dias < 60) return `${Math.round(dias / 7)} semanas`;
+    const meses = Math.round(dias / 30);
+    return meses === 1 ? '1 mês' : `${meses} meses`;
+  };
+  /** Quantas mensagens de retorno/reativação já foram abertas hoje (lista do Dashboard ou Clientes › Enviar mensagens). */
+  function relacionamentoHoje(pessoas, agora = new Date()) {
+    const hoje = NutriDudu.utils.isoDia(agora);
+    return pessoas.filter((p) => ['retorno', 'reativacao'].some((g) => p.automacoes?.[g]?.via === 'manual' && NutriDudu.utils.isoDia(p.automacoes[g].em) === hoje)).length;
+  }
 
   /** Texto de um modelo, preenchido e no "gênero" da pessoa (só muda os emojis). */
   function texto(id, valores, pessoa) {
@@ -121,6 +137,31 @@ NutriDudu.mensagensManuais = (function () {
           texto: texto('cobranca', [primeiroNome(p.nome), l.descricao || 'consulta', utils.moeda(calculos.valorLiquido(l)), utils.data(l.vencimento), d.geral?.chavePix || 'informada pela recepção'], p) });
       });
 
+    // 7. Retorno e reativação: o sistema escolhe quem chamar hoje, por prioridade, até o limite do dia.
+    const EG = NutriDudu.enviarGrupo;
+    if (EG && d.pacotes) {
+      const grupos = EG.montarGrupos({ pessoas: d.pessoas, consultas: d.consultas, pacotes: d.pacotes, geral: d.geral || {} }, agora);
+      const prioridade = (situacao) => (/faltou/.test(situacao) ? 0 : /previsto/.test(situacao) ? 1 : 2);
+      const fila = [
+        ...grupos.retorno.map((x) => ({ ...x, grupo: 'retorno', prio: prioridade(x.situacao) })),
+        ...grupos.reativacao.map((x) => ({ ...x, grupo: 'reativacao', prio: x.pessoa.status === 'inativo' ? 4 : 3 })),
+      ].filter((x) => !EG.bloqueio(x.pessoa, x.grupo, agora) && telefone(x.pessoa))
+        .sort((a, b) => a.prio - b.prio);
+      const vagas = Math.max(0, LIMITE_RELACIONAMENTO_DIA - relacionamentoHoje(d.pessoas, agora));
+      // Quem já tem outra mensagem hoje (ex.: aniversário) fica para outro dia: uma mensagem por pessoa.
+      const vistos = new Set(itens.map((i) => i.pessoa.id));
+      fila.filter((x) => { if (vistos.has(x.pessoa.id)) return false; vistos.add(x.pessoa.id); return true; }).slice(0, vagas).forEach((x) => {
+        const p = x.pessoa;
+        let t;
+        if (x.grupo === 'reativacao') t = texto('reativacao', [primeiroNome(p.nome)], p);
+        else {
+          const ultima = d.consultas.filter((c) => c.pessoaId === p.id && c.status === 'realizada').sort((a, b) => b.inicio.localeCompare(a.inicio))[0];
+          t = texto('retorno', [primeiroNome(p.nome), ultima ? tempoDesde(utils.diasEntre(ultima.inicio, agora)) : 'um tempo'], p);
+        }
+        add({ chave: `${x.grupo}:${p.id}`, tipo: x.grupo, pessoa: p, detalhe: x.situacao, texto: t });
+      });
+    }
+
     const ordem = Object.keys(TIPOS);
     return itens.sort((a, b) => ordem.indexOf(a.tipo) - ordem.indexOf(b.tipo));
   }
@@ -170,6 +211,10 @@ NutriDudu.mensagensManuais = (function () {
       await store.update('pessoas', p.id, { automacoes: { ...(p.automacoes || {}), [`aniversario_${new Date().getFullYear()}`]: { em: agoraIso, ok: true, via: 'manual' } } });
     }
     if (item.tipo === 'cobranca') await store.update('lancamentos', item.lancamento.id, { manual: { ...(item.lancamento.manual || {}), cobranca: agoraIso } });
+    if (item.tipo === 'retorno' || item.tipo === 'reativacao') {
+      const p = (await store.get('pessoas', item.pessoa.id)) || item.pessoa;
+      await store.update('pessoas', p.id, { automacoes: { ...(p.automacoes || {}), [item.tipo]: { em: agoraIso, ok: true, via: 'manual' } } });
+    }
     await store.create('interacoes', {
       pessoaId: item.pessoa.id, dataHora: agoraIso, tipo: 'nota', autor: NutriDudu.permissoes.atual(), automatico: true,
       descricao: pulou ? `${TIPOS[item.tipo].nome}: marcado como já enviado.` : `${TIPOS[item.tipo].nome}: mensagem aberta no WhatsApp para enviar.`,
@@ -232,5 +277,5 @@ NutriDudu.mensagensManuais = (function () {
     }));
   }
 
-  return { TIPOS, pendentes, texto, cartao, ligar, telefone };
+  return { TIPOS, LIMITE_RELACIONAMENTO_DIA, relacionamentoHoje, pendentes, texto, cartao, ligar, telefone };
 })();

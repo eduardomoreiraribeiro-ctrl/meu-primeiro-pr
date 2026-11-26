@@ -296,7 +296,7 @@ NutriDudu.pages.dashboard = (function () {
       const [todosProf, ckDoc] = await Promise.all([store.list('profissionais'), store.get('configuracoes', 'checkin')]);
       manuais = NutriDudu.mensagensManuais.pendentes({
         pessoas: todasPessoas, consultas: todasConsultas, lancamentos: todosLancamentos, checkins: checkins || [],
-        checkinCfg: checkins ? NutriDudu.checkin.configuracao(ckDoc || {}) : null, geral: geral || {}, profissionais: todosProf,
+        checkinCfg: checkins ? NutriDudu.checkin.configuracao(ckDoc || {}) : null, geral: geral || {}, profissionais: todosProf, pacotes,
       });
     }
 
