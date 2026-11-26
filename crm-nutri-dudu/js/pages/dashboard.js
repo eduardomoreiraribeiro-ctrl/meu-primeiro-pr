@@ -71,9 +71,9 @@ NutriDudu.pages.dashboard = (function () {
   const whatsapp = (p) => `<a class="btn btn-pequeno" href="https://wa.me/55${NutriDudu.utils.soDigitos(p.telefone)}" target="_blank" rel="noopener" aria-label="WhatsApp de ${NutriDudu.utils.escapeHtml(p.nome)}">WhatsApp</a>`;
 
   /** Cartão de lista de ação: título com contador, itens (até LIMITE_LISTA) e "ver todos". */
-  function cartaoAcao({ id, titulo, sub, itens, vazio, verTodos }) {
+  function cartaoAcao({ id, titulo, sub, itens, vazio, verTodos, limite = LIMITE_LISTA }) {
     const { utils } = NutriDudu;
-    const visiveis = itens.slice(0, LIMITE_LISTA);
+    const visiveis = itens.slice(0, limite);
     return `
       <section class="card acao" data-lista="${id}">
         <div class="secao-cabecalho">
@@ -82,8 +82,8 @@ NutriDudu.pages.dashboard = (function () {
         </div>
         ${sub ? `<p class="muted small card-sub">${utils.escapeHtml(sub)}</p>` : ''}
         ${itens.length ? `<ul class="lista-acao">${visiveis.join('')}</ul>` : `<p class="tudo-certo">✓ ${utils.escapeHtml(vazio)}</p>`}
-        ${itens.length > LIMITE_LISTA && verTodos ? `<a class="small ver-todos" href="${verTodos}">Ver todos (${itens.length})</a>` : ''}
-        ${itens.length > LIMITE_LISTA && !verTodos ? `<p class="small muted">+ ${itens.length - LIMITE_LISTA} não mostrados</p>` : ''}
+        ${itens.length > limite && verTodos ? `<a class="small ver-todos" href="${verTodos}">Ver todos (${itens.length})</a>` : ''}
+        ${itens.length > limite && !verTodos ? `<p class="small muted">+ ${itens.length - limite} não mostrados</p>` : ''}
       </section>`;
   }
 
@@ -219,17 +219,21 @@ NutriDudu.pages.dashboard = (function () {
         );
       });
 
-    return `
-      <div class="grid-acoes">
-        ${cartaoAcao({ id: 'conversas', titulo: 'Conversas aguardando equipe', sub: 'WhatsApp: o assistente chamou alguém ou está desligado', itens: aguardando, vazio: 'Nenhuma conversa esperando a equipe.', verTodos: '#/conversas' })}
-        ${cartaoAcao({ id: 'retornos', titulo: 'Retornos pendentes', sub: 'Clientes sem próximo passo: sem retorno, faltas sem remarcar, sumidos', itens: retornos, vazio: 'Todos os clientes ativos têm próximo passo.', verTodos: '#/clientes' })}
-        ${d.checkins ? cartaoAcao({ id: 'quedas', titulo: 'Check-ins em queda', sub: 'Nota caindo nas últimas semanas: vale chamar pra conversar', itens: quedas, vazio: 'Ninguém com a nota dos check-ins caindo. 💪' }) : ''}
-        ${cartaoAcao({ id: 'confirmar', titulo: 'Consultas a confirmar', sub: 'Hoje e amanhã, ainda não confirmadas', itens: aConfirmar, vazio: 'Nada para confirmar até amanhã.' })}
-        ${cartaoAcao({ id: 'atrasados', titulo: 'Pagamentos atrasados', sub: 'Do mais antigo para o mais recente', itens: atrasados, vazio: 'Nenhum pagamento atrasado.' })}
-        ${cartaoAcao({ id: 'pacotes', titulo: 'Pacotes para renovar', sub: 'Acabando, vencendo em até 15 dias, vencidos ou atrasados no ritmo', itens: pacotesAtencao, vazio: 'Nenhum pacote pedindo atenção.' })}
-        ${cartaoAcao({ id: 'parados', titulo: 'Leads parados', sub: `Há mais de ${diasParado} dias na mesma etapa do funil comercial`, itens: parados, vazio: 'Nenhum lead parado.' })}
-        ${cartaoAcao({ id: 'aniversarios', titulo: 'Aniversariantes da semana', sub: 'Próximos 7 dias', itens: aniversariantes, vazio: 'Nenhum aniversário nos próximos 7 dias.' })}
-      </div>`;
+    return {
+      conversas: { titulo: 'Conversas aguardando equipe', sub: 'WhatsApp: o assistente chamou alguém ou está desligado', itens: aguardando, vazio: 'Nenhuma conversa esperando a equipe.', verTodos: '#/conversas' },
+      retornos: { titulo: 'Retornos pendentes', sub: 'Clientes sem próximo passo: sem retorno, faltas sem remarcar, sumidos', itens: retornos, vazio: 'Todos os clientes ativos têm próximo passo.', verTodos: '#/acompanhamento' },
+      quedas: d.checkins ? { titulo: 'Check-ins em queda', sub: 'Nota caindo nas últimas semanas: vale chamar pra conversar', itens: quedas, vazio: 'Ninguém com a nota dos check-ins caindo. 💪' } : null,
+      confirmar: { titulo: 'Consultas a confirmar', sub: 'Hoje e amanhã, ainda não confirmadas', itens: aConfirmar, vazio: 'Nada para confirmar até amanhã.' },
+      atrasados: { titulo: 'Pagamentos atrasados', sub: 'Do mais antigo para o mais recente', itens: atrasados, vazio: 'Nenhum pagamento atrasado.' },
+      pacotes: { titulo: 'Pacotes para renovar', sub: 'Acabando, vencendo em até 15 dias, vencidos ou atrasados no ritmo', itens: pacotesAtencao, vazio: 'Nenhum pacote pedindo atenção.' },
+      parados: { titulo: 'Leads parados', sub: `Há mais de ${diasParado} dias na mesma etapa do funil comercial`, itens: parados, vazio: 'Nenhum lead parado.', verTodos: '#/kanban/comercial' },
+      aniversarios: { titulo: 'Aniversariantes da semana', sub: 'Próximos 7 dias', itens: aniversariantes, vazio: 'Nenhum aniversário nos próximos 7 dias.' },
+    };
+  }
+
+  /** Grade de cartões de ação (ids na ordem desejada; cartões nulos são pulados). */
+  function cartoesAcao(listas, ids, { tudo = false } = {}) {
+    return `<div class="grid-acoes">${ids.map((id) => listas[id] && cartaoAcao({ id, ...listas[id], ...(tudo ? { limite: 999 } : {}) })).filter(Boolean).join('')}</div>`;
   }
 
   function agendaDeHojeHtml(consultas, pessoaPorId, servicoPorId) {
@@ -271,7 +275,8 @@ NutriDudu.pages.dashboard = (function () {
 
   // ---------------- Página ----------------
 
-  async function render(container) {
+  // modo: 'dashboard' | 'mensagens' | 'pendencias' | 'financeiro' | 'relatorios' (o Dashboard foi dividido em telas).
+  async function render(container, params = {}, modo = 'dashboard') {
     const { store, ui, utils, indicadores, calculos, agenda } = NutriDudu;
     const filtro = lerFiltro();
     const periodo = indicadores.intervalo(filtro.preset, filtro.de, filtro.ate);
@@ -303,7 +308,8 @@ NutriDudu.pages.dashboard = (function () {
     // Filtro por profissional: pessoas (responsável), consultas e lançamentos dela.
     // O perfil Profissional vê sempre só os seus números (seção 2 do planejamento).
     const proprio = NutriDudu.permissoes.idProfissionalAtual();
-    const profId = proprio || (profissionais.some((p) => p.id === filtro.profissionalId) ? filtro.profissionalId : '');
+    const comFiltros = ['financeiro', 'relatorios'].includes(modo);
+    const profId = proprio || (comFiltros && profissionais.some((p) => p.id === filtro.profissionalId) ? filtro.profissionalId : '');
     const pessoas = profId ? todasPessoas.filter((p) => p.profissionalId === profId) : todasPessoas;
     const consultas = profId ? todasConsultas.filter((c) => c.profissionalId === profId) : todasConsultas;
     const lancamentos = profId ? todosLancamentos.filter((l) => l.profissionalId === profId || (!l.profissionalId && pessoas.some((p) => p.id === l.pessoaId))) : todosLancamentos;
@@ -338,13 +344,82 @@ NutriDudu.pages.dashboard = (function () {
     const horas = (min) => `${Math.round(min / 60)} h`;
     const hojeExtenso = utils.diaPorExtenso(new Date());
 
-    container.innerHTML = `
-      <div class="dashboard">
-        ${ui.cabecalho('Dashboard', 'Visão geral da operação da clínica')}
-        ${filtrosHtml({ ...filtro, profissionalId: profId }, periodo, proprio ? [] : profissionais)}
-        ${manuais ? NutriDudu.mensagensManuais.cartao(manuais) : ''}
-        ${proprio ? `<p class="muted small aviso-perfil">Mostrando só os seus números (${utils.escapeHtml(profissionais.find((p) => p.id === proprio)?.nome || 'você')}).</p>` : ''}
+    const listas = listasDeAcao({
+      pessoas, consultas, lancamentos, pacotes: pacotesFiltrados, geral: geral || {},
+      pessoaPorId: porId(todasPessoas), servicoPorId: porId(servicos),
+      pacotesDe: calculos.agruparPorPessoa(pacotesFiltrados),
+      consultasDe: calculos.agruparPorPessoa(consultas.filter((c) => c.status !== 'cancelada')),
+      conversas,
+      checkins, checkinsDe: calculos.agruparPorPessoa(checkins || []),
+    });
+    const IDS_PENDENCIAS = ['conversas', 'confirmar', 'retornos', 'quedas', 'parados', 'aniversarios'];
+    const contar = (ids) => ids.reduce((t, id) => t + (listas[id]?.itens.length || 0), 0);
+    const avisoPerfil = proprio ? `<p class="muted small aviso-perfil">Mostrando só os seus números (${utils.escapeHtml(profissionais.find((p) => p.id === proprio)?.nome || 'você')}).</p>` : '';
+    const filtros = filtrosHtml({ ...filtro, profissionalId: profId }, periodo, proprio ? [] : profissionais);
 
+    const graficoFaturamento = `
+          <section class="card dash-largo">
+            <h2 class="card-title">Faturamento mês a mês</h2>
+            <p class="muted small card-sub">Últimos 12 meses · cobranças com vencimento em cada mês (pagas e a receber); o mês atual em destaque</p>
+            <div class="rolagem-x">
+              ${ui.colunas(meses.map((m) => ({ ...m, destaque: m.atual })), {
+                formatar: utils.moedaCurta, destacarMaior: false, vazio: 'Nenhum faturamento nos últimos 12 meses.',
+                descrever: (m) => `${m.nome}: ${utils.moeda(m.qtd)} (${utils.moeda(m.recebido)} recebido)`,
+              })}
+            </div>
+          </section>`;
+
+    const atalho = (href, icone, titulo, qtd, texto) => `
+      <a class="card atalho${qtd ? ' tem' : ''}" href="${href}">
+        <span class="atalho-icone">${icone}</span>
+        <span><strong>${utils.escapeHtml(titulo)}</strong><span class="muted small bloco">${utils.escapeHtml(texto)}</span></span>
+        <span class="contador${qtd ? ' tem' : ''}">${qtd}</span>
+      </a>`;
+
+    let corpo;
+    if (modo === 'mensagens') {
+      corpo = `
+        ${ui.cabecalho('Mensagens do dia', 'O que mandar hoje pelo seu WhatsApp: toque em "Abrir no WhatsApp", confira e envie')}
+        ${manuais ? NutriDudu.mensagensManuais.cartao(manuais)
+          : `<div class="card"><p>As mensagens estão saindo sozinhas pelo WhatsApp da clínica, então não tem fila pra mandar à mão.</p><p class="muted small">Isso muda em Configurações → Mensagens automáticas.</p></div>`}`;
+    } else if (modo === 'pendencias') {
+      corpo = `
+        ${ui.cabecalho('Pendências', 'O que precisa de atenção: confirmar consultas, retornos, check-ins em queda, leads e aniversários')}
+        ${avisoPerfil}
+        ${cartoesAcao(listas, IDS_PENDENCIAS, { tudo: true })}`;
+    } else if (modo === 'financeiro') {
+      const agora = new Date();
+      const pessoaPorId = porId(todasPessoas);
+      const podeReceber = NutriDudu.permissoes.pode('darBaixaPagamento');
+      const aReceber = lancamentos
+        .filter((l) => l.status === 'pendente' && !calculos.lancamentoAtrasado(l, agora) && pessoaPorId[l.pessoaId])
+        .sort((x, y) => String(x.vencimento).localeCompare(String(y.vencimento)))
+        .map((l) => itemAcao(
+          `${linkPessoa(pessoaPorId[l.pessoaId])} <strong>${utils.moeda(calculos.valorLiquido(l))}</strong>`,
+          `${utils.escapeHtml(l.descricao || '')} · vence ${utils.data(l.vencimento)}`,
+          `${podeReceber ? `<button type="button" class="btn btn-pequeno btn-primary" data-receber="${l.id}">Receber</button>` : ''} ${whatsapp(pessoaPorId[l.pessoaId])}`,
+        ));
+      corpo = `
+        ${ui.cabecalho('Financeiro', 'Recebimentos, cobranças em aberto e pacotes para renovar')}
+        ${filtros}
+        ${avisoPerfil}
+        <h2 class="titulo-secao">Agora</h2>
+        <section class="kpi-grid">
+          ${ui.kpi('A receber', utils.moeda(cart.aReceber), cart.atrasado ? `${utils.moeda(cart.atrasado)} atrasado` : 'nada atrasado')}
+          ${ui.kpi('Pacotes ativos', String(cart.pacotesAtivos), cart.renovacao.terminados ? `renovação: ${pct(cart.renovacao.taxa)} (${cart.renovacao.renovados} de ${cart.renovacao.terminados})` : 'nenhum pacote terminado ainda')}
+        </section>
+        <h2 class="titulo-secao">No período</h2>
+        <section class="kpi-grid">
+          ${ui.kpi('Faturamento estimado', utils.moeda(r.faturamentoEstimado), `${utils.moeda(r.recebido)} já recebido`)}
+          ${ui.kpi('Ticket médio', r.ticketMedio === null ? '—' : utils.moeda(r.ticketMedio), r.pagamentos ? `${r.pagamentos} pagamento(s) recebido(s)` : 'nenhum pagamento recebido')}
+        </section>
+        ${cartoesAcao({ ...listas, receber: { titulo: 'A receber (em dia)', sub: 'Cobranças pendentes que ainda não venceram', itens: aReceber, vazio: 'Nenhuma cobrança em aberto.' } }, ['atrasados', 'receber', 'pacotes'], { tudo: true })}
+        <div class="dash-grid">${graficoFaturamento}</div>`;
+    } else if (modo === 'relatorios') {
+      corpo = `
+        ${ui.cabecalho('Relatórios', 'Números do período e gráficos')}
+        ${filtros}
+        ${avisoPerfil}
         <h2 class="titulo-secao">No período</h2>
         <section class="kpi-grid">
           ${ui.kpi('Clientes novos', String(r.clientesNovos), 'fecharam no período')}
@@ -356,7 +431,47 @@ NutriDudu.pages.dashboard = (function () {
           ${ui.kpi('Ocupação da agenda', pct(taxaOcupacao), ocup.disponivelMin ? `${horas(ocup.ocupadoMin)} marcadas de ${horas(ocup.disponivelMin)} disponíveis` : 'sem horário de atendimento')}
           ${ui.kpi('Taxa de retorno', pct(r.retorno.taxa), r.retorno.devidos ? `${r.retorno.voltaram} de ${r.retorno.devidos} voltaram no prazo` : 'nenhum retorno vencendo no período')}
         </section>
-
+        <h2 class="titulo-secao">Gráficos</h2>
+        <div class="dash-grid">
+          ${graficoFaturamento}
+          <section class="card">
+            <h2 class="card-title">Serviços e planos mais realizados</h2>
+            <p class="muted small card-sub">Atendimentos realizados no período</p>
+            ${ui.barras(r.porServico.slice(0, 6), { unidade: ['atendimento', 'atendimentos'], vazio: 'Nenhum atendimento realizado no período.' })}
+          </section>
+          <section class="card">
+            <h2 class="card-title">Origem dos leads e conversão</h2>
+            <p class="muted small card-sub">Leads que chegaram no período</p>
+            ${origemTabela(r.porOrigem)}
+          </section>
+          <section class="card">
+            <h2 class="card-title">Leads por etapa do Kanban</h2>
+            <p class="muted small card-sub">Funil comercial · situação atual</p>
+            ${ui.barras(r.porEtapa.map((e) => ({ ...e, apagado: e.id === 'perdido' })), { unidade: ['lead', 'leads'], vazio: 'Nenhum lead no funil.' })}
+          </section>
+          <section class="card">
+            <h2 class="card-title">Clientes que mais indicaram</h2>
+            <p class="muted small card-sub">Desde o início · quantas pessoas cada um indicou</p>
+            ${ui.barras(indicaram, { unidade: ['indicação', 'indicações'], vazio: 'Nenhuma indicação registrada ainda.' })}
+          </section>
+          <section class="card">
+            <h2 class="card-title">Dias mais movimentados da semana</h2>
+            <p class="muted small card-sub">Atendimentos realizados e agendados no período</p>
+            ${ui.colunas(dias, { unidade: ['atendimento', 'atendimentos'], vazio: 'Nenhum atendimento no período.' })}
+          </section>
+        </div>`;
+    } else {
+      const qtdMsgs = manuais ? manuais.length : 0;
+      const qtdPend = contar(IDS_PENDENCIAS);
+      const qtdFin = (listas.atrasados?.itens.length || 0) + (listas.pacotes?.itens.length || 0);
+      corpo = `
+        ${ui.cabecalho('Dashboard', `Resumo de hoje · ${hojeExtenso}`)}
+        ${avisoPerfil}
+        <section class="atalhos">
+          ${manuais ? atalho('#/mensagens', '📨', 'Mensagens do dia', qtdMsgs, qtdMsgs ? 'pra mandar pelo WhatsApp' : 'tudo enviado') : ''}
+          ${atalho('#/pendencias', '✅', 'Pendências', qtdPend, qtdPend ? 'precisam de atenção' : 'nada pendente')}
+          ${atalho('#/financeiro', '💰', 'Financeiro', qtdFin, qtdFin ? 'atrasados ou pacotes pra renovar' : 'tudo em dia')}
+        </section>
         <h2 class="titulo-secao">Hoje</h2>
         <section class="kpi-grid">
           ${ui.kpi('Clientes ativos', String(cart.clientesAtivos), `${cart.leadsNoFunil} lead(s) em negociação`)}
@@ -364,70 +479,16 @@ NutriDudu.pages.dashboard = (function () {
           ${ui.kpi('Pacotes ativos', String(cart.pacotesAtivos), cart.renovacao.terminados ? `renovação: ${pct(cart.renovacao.taxa)} (${cart.renovacao.renovados} de ${cart.renovacao.terminados})` : 'nenhum pacote terminado ainda')}
           ${ui.kpi('Agendamentos hoje', String(consultas.filter((c) => c.status !== 'cancelada' && utils.isoDia(c.inicio) === utils.isoDia(new Date())).length), hojeExtenso)}
         </section>
-
         <div class="dash-grid">
           <section class="card">
             <h2 class="card-title">Agendamentos de hoje</h2>
             <p class="muted small card-sub">${utils.escapeHtml(hojeExtenso)}</p>
             ${agendaDeHojeHtml(consultas, porId(todasPessoas), porId(servicos))}
           </section>
-
-          <section class="card">
-            <h2 class="card-title">Leads por etapa do Kanban</h2>
-            <p class="muted small card-sub">Funil comercial · situação atual</p>
-            ${ui.barras(r.porEtapa.map((e) => ({ ...e, apagado: e.id === 'perdido' })), { unidade: ['lead', 'leads'], vazio: 'Nenhum lead no funil.' })}
-          </section>
-        </div>
-
-        <h2 class="titulo-secao">Precisa de atenção</h2>
-        ${listasDeAcao({
-          pessoas, consultas, lancamentos, pacotes: pacotesFiltrados, geral: geral || {},
-          pessoaPorId: porId(todasPessoas), servicoPorId: porId(servicos),
-          pacotesDe: calculos.agruparPorPessoa(pacotesFiltrados),
-          consultasDe: calculos.agruparPorPessoa(consultas.filter((c) => c.status !== 'cancelada')),
-          conversas,
-          checkins, checkinsDe: calculos.agruparPorPessoa(checkins || []),
-        })}
-
-        <h2 class="titulo-secao">Gráficos</h2>
-        <div class="dash-grid">
-          <section class="card dash-largo">
-            <h2 class="card-title">Faturamento mês a mês</h2>
-            <p class="muted small card-sub">Últimos 12 meses · cobranças com vencimento em cada mês (pagas e a receber); o mês atual em destaque</p>
-            <div class="rolagem-x">
-              ${ui.colunas(meses.map((m) => ({ ...m, destaque: m.atual })), {
-                formatar: utils.moedaCurta, destacarMaior: false, vazio: 'Nenhum faturamento nos últimos 12 meses.',
-                descrever: (m) => `${m.nome}: ${utils.moeda(m.qtd)} (${utils.moeda(m.recebido)} recebido)`,
-              })}
-            </div>
-          </section>
-
-          <section class="card">
-            <h2 class="card-title">Serviços e planos mais realizados</h2>
-            <p class="muted small card-sub">Atendimentos realizados no período</p>
-            ${ui.barras(r.porServico.slice(0, 6), { unidade: ['atendimento', 'atendimentos'], vazio: 'Nenhum atendimento realizado no período.' })}
-          </section>
-
-          <section class="card">
-            <h2 class="card-title">Origem dos leads e conversão</h2>
-            <p class="muted small card-sub">Leads que chegaram no período</p>
-            ${origemTabela(r.porOrigem)}
-          </section>
-
-          <section class="card">
-            <h2 class="card-title">Clientes que mais indicaram</h2>
-            <p class="muted small card-sub">Desde o início · quantas pessoas cada um indicou</p>
-            ${ui.barras(indicaram, { unidade: ['indicação', 'indicações'], vazio: 'Nenhuma indicação registrada ainda.' })}
-          </section>
-
-          <section class="card">
-            <h2 class="card-title">Dias mais movimentados da semana</h2>
-            <p class="muted small card-sub">Atendimentos realizados e agendados no período</p>
-            ${ui.colunas(dias, { unidade: ['atendimento', 'atendimentos'], vazio: 'Nenhum atendimento no período.' })}
-          </section>
-        </div>
-      </div>
-    `;
+          ${cartaoAcao({ id: 'confirmar', ...listas.confirmar })}
+        </div>`;
+    }
+    container.innerHTML = `<div class="dashboard">${corpo}</div>`;
 
     const raiz = container.querySelector('.dashboard');
 
@@ -456,7 +517,7 @@ NutriDudu.pages.dashboard = (function () {
       NutriDudu.recarregarPagina();
     });
 
-    if (manuais) NutriDudu.mensagensManuais.ligar(raiz, manuais);
+    if (manuais && modo === 'mensagens') NutriDudu.mensagensManuais.ligar(raiz, manuais);
 
     // Botões das listas de ação.
     const pessoaPorId = porId(todasPessoas);
@@ -478,3 +539,9 @@ NutriDudu.pages.dashboard = (function () {
 
   return { titulo: 'Dashboard', render };
 })();
+
+// Telas que saíram do Dashboard (mesmos dados, cada uma com sua parte).
+NutriDudu.pages.mensagens = { titulo: 'Mensagens do dia', render: (c, p) => NutriDudu.pages.dashboard.render(c, p, 'mensagens') };
+NutriDudu.pages.pendencias = { titulo: 'Pendências', render: (c, p) => NutriDudu.pages.dashboard.render(c, p, 'pendencias') };
+NutriDudu.pages.financeiro = { titulo: 'Financeiro', render: (c, p) => NutriDudu.pages.dashboard.render(c, p, 'financeiro') };
+NutriDudu.pages.relatorios = { titulo: 'Relatórios', render: (c, p) => NutriDudu.pages.dashboard.render(c, p, 'relatorios') };

@@ -1813,3 +1813,19 @@ td .ac-selo { padding: 0 4px; border: 0; background: none; font-size: 0.8rem; cu
 .modal.ac-tela-cheia input, .modal.ac-tela-cheia textarea { font-size: 1.1rem; }
 .modal.ac-tela-cheia .ac-tag span { font-size: 1.02rem; padding: 8px 16px; }
 .modal.ac-tela-cheia .ac-sec { font-size: 1.25rem; }
+
+/* ---------- Menu em grupos e telas tiradas do Dashboard ---------- */
+.sidebar { overflow-y: auto; }
+.nav-grupo { display: block; padding: 0.9rem 0.75rem 0.25rem; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); opacity: 0.8; }
+.nav-grupo:first-child { padding-top: 0; }
+.nav-link { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.atalhos { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+.atalho { display: flex; align-items: center; gap: 0.75rem; color: var(--text); text-decoration: none; padding: 0.9rem 1rem; }
+.atalho:hover { text-decoration: none; border-color: var(--primary); }
+.atalho > span:nth-child(2) { flex: 1; min-width: 0; }
+.atalho-icone { font-size: 1.5rem; }
+.ac-dias { color: var(--primary); white-space: nowrap; }
+@media (max-width: 860px) {
+  .nav-grupo { display: none; }
+  .nav-link { flex: 0 0 auto; min-width: 62px; }
+}

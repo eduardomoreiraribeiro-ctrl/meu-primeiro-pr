@@ -5,6 +5,11 @@
 
   const ROTAS = [
     { padrao: /^\/$/, pagina: 'dashboard', menu: 'dashboard' },
+    { padrao: /^\/mensagens$/, pagina: 'mensagens', menu: 'mensagens' },
+    { padrao: /^\/pendencias$/, pagina: 'pendencias', menu: 'pendencias' },
+    { padrao: /^\/acompanhamento$/, pagina: 'acompanhamento', menu: 'acompanhamento' },
+    { padrao: /^\/financeiro$/, pagina: 'financeiro', menu: 'financeiro' },
+    { padrao: /^\/relatorios$/, pagina: 'relatorios', menu: 'relatorios' },
     { padrao: /^\/agenda$/, pagina: 'agenda', menu: 'agenda' },
     { padrao: /^\/kanban$/, redirecionar: '/kanban/comercial' },
     { padrao: /^\/kanban\/(comercial|acompanhamento)$/, pagina: 'kanban', menu: 'kanban', params: ['funil'] },
@@ -71,7 +76,14 @@
     document.title = `${titulo} · Nutri Dudu`;
   }
 
+  // Itens do menu só para quem vê dados clínicos.
+  function ajustarMenuClinico() {
+    const ve = permissoes.pode('verClinico');
+    document.querySelectorAll('[data-so-clinico]').forEach((el) => { el.hidden = !ve; });
+  }
+
   function marcarMenu(menu) {
+    ajustarMenuClinico();
     document.querySelectorAll('.nav-link').forEach((link) => {
       const ativo = link.dataset.menu === menu;
       link.classList.toggle('ativo', ativo);
