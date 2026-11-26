@@ -1,17 +1,18 @@
 // Registrar atendimento: fluxo único em etapas, para a nutricionista não pular nada.
-// 1 Anamnese · 2 Avaliação física · 3 Fotos · 4 Evolução e condutas · 5 Próximo retorno · 6 Fechamento
+// 1 Anamnese · 2 Avaliação física · 3 Fotos · 4 Evolução e condutas · 5 Objetivos e combinados · 6 Próximo retorno · 7 Fechamento
 window.NutriDudu = window.NutriDudu || {};
 
 NutriDudu.atendimento = (function () {
-  const PASSOS = ['Anamnese', 'Avaliação física', 'Fotos', 'Evolução e condutas', 'Próximo retorno', 'Fechamento'];
+  const PASSOS = ['Anamnese', 'Avaliação física', 'Fotos', 'Evolução e condutas', 'Objetivos e combinados', 'Próximo retorno', 'Fechamento'];
   const DIAS_FREQUENCIA = { semanal: 7, quinzenal: 15, mensal: 30 };
 
   // Em qual etapa está cada campo (para abrir a etapa certa quando há erro).
   function passoDoCampo(nome) {
     if (nome.startsWith('an_') || nome in NutriDudu.anamnese.LISTAS) return 0;
     if (nome.startsWith('av_') || nome.startsWith('circ_') || nome.startsWith('dob_')) return 1;
-    if (nome === 'proximoRetorno') return 4;
-    if (['valor', 'formaPagamento'].includes(nome)) return 5;
+    if (nome.startsWith('ac_')) return 4;
+    if (nome === 'proximoRetorno') return 5;
+    if (['valor', 'formaPagamento'].includes(nome)) return 6;
     return 3;
   }
 
@@ -30,6 +31,7 @@ NutriDudu.atendimento = (function () {
       store.list('lancamentos', (l) => l.consultaId === consultaId && l.status !== 'cancelado'),
       store.get('configuracoes', 'geral'),
     ]);
+    const acompanhamentos = await store.list('acompanhamentos', (a) => a.pessoaId === consulta.pessoaId).catch(() => []);
     const anterior = avaliacoes
       .map((a) => ({ ...a, data: consultas.find((c) => c.id === a.consultaId)?.inicio || a.criadoEm }))
       .sort((a, b) => b.data.localeCompare(a.data))[0] || null;
@@ -37,7 +39,7 @@ NutriDudu.atendimento = (function () {
       .filter((c) => c.status === 'realizada' && c.conduta)
       .sort((a, b) => b.inicio.localeCompare(a.inicio))[0]?.conduta || '';
     return {
-      consulta, pessoa, servico, profissional, anamneses, anterior, ultimaConduta, consultas, geral: geral || {},
+      consulta, pessoa, servico, profissional, anamneses, acompanhamentos, anterior, ultimaConduta, consultas, geral: geral || {},
       pacote: pacotes.find((p) => p.id === consulta.pacoteId) || null,
       cobrancaExistente: lancamentos[0] || null,
     };
@@ -132,6 +134,14 @@ NutriDudu.atendimento = (function () {
     return { dia: NutriDudu.utils.isoDia(data), passo };
   }
 
+  function passoObjetivos(d) {
+    const A = NutriDudu.acompanhamento;
+    const atual = A.atual(d.acompanhamentos || []);
+    return `
+      <p class="campo-ajuda">${atual ? `Revise com ${NutriDudu.utils.escapeHtml(d.pessoa.nome.split(' ')[0])} o que mudou. Se nada mudar, nada é gravado.` : 'Preencha junto com o paciente. Pode deixar em branco e completar depois na ficha.'}</p>
+      ${A.formulario(atual || {})}`;
+  }
+
   function passoRetorno(d) {
     const { form: f } = NutriDudu;
     const s = sugestaoRetorno(d);
@@ -210,6 +220,7 @@ NutriDudu.atendimento = (function () {
       anamnese: atualizar ? anamnese.ler(form) : null,
       avaliacao: lerAvaliacao(form),
       fotos,
+      acompanhamento: NutriDudu.acompanhamento.ler(form),
       anotacoes: f.valor(form, 'anotacoes'),
       conduta: f.valor(form, 'conduta'),
       proximoRetorno: f.valor(form, 'proximoRetorno') || null,
@@ -295,6 +306,11 @@ NutriDudu.atendimento = (function () {
       proximoRetorno: dados.proximoRetorno, anamneseId, avaliacaoId, fotoIds,
     });
 
+    if (dados.acompanhamento) {
+      const plano = await NutriDudu.acompanhamento.salvarVersao(c.pessoaId, dados.acompanhamento, { consultaId: c.id, lista: d.acompanhamentos });
+      if (plano) registros.push('plano de acompanhamento atualizado');
+    }
+
     if (dados.gerarCobranca) {
       await store.create('lancamentos', {
         pessoaId: c.pessoaId, servicoId: c.servicoId, consultaId: c.id, pacoteId: null, profissionalId: c.profissionalId,
@@ -357,7 +373,7 @@ NutriDudu.atendimento = (function () {
 
     const fotos = [];
     let passo = 0;
-    const corpos = [passoAnamnese, passoAvaliacao, passoFotos, passoEvolucao, passoRetorno, passoFechamento].map((fn) => fn(d));
+    const corpos = [passoAnamnese, passoAvaliacao, passoFotos, passoEvolucao, passoObjetivos, passoRetorno, passoFechamento].map((fn) => fn(d));
 
     const corpo = `
       <ol class="passos" aria-label="Etapas">
@@ -459,6 +475,7 @@ NutriDudu.atendimento = (function () {
         formRef = form;
         // O corpo do modal rola; a lista de etapas fica no topo.
         anamnese.ligar(form);
+        NutriDudu.acompanhamento.ligar(form);
         form.querySelector('[data-proximo]').addEventListener('click', () => irPara(passo + 1));
         form.querySelector('[data-anterior]').addEventListener('click', () => irPara(passo - 1));
         form.querySelectorAll('[data-ir-passo]').forEach((b) => b.addEventListener('click', () => irPara(Number(b.dataset.irPasso))));

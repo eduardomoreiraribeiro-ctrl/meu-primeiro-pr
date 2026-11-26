@@ -67,3 +67,14 @@
 .ap-f-neutro { color: var(--ap-amarelo); }
 .ap-f-ruim, .ap-f-pessimo { color: var(--ap-vermelho); }
 .ap-rodape { text-align: center; font-size: 0.8rem; color: var(--ap-muted); margin: 4px 8px 0; }
+/* Objetivos e meta com contagem regressiva */
+.ap-meta { display: flex; justify-content: space-between; align-items: center; gap: 12px; background: var(--ap-primary-soft); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.ap-meta > div:first-child { display: flex; flex-direction: column; min-width: 0; }
+.ap-meta > div:first-child span { font-size: 0.8rem; color: var(--ap-muted); }
+.ap-meta > div:first-child strong { font-size: 1.02rem; }
+.ap-contagem { text-align: center; color: var(--ap-primary); flex: none; }
+.ap-contagem strong { display: block; font-size: 1.7rem; line-height: 1; }
+.ap-contagem span { font-size: 0.78rem; }
+.ap-objetivos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ap-objetivos span { font-size: 0.76rem; color: var(--ap-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.ap-objetivos p { margin: 2px 0 0; }

@@ -1770,3 +1770,46 @@ figcaption { margin-top: 0.3rem; font-size: 0.82rem; color: var(--text-muted); }
 .pl-cadastro { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px 14px; margin-bottom: 12px; border-radius: 12px; background: var(--primary-soft); }
 .mm-cartao { margin: 0 0 18px; border: 2px solid var(--primary); }
 .mm-cartao .item-acao-botoes { flex-wrap: wrap; }
+
+/* ---------- Plano de acompanhamento ---------- */
+.ac-rapidos { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 4px 0 14px; }
+.ac-rapidos > div { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px; }
+.ac-rapidos span { display: block; font-size: 0.75rem; color: var(--text-muted); }
+.ac-rapidos strong { font-size: 0.98rem; }
+.ac-radar { border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; border: 1px solid var(--border); }
+.ac-radar ul { margin: 6px 0 0; padding-left: 1.1rem; }
+.ac-radar p { margin: 4px 0 0; }
+.ac-radar-verde { background: var(--sucesso-soft); }
+.ac-radar-amarelo { background: var(--alerta-soft); }
+.ac-radar-vermelho { background: var(--perigo-soft); }
+.ac-selo { display: inline-block; font-size: 0.72rem; font-weight: 600; vertical-align: middle; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); border: 1px solid var(--border); white-space: nowrap; }
+td .ac-selo { padding: 0 4px; border: 0; background: none; font-size: 0.8rem; cursor: help; }
+.ac-meta { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; align-items: center; background: var(--primary-soft); border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; }
+.ac-meta strong { color: var(--primary); }
+.ac-grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 6px 24px; }
+.ac-grade h4 { margin: 0 0 8px; font-size: 0.95rem; }
+.ac-item { margin-bottom: 10px; }
+.ac-item > span { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.ac-item p { margin: 2px 0 0; }
+.ac-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ac-chips span { background: var(--surface-2); border: 1px solid var(--border); border-radius: 99px; padding: 2px 10px; font-size: 0.85rem; }
+.ac-versao { border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; }
+.ac-versao summary { cursor: pointer; margin-bottom: 6px; }
+.ac-form .ac-sec { margin: 18px 0 8px; font-size: 1rem; }
+.ac-form .ac-sec:first-child { margin-top: 0; }
+.ac-form input[type="range"] { width: 100%; accent-color: var(--primary); }
+.ac-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ac-tag { position: relative; cursor: pointer; }
+.ac-tag input { position: absolute; opacity: 0; pointer-events: none; }
+.ac-tag span { display: inline-block; padding: 5px 12px; border-radius: 99px; border: 1px solid var(--border); background: var(--surface-2); font-size: 0.88rem; user-select: none; }
+.ac-tag input:checked + span { background: var(--primary); border-color: var(--primary); color: var(--sobre-primaria); }
+.ac-tag input:focus-visible + span { outline: 2px solid var(--primary); outline-offset: 2px; }
+/* Modo consulta: tela cheia, letra grande, para preencher olhando junto com o paciente. */
+.modal.ac-tela-cheia { width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; font-size: 1.15rem; }
+.modal.ac-tela-cheia form { max-height: 100vh; height: 100%; }
+.modal.ac-tela-cheia .modal-corpo { flex: 1; }
+.modal.ac-tela-cheia .ac-form, .modal.ac-tela-cheia .modal-corpo > p { width: 100%; max-width: 960px; margin-left: auto; margin-right: auto; }
+.modal.ac-tela-cheia .modal-topo h2 { font-size: 1.4rem; }
+.modal.ac-tela-cheia input, .modal.ac-tela-cheia textarea { font-size: 1.1rem; }
+.modal.ac-tela-cheia .ac-tag span { font-size: 1.02rem; padding: 8px 16px; }
+.modal.ac-tela-cheia .ac-sec { font-size: 1.25rem; }

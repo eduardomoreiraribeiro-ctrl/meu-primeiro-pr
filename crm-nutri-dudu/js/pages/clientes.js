@@ -57,6 +57,7 @@ NutriDudu.pages.clientes = (function () {
         pessoa: p,
         resumo: r,
         alertas: NutriDudu.alertas.daPessoa(p, { consultas: consultasDe(p.id), pacotes: pacotesDe(p.id), ...(checkins.length ? { checkins: checkinsDe(p.id) } : {}) }, geral),
+        radar: p.status === 'ativo' && NutriDudu.acompanhamento ? NutriDudu.acompanhamento.radar({ pessoa: p, consultas: consultasDe(p.id), pacotes: pacotesDe(p.id), checkins: checkinsDe(p.id), geral }) : null,
         profissional: prof[p.profissionalId] || null,
         pacoteNome: r.pacote ? nomeServico[r.pacote.servicoId] || 'Pacote' : '',
         origem: config.ORIGENS[p.origem] || '',
@@ -177,7 +178,7 @@ NutriDudu.pages.clientes = (function () {
               </div>
             </div>
           </td>
-          <td>${ui.statusPessoa(p.status)}</td>
+          <td>${ui.statusPessoa(p.status)}${l.radar ? ` <span class="ac-selo ac-selo-${l.radar.nivel}" title="Radar: ${utils.escapeHtml(l.radar.rotulo)}${l.radar.motivos.length ? ` — ${utils.escapeHtml(l.radar.motivos.join(' · '))}` : ''}">${NutriDudu.acompanhamento.ICONE_RADAR[l.radar.nivel]}</span>` : ''}</td>
           ${mostrarProfissional ? `<td>${l.profissional ? `<span class="com-ponto"><span class="ponto" style="background:${utils.escapeHtml(l.profissional.cor)}"></span>${utils.escapeHtml(l.profissional.nome)}</span>` : '<span class="muted">—</span>'}</td>` : ''}
           <td class="small">${utils.escapeHtml(l.origem)}</td>
           <td>${celulaPacote(l)}</td>

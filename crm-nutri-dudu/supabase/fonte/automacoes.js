@@ -1518,8 +1518,14 @@ const NutriDuduAutomacoes = (() => {
       const idsServico = [...new Set([...consultas, ...pacotes].map((x) => x.servicoId).filter(Boolean))];
       const servicos = (await Promise.all(idsServico.map((id) => repo.pega('servicos', id)))).filter(Boolean);
       const profissional = pessoa.profissionalId ? await repo.pega('profissionais', pessoa.profissionalId) : null;
+      // Plano de acompanhamento (tabela nova: se ainda não existir, a área abre sem os objetivos).
+      let objetivos = null;
+      try {
+        const A = NutriDudu.acompanhamento;
+        objetivos = A.publico(A.atual(await repo.porCampo('acompanhamentos', 'pessoaId', pessoa.id)), relogio.agora());
+      } catch (_) { objetivos = null; }
       const dados = NutriDudu.areaPaciente.montar({
-        pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: relogio.agora(),
+        pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, objetivos, agora: relogio.agora(),
         whatsappClinica: config.whatsappAtendimento(site?.whatsappClinica),
       });
       return json({ ok: true, ...dados });

@@ -7,6 +7,7 @@ NutriDudu.pages.cliente = (function () {
   const acessosRegistrados = new Set();
   const ABAS = {
     visao: { nome: 'Visão geral' },
+    acompanhamento: { nome: 'Plano de acompanhamento', clinica: true },
     anamnese: { nome: 'Anamnese', clinica: true },
     consultas: { nome: 'Consultas' },
     checkins: { nome: 'Check-ins', clinica: true },
@@ -515,6 +516,7 @@ NutriDudu.pages.cliente = (function () {
       store.get('configuracoes', 'geral'),
     ]);
     const checkins = verClinico ? await store.list('checkins', doCliente) : [];
+    const acompanhamentos = verClinico ? await store.list('acompanhamentos', doCliente).catch(() => []) : [];
     const checkinCfg = verClinico ? NutriDudu.checkin.configuracao((await store.get('configuracoes', 'checkin')) || {}) : null;
     const conversa = (await store.list('conversas', doCliente)).sort((a, b) => (b.ultimaMensagemEm || '').localeCompare(a.ultimaMensagemEm || ''))[0];
 
@@ -529,7 +531,7 @@ NutriDudu.pages.cliente = (function () {
     estadoHistorico[pessoa.id] = estadoHistorico[pessoa.id] || {};
 
     const c = {
-      pessoa, consultas, pacotes, lancamentos, checkins, checkinCfg, anamneses, avaliacoes, avaliacoesOrdenadas, fotos, interacoes, indicados, resumo, dadosFormula,
+      pessoa, consultas, pacotes, lancamentos, checkins, checkinCfg, acompanhamentos, geral: geral || {}, anamneses, avaliacoes, avaliacoesOrdenadas, fotos, interacoes, indicados, resumo, dadosFormula,
       servicoPorId: porId(servicos), profPorId: porId(profissionais),
       estadoFotos: estadoFotos[pessoa.id], estadoHistorico: estadoHistorico[pessoa.id],
     };
@@ -548,7 +550,9 @@ NutriDudu.pages.cliente = (function () {
       visao: abaVisao, anamnese: abaAnamnese, consultas: abaConsultas, avaliacao: abaAvaliacao,
       fotos: abaFotos, pacotes: abaPacotes, financeiro: abaFinanceiro, historico: abaHistorico,
       checkins: (ctx) => NutriDudu.checkinFicha.aba(ctx),
+      acompanhamento: (ctx) => NutriDudu.acompanhamentoFicha.aba(ctx),
     }[aba](c);
+    const radar = verClinico ? NutriDudu.acompanhamento.radar({ pessoa, consultas, pacotes, checkins, geral: geral || {} }) : null;
 
     const base = `#/clientes/${encodeURIComponent(pessoa.id)}`;
     container.innerHTML = `<div class="ficha">
@@ -556,7 +560,7 @@ NutriDudu.pages.cliente = (function () {
         <div class="ficha-identidade">
           ${ui.avatar(utils.iniciais(pessoa.nome))}
           <div class="ficha-nome">
-            <h1>${utils.escapeHtml(pessoa.nome)}</h1>
+            <h1>${utils.escapeHtml(pessoa.nome)}${radar ? ` <span class="ac-selo ac-selo-${radar.nivel}" title="${utils.escapeHtml(radar.motivos.join(' · ') || 'Engajamento em dia')}">${NutriDudu.acompanhamento.ICONE_RADAR[radar.nivel]} ${utils.escapeHtml(radar.rotulo)}</span>` : ''}</h1>
             <p class="muted">${idade !== null ? `${idade} anos · ` : ''}${utils.escapeHtml(pessoa.telefone)}${pessoa.email ? ` · ${utils.escapeHtml(pessoa.email)}` : ''}</p>
             <p class="ficha-tags">
               ${ui.statusPessoa(pessoa.status)}
@@ -652,6 +656,7 @@ NutriDudu.pages.cliente = (function () {
     });
 
     if (aba === 'checkins') NutriDudu.checkinFicha.ligar(container, c);
+    if (aba === 'acompanhamento') NutriDudu.acompanhamentoFicha.ligar(container, c);
 
     // Imagens das fotos: vêm do IndexedDB, depois que a página está montada.
     container.querySelectorAll('img[data-chave]').forEach(async (img) => {

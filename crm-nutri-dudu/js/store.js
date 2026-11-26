@@ -31,6 +31,7 @@ NutriDudu.store = (function () {
     mensagens: 'msg',
     espera: 'esp',
     checkins: 'chk',
+    acompanhamentos: 'acp',
   };
 
   const nuvem = () => NutriDudu.nuvem?.ativa();

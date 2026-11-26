@@ -30,7 +30,7 @@ NutriDudu.form = (function () {
 
   function areaTexto(nome, rotulo, valor = '', opcoes = {}) {
     const id = idNovo(nome);
-    const controle = `<textarea id="${id}" name="${escapeHtml(nome)}" rows="${opcoes.linhas || 3}">${escapeHtml(valor ?? '')}</textarea>`;
+    const controle = `<textarea id="${id}" name="${escapeHtml(nome)}" rows="${opcoes.linhas || 3}"${opcoes.placeholder ? ` placeholder="${escapeHtml(opcoes.placeholder)}"` : ''}>${escapeHtml(valor ?? '')}</textarea>`;
     return envolver(nome, rotulo, controle, opcoes, id);
   }
 

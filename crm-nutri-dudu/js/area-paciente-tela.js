@@ -78,6 +78,26 @@ NutriDudu.areaPacienteTela = (function () {
     </section>`;
   }
 
+  /** Objetivos combinados na consulta + contagem regressiva da meta. */
+  function cartaoObjetivos(d) {
+    const o = d.objetivos;
+    if (!o) return '';
+    let dias = null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(o.meta?.data || '');
+    if (m) {
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
+      dias = Math.round((new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) - hoje) / 864e5);
+    }
+    const linha = (rotulo, t) => (t ? `<li><span>${esc(rotulo)}</span><p>${esc(t).replace(/\n/g, '<br>')}</p></li>` : '');
+    const contagem = dias === null ? '' : dias > 1 ? `<strong>${dias}</strong><span>dias</span>` : dias === 1 ? '<strong>1</strong><span>dia</span>' : dias === 0 ? '<strong>Hoje!</strong>' : '<strong>✓</strong><span>concluída</span>';
+    return `<section class="ap-cartao"><h2>🎯 Seus objetivos</h2>
+      ${o.meta ? `<div class="ap-meta"><div><span>🏁 Meta</span><strong>${esc(o.meta.titulo || 'Sua meta')}</strong>${o.meta.data ? `<span>${dataLonga(`${o.meta.data}T12:00:00`)}</span>` : ''}</div>${contagem ? `<div class="ap-contagem">${contagem}</div>` : ''}</div>` : ''}
+      <ul class="ap-objetivos">
+        ${linha('Principal', o.objetivoPrincipal)}${linha('Próximos 3 meses', o.objetivoCurto)}${linha('6 a 12 meses', o.objetivoMedio)}${linha('Longo prazo', o.objetivoLongo)}
+        ${linha('Como vamos saber que está dando certo', o.sinaisSucesso)}
+      </ul></section>`;
+  }
+
   function montar(raiz, d, opcoes = {}) {
     let metrica = 'peso';
     const emoji = d.sexo === 'M' ? '💪' : '💚';
@@ -108,6 +128,8 @@ NutriDudu.areaPacienteTela = (function () {
           ${zap ? `<a class="ap-btn ap-btn-sec" href="${zap}" target="_blank" rel="noopener">${px ? 'Remarcar ou tirar dúvida no WhatsApp' : 'Marcar pelo WhatsApp'}</a>`
             : px ? '' : `<a class="ap-btn ap-btn-sec" href="${esc(opcoes.linkAgendar || 'agendar.html')}">Marcar consulta pelo site</a>`}
         </section>
+
+        ${cartaoObjetivos(d)}
 
         ${pl ? `<section class="ap-cartao"><h2>🗂️ Seu plano</h2>
           <div class="ap-plano"><strong>${esc(pl.nome)}</strong>${pl.ativo ? '<span class="ap-chip ok">Ativo</span>' : '<span class="ap-chip">Encerrado</span>'}</div>

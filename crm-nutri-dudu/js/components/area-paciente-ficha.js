@@ -33,8 +33,10 @@ NutriDudu.areaPacienteFicha = (function () {
       store.list('avaliacoes', doPaciente), store.list('checkins', doPaciente), store.get('configuracoes', 'agendamento_site'), store.get('configuracoes', 'automacoes'),
     ]);
     const profissional = pessoa.profissionalId ? await store.get('profissionais', pessoa.profissionalId) : null;
+    const A = NutriDudu.acompanhamento;
+    const objetivos = A.publico(A.atual(await store.list('acompanhamentos', doPaciente).catch(() => [])));
     return NutriDudu.areaPaciente.montar({
-      pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: new Date(),
+      pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, objetivos, agora: new Date(),
       whatsappClinica: NutriDudu.config.whatsappAtendimento(site?.whatsappClinica),
     });
   }
@@ -69,6 +71,7 @@ NutriDudu.areaPacienteFicha = (function () {
         corpo: `<p>Uma página só de ${nome}, aberta por um link pessoal, com:</p>
           <ul class="small"><li>📅 próxima consulta e botão pro WhatsApp da clínica</li><li>🗂️ plano: quantas consultas já fez e quantas faltam</li>
           <li>📈 evolução das avaliações (peso, % de gordura, massa magra, cintura) com gráfico</li><li>📋 notas dos check-ins e o último check-in detalhado</li>
+          <li>🎯 objetivos combinados e a contagem regressiva da meta</li>
           <li>🩺 histórico de consultas</li></ul>
           <p class="small muted">Não aparecem anotações da consulta, anamnese nem financeiro.</p>`,
         acoes: [

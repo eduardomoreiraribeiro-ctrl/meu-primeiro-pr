@@ -145,7 +145,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos'
   ] loop
     execute format($f$
       create table if not exists public.%I (
@@ -185,7 +185,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos'
   ] loop
     execute format('drop policy if exists "ler" on public.%I', t);
     execute format('drop policy if exists "criar" on public.%I', t);
@@ -210,7 +210,7 @@ begin
   end loop;
 
   -- c) Prontuário: só administrador e profissional (a recepção não recebe nada).
-  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins'] loop
+  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins', 'acompanhamentos'] loop
     execute format('create policy "ler" on public.%I for select using (public.ve_clinico())', t);
     execute format('create policy "criar" on public.%I for insert with check (public.ve_clinico())', t);
     execute format('create policy "alterar" on public.%I for update using (public.ve_clinico()) with check (public.ve_clinico())', t);
@@ -286,7 +286,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins'] loop
+  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins', 'acompanhamentos'] loop
     execute format('drop trigger if exists auditar on public.%I', t);
     execute format('create trigger auditar after insert or update or delete on public.%I
                     for each row execute function public.auditar()', t);
@@ -354,7 +354,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);

@@ -97,6 +97,7 @@ NutriDudu.areaPaciente = (function () {
       evolucao,
       checkins,
       ultimoCheckin,
+      objetivos: d.objetivos || null,
       checkinAberto: aberto ? { titulo: aberto.titulo || 'Check-in', prazo: aberto.prazo || null, codigo: aberto.codigo } : null,
       geradoEm: agora.toISOString(),
     };
