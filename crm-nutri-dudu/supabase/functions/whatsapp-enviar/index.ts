@@ -1,7 +1,7 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: eed8ce
+// Versão: ff00c5
 
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
@@ -998,7 +998,12 @@ NutriDudu.mensagensAutomaticas = (function () {
   const masculinizar = (texto) => EMOJIS_MASCULINOS.reduce((t, [de, para]) => t.split(de).join(para), String(texto || ''));
   const ehHomem = (pessoa) => pessoa?.sexo === 'M';
   /** Texto no "gênero" de quem recebe (só troca os emojis). */
-  const paraGenero = (texto, pessoa) => (ehHomem(pessoa) ? masculinizar(texto) : texto);
+  // Saudação no jeito do Eduardo: "Ei, Fernanda!" para mulher e "Fala, Thiago!" para homem (sem sexo informado: "Oi,").
+  const saudar = (texto, pessoa) => {
+    const nova = pessoa?.sexo === 'M' ? 'Fala, ' : pessoa?.sexo === 'F' ? 'Ei, ' : null;
+    return nova ? String(texto).replace(/^Oi, /, nova) : texto;
+  };
+  const paraGenero = (texto, pessoa) => saudar(ehHomem(pessoa) ? masculinizar(texto) : texto, pessoa);
   /** O modelo tem versão masculina? (algum emoji muda) */
   const temVersaoMasculina = (id, clinica = 'clínica') => Boolean(MODELOS[id] && !MODELOS[id].paraEquipe && masculinizar(MODELOS[id].corpo(clinica)) !== MODELOS[id].corpo(clinica));
   /** "pro Rafael" / "pra Rafaela" (sem sexo informado: "pra"). */
@@ -1071,11 +1076,11 @@ NutriDudu.mensagensEmail = (function () {
       botao = { texto: 'Responder check-in', link: d.link };
     } else if (tipo === 'checkinLembrete') {
       assunto = 'Último dia pra responder seu check-in ⏰';
-      linhas = [`Oi, ${d.nome}! Passando pra lembrar do seu ${d.titulo}: o prazo termina hoje ⏰`, g('Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚')];
+      linhas = [g(`Oi, ${d.nome}! Passando pra lembrar do seu ${d.titulo}: o prazo termina hoje ⏰`), g('Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚')];
       botao = { texto: 'Responder agora', link: d.link };
     } else if (tipo === 'aniversario') {
       assunto = `Feliz aniversário, ${d.nome}! 🎉`;
-      linhas = [`Oi, ${d.nome}! Hoje é o seu dia! 🎉`, g('Feliz aniversário! Que esse novo ciclo venha com muita saúde, energia e conquistas. Conta sempre comigo 💚')];
+      linhas = [g(`Oi, ${d.nome}! Hoje é o seu dia! 🎉`), g('Feliz aniversário! Que esse novo ciclo venha com muita saúde, energia e conquistas. Conta sempre comigo 💚')];
     } else if (tipo === 'resumoDia') {
       assunto = `Resumo de ${d.dia}`;
       const html = moldura({ paragrafos: String(d.resumo || '').split('\n').map((l) => (l.trim() ? esc(l) : '&nbsp;')), assinatura: 'Sistema Nutri Dudu', rodape: false })

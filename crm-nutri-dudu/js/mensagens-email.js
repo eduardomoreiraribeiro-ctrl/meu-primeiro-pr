@@ -54,11 +54,11 @@ NutriDudu.mensagensEmail = (function () {
       botao = { texto: 'Responder check-in', link: d.link };
     } else if (tipo === 'checkinLembrete') {
       assunto = 'Último dia pra responder seu check-in ⏰';
-      linhas = [`Oi, ${d.nome}! Passando pra lembrar do seu ${d.titulo}: o prazo termina hoje ⏰`, g('Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚')];
+      linhas = [g(`Oi, ${d.nome}! Passando pra lembrar do seu ${d.titulo}: o prazo termina hoje ⏰`), g('Leva só 2 minutinhos e me ajuda muito a acompanhar sua evolução 💚')];
       botao = { texto: 'Responder agora', link: d.link };
     } else if (tipo === 'aniversario') {
       assunto = `Feliz aniversário, ${d.nome}! 🎉`;
-      linhas = [`Oi, ${d.nome}! Hoje é o seu dia! 🎉`, g('Feliz aniversário! Que esse novo ciclo venha com muita saúde, energia e conquistas. Conta sempre comigo 💚')];
+      linhas = [g(`Oi, ${d.nome}! Hoje é o seu dia! 🎉`), g('Feliz aniversário! Que esse novo ciclo venha com muita saúde, energia e conquistas. Conta sempre comigo 💚')];
     } else if (tipo === 'resumoDia') {
       assunto = `Resumo de ${d.dia}`;
       const html = moldura({ paragrafos: String(d.resumo || '').split('\n').map((l) => (l.trim() ? esc(l) : '&nbsp;')), assinatura: 'Sistema Nutri Dudu', rodape: false })
