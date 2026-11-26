@@ -35,7 +35,7 @@ NutriDudu.areaPacienteFicha = (function () {
     const profissional = pessoa.profissionalId ? await store.get('profissionais', pessoa.profissionalId) : null;
     return NutriDudu.areaPaciente.montar({
       pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: new Date(),
-      whatsappClinica: autom?.whatsappOficial === false ? '' : (U().soDigitos(site?.whatsappClinica || '') || '5527997498446'),
+      whatsappClinica: NutriDudu.config.whatsappAtendimento(site?.whatsappClinica),
     });
   }
 

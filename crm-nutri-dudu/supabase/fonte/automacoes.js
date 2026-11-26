@@ -1221,8 +1221,8 @@ const NutriDuduAutomacoes = (() => {
     const limiteInicio = (cfg) => new Date(relogio.agora().getTime() + Number(cfg.antecedenciaHoras || 0) * HORA);
     const limiteFim = (cfg) => new Date(relogio.agora().getTime() + Number(cfg.diasFrente || 30) * DIA);
 
-    // Botão do WhatsApp da clínica: some quando o WhatsApp oficial está desligado (número fora do ar).
-    const whatsDoSite = (dados, cfg) => (dados.automacoesCfg?.whatsappOficial === false ? '' : utils.soDigitos(cfg.whatsappClinica || ''));
+    // Botão de WhatsApp da página: o número de atendimento (o da clínica antigo foi bloqueado).
+    const whatsDoSite = (dados, cfg) => config.whatsappAtendimento(cfg.whatsappClinica);
 
     async function catalogo() {
       const { dados, cfg, servicos } = await carregar();
@@ -1483,7 +1483,7 @@ const NutriDuduAutomacoes = (() => {
   // ---------------------------------------------------------------------
   // Área do paciente (paciente.html#código): só leitura, só os dados da própria pessoa.
   // ---------------------------------------------------------------------
-  function criarAreaPaciente({ repo, relogio = S.criarRelogio(), whatsappPadrao = '5527997498446' }) {
+  function criarAreaPaciente({ repo, relogio = S.criarRelogio() }) {
     const CORS = {
       'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Headers': 'content-type',
@@ -1512,7 +1512,7 @@ const NutriDuduAutomacoes = (() => {
       const profissional = pessoa.profissionalId ? await repo.pega('profissionais', pessoa.profissionalId) : null;
       const dados = NutriDudu.areaPaciente.montar({
         pessoa, profissional, consultas, pacotes, servicos, avaliacoes, checkins, agora: relogio.agora(),
-        whatsappClinica: autom?.whatsappOficial === false ? '' : (utils.soDigitos(site?.whatsappClinica || '') || whatsappPadrao),
+        whatsappClinica: config.whatsappAtendimento(site?.whatsappClinica),
       });
       return json({ ok: true, ...dados });
     }

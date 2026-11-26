@@ -2,6 +2,17 @@
 window.NutriDudu = window.NutriDudu || {};
 
 NutriDudu.config = {
+  // WhatsApp que aparece para os pacientes (site, agendamento, área do paciente). O número antigo da
+  // clínica (8446) foi bloqueado pela Meta em 23/11/2026; onde ele estiver salvo, vale este.
+  WHATSAPP_ATENDIMENTO: '5527996351353',
+  WHATSAPP_BLOQUEADO: '5527997498446',
+  /** Número para o botão de WhatsApp dos pacientes: o salvo, ou o de atendimento se vazio ou bloqueado. */
+  whatsappAtendimento(salvo) {
+    const d = String(salvo || '').replace(/\D/g, '');
+    const comPais = d.length === 10 || d.length === 11 ? `55${d}` : d;
+    return !comPais || comPais === this.WHATSAPP_BLOQUEADO ? this.WHATSAPP_ATENDIMENTO : comPais;
+  },
+
   PERFIS: {
     admin: 'Administrador',
     profissional: 'Profissional',
