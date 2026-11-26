@@ -63,7 +63,8 @@ NutriDudu.mensagensManuais = (function () {
 
     // 2. Pré-anamnese: primeira consulta futura (mais de 2 h pela frente), sem formulário enviado nem preenchido.
     const comRealizada = new Set(consultas.filter((c) => c.status === 'realizada').map((c) => c.pessoaId));
-    const jaTemPre = new Set(consultas.filter((c) => ['enviada', 'preenchida'].includes(c.preAnamnese?.status) || c.manual?.pre || c.automacoes?.preAnamnese?.ok).map((c) => c.pessoaId));
+    // O e-mail não tira da lista: no WhatsApp a pessoa vê mais rápido (pedido do Eduardo: mandar nos dois).
+    const jaTemPre = new Set(consultas.filter((c) => c.preAnamnese?.status === 'preenchida' || c.manual?.pre || c.automacoes?.preAnamnese?.ok).map((c) => c.pessoaId));
     const primeiraFutura = {};
     consultas.filter((c) => STATUS_FUTURO.includes(c.status) && new Date(c.inicio) - agora > 2 * HORA)
       .sort((a, b) => a.inicio.localeCompare(b.inicio))
@@ -85,6 +86,14 @@ NutriDudu.mensagensManuais = (function () {
         if (!q) return;
         add({ chave: `checkin:${p.id}:${C.isoLocal(slot)}`, tipo: 'checkin', pessoa: p, questionario: q, slot, detalhe: `${q.titulo} · programado ${NOMES_DIA[slot.getDay()]} às ${utils.hora(slot)}`, precisaLink: true });
       });
+      // 3b. Check-in que já saiu por e-mail: manda o mesmo link pelo WhatsApp.
+      (d.checkins || []).filter((ck) => ck.canal === 'email' && !ck.whatsEm && !ck.respondidoEm && !ck.cancelado && ck.codigo && agora - new Date(ck.enviadoEm) < DIA)
+        .forEach((ck) => {
+          const p = pessoaPor[ck.pessoaId];
+          const fim = new Date(ck.prazo);
+          add({ chave: `ckmail:${ck.id}`, tipo: 'checkin', pessoa: p, checkin: ck, detalhe: `${ck.titulo} · já foi por e-mail`,
+            texto: texto('checkinDisponivel', [primeiroNome(p?.nome), String(ck.titulo || 'check-in').toLowerCase(), linkCheckin(ck.codigo), `${NOMES_DIA[fim.getDay()]} (${utils.data(fim).slice(0, 5)})`], p) });
+        });
       // 4. Lembrete do check-in: último dia do prazo, ainda sem resposta.
       (d.checkins || []).filter((ck) => !ck.respondidoEm && !ck.cancelado && ck.codigo && ck.prazo && !ck.lembreteEm
         && utils.isoDia(ck.prazo) === utils.isoDia(agora) && new Date(ck.prazo) > agora)
@@ -123,6 +132,7 @@ NutriDudu.mensagensManuais = (function () {
   async function preparar(item) {
     const { store, utils, permissoes } = NutriDudu;
     const agoraIso = new Date().toISOString();
+    if (item.tipo === 'checkin' && item.checkin) return item.texto;
     if (item.tipo === 'checkin') {
       const C = NutriDudu.checkin;
       const ficha = NutriDudu.checkinFicha;
@@ -154,6 +164,7 @@ NutriDudu.mensagensManuais = (function () {
     const agoraIso = new Date().toISOString();
     if (item.tipo === 'lembrete') await store.update('consultas', item.consulta.id, { manual: { ...(item.consulta.manual || {}), lembrete: agoraIso } });
     if (item.tipo === 'checkinLembrete') await store.update('checkins', item.checkin.id, { lembreteEm: agoraIso });
+    if (item.tipo === 'checkin' && item.checkin) await store.update('checkins', item.checkin.id, { whatsEm: agoraIso });
     if (item.tipo === 'aniversario') {
       const p = (await store.get('pessoas', item.pessoa.id)) || item.pessoa;
       await store.update('pessoas', p.id, { automacoes: { ...(p.automacoes || {}), [`aniversario_${new Date().getFullYear()}`]: { em: agoraIso, ok: true, via: 'manual' } } });
@@ -209,7 +220,9 @@ NutriDudu.mensagensManuais = (function () {
       const item = itens[Number(b.dataset.msgPular)];
       b.disabled = true;
       try {
-        if (item.tipo === 'checkin') {
+        if (item.tipo === 'checkin' && item.checkin) {
+          await marcarEnviado(item, { pulou: true });
+        } else if (item.tipo === 'checkin') {
           const p = (await NutriDudu.store.get('pessoas', item.pessoa.id)) || item.pessoa;
           await NutriDudu.store.update('pessoas', p.id, { checkinProgramado: { ...p.checkinProgramado, ultimoSlot: NutriDudu.checkin.isoLocal(item.slot) } });
         } else if (item.tipo === 'pre') {

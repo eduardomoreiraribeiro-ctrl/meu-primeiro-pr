@@ -598,6 +598,55 @@ NutriDudu.pages.configuracoes = (function () {
     return `${location.origin}${location.pathname.replace(/[^/]*$/, '')}`.replace(/\/$/, '');
   }
 
+  // ---------------- E-mails automáticos ----------------
+  function blocoEmails(cfg, pode) {
+    const { ui, utils } = NutriDudu;
+    const ME = NutriDudu.mensagensEmail;
+    const ativas = { ...NutriDudu.mensagensAutomaticas.PADRAO.emailAtivas, ...(cfg.emailAtivas || {}) };
+    return `
+      <section class="card" data-bloco-emails>
+        <div class="secao-cabecalho">
+          <h2 class="card-title">E-mails automáticos</h2>
+          ${ui.badge(cfg.emailAtivo ? 'Ligados' : 'Desligados', cfg.emailAtivo ? 'sucesso' : 'neutro')}
+        </div>
+        <p class="muted small card-sub">Saem sozinhos de <strong>${utils.escapeHtml(cfg.emailNome)} &lt;${utils.escapeHtml(cfg.emailRemetente)}&gt;</strong>, para quem tem e-mail no cadastro, de segunda a sábado, das ${cfg.horaInicio}h às ${cfg.horaFim}h (o resumo do dia, todo dia às ${cfg.horaResumo ?? 7}h). Continuam aparecendo na lista do WhatsApp do Dashboard, para você mandar também.</p>
+        <ul class="lista-automacoes">${Object.entries(ME.TIPOS).map(([id, nome]) => `<li>${ativas[id] ? '✅' : '⏸️'} ${utils.escapeHtml(nome)}</li>`).join('')}</ul>
+        <p class="small"><strong>Respostas dos pacientes vão para:</strong> ${cfg.emailResponderPara ? utils.escapeHtml(cfg.emailResponderPara) : '<span class="muted">não informado (Editar)</span>'}</p>
+        <p class="small"><strong>Resumo do dia vai para:</strong> ${cfg.emailEquipe ? utils.escapeHtml(cfg.emailEquipe) : '<span class="muted">não informado (Editar)</span>'}</p>
+        ${pode ? '<div class="acoes-linha"><button type="button" class="btn btn-pequeno btn-primary" data-editar-emails>Editar</button></div>' : ''}
+      </section>`;
+  }
+
+  function abrirEmails(cfg) {
+    const { form: f, modal } = NutriDudu;
+    const ME = NutriDudu.mensagensEmail;
+    if (!NutriDudu.permissoes.exigir('configurarAgente')) return;
+    const ativas = { ...NutriDudu.mensagensAutomaticas.PADRAO.emailAtivas, ...(cfg.emailAtivas || {}) };
+    modal.formulario({
+      titulo: 'E-mails automáticos',
+      corpo: `
+        ${f.chave('emailAtivo', 'E-mails automáticos ligados', Boolean(cfg.emailAtivo))}
+        ${f.texto('emailResponderPara', 'Respostas dos pacientes vão para (seu e-mail)', cfg.emailResponderPara, { tipo: 'email', placeholder: 'seuemail@gmail.com' })}
+        ${f.texto('emailEquipe', 'Resumo do dia vai para', cfg.emailEquipe, { tipo: 'email', placeholder: 'seuemail@gmail.com' })}
+        <p class="small"><strong>Quais e-mails mandar:</strong></p>
+        ${Object.entries(ME.TIPOS).map(([id, nome]) => f.chave(`email_${id}`, nome, ativas[id] !== false)).join('')}`,
+      ler: (form) => ({
+        emailAtivo: f.marcado(form, 'emailAtivo'),
+        emailResponderPara: f.valor(form, 'emailResponderPara'),
+        emailEquipe: f.valor(form, 'emailEquipe'),
+        emailAtivas: Object.fromEntries(Object.keys(ME.TIPOS).map((id) => [id, f.marcado(form, `email_${id}`)])),
+      }),
+      validar: (d) => {
+        const e = {};
+        if (d.emailResponderPara && !ME.emailValido(d.emailResponderPara)) e.emailResponderPara = 'E-mail inválido.';
+        if (d.emailEquipe && !ME.emailValido(d.emailEquipe)) e.emailEquipe = 'E-mail inválido.';
+        if (d.emailAtivo && !d.emailResponderPara) e.emailResponderPara = 'Informe para onde vão as respostas.';
+        return e;
+      },
+      salvar: (d) => salvarAutomacoes(d, 'E-mails automáticos atualizados.'),
+    });
+  }
+
   function blocoAutomacoes(cfg, status, geral) {
     const { utils, permissoes, ui, mensagensAutomaticas: MA } = NutriDudu;
     const pode = permissoes.pode('configurarAgente');
@@ -1050,6 +1099,7 @@ NutriDudu.pages.configuracoes = (function () {
         </section>` : ''}
 
       ${blocoAgente(agenteCfg)}
+      ${blocoEmails(automacoesCfg, permissoes.pode('configurarAgente'))}
       ${blocoAutomacoes(automacoesCfg, automacoesStatus, geral)}
       ${blocoSite(siteCfg, servicos, agenteCfg)}
     `;
@@ -1076,6 +1126,7 @@ NutriDudu.pages.configuracoes = (function () {
     container.querySelector('[data-rodar-automacoes]')?.addEventListener('click', (e) => rodarAutomacoes(e.currentTarget));
     container.querySelector('[data-modelos-meta]')?.addEventListener('click', (e) => modelosMeta(e.currentTarget));
     container.querySelector('[data-ver-resumo]')?.addEventListener('click', () => verResumo());
+    container.querySelector('[data-editar-emails]')?.addEventListener('click', () => abrirEmails(automacoesCfg));
     container.querySelectorAll('[data-ver-modelo]').forEach((b) => b.addEventListener('click', () => verModelo(b.dataset.verModelo, automacoesCfg, geral)));
     container.querySelector('[data-editar-site]')?.addEventListener('click', () => abrirSite(siteCfg, servicos));
     container.querySelector('[data-copiar-site]')?.addEventListener('click', async () => {

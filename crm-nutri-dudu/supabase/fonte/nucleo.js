@@ -116,6 +116,24 @@ const NutriDuduServidor = (() => {
     return null;
   }
 
+  // ---------------------------------------------------------------------
+  // E-mail (Resend): envia pelo domínio verificado da clínica.
+  // ---------------------------------------------------------------------
+  function emailResend({ apiKey, fetch: buscar = fetch }) {
+    async function enviar({ de, para, responderPara = null, assunto, html, texto }) {
+      if (!apiKey) throw new Error('RESEND_API_KEY não configurada no Supabase.');
+      const resp = await buscar('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: de, to: [para], ...(responderPara ? { reply_to: responderPara } : {}), subject: assunto, html, text: texto }),
+      });
+      const corpo = await resp.json().catch(() => ({}));
+      if (!resp.ok) throw new Error(`E-mail: ${corpo?.message || resp.status}`);
+      return corpo?.id || null;
+    }
+    return { enviar, configurado: Boolean(apiKey) };
+  }
+
   function whatsappCloud({ token, phoneNumberId, versao = 'v23.0', fetch: buscar = fetch }) {
     async function postar(corpoMensagem) {
       const resp = await buscar(`https://graph.facebook.com/${versao}/${phoneNumberId}/messages`, {
@@ -1451,7 +1469,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
   }
 
   return {
-    criarRelogio, repoSupabase, whatsappCloud, outroFormatoBR, assinaturaValida, chaveTelefone, formatarDoWhatsapp,
+    criarRelogio, repoSupabase, emailResend, whatsappCloud, outroFormatoBR, assinaturaValida, chaveTelefone, formatarDoWhatsapp,
     FERRAMENTAS, instrucoes, criarFerramentas, carregarContexto, montarHistorico, responder, custoDe, STATUS_FUTURO,
     criarWebhook, criarEnvioEquipe, PADRAO_AGENTE, textoDaMensagem, diasDoAgente,
   };

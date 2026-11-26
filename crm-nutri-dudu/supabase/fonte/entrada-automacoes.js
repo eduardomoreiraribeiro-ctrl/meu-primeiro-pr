@@ -11,10 +11,11 @@ const whatsapp = NutriDuduServidor.whatsappCloud({
   phoneNumberId: variavel('WHATSAPP_PHONE_NUMBER_ID'),
   versao: variavel('WHATSAPP_GRAPH_VERSION', 'v23.0'),
 });
+const email = NutriDuduServidor.emailResend({ apiKey: variavel('RESEND_API_KEY') });
 const relogio = NutriDuduServidor.criarRelogio({ offsetClinicaMin: Number(variavel('CLINICA_FUSO_MINUTOS', '-180')) });
 
 const servidor = NutriDuduAutomacoes.criarServidor({
-  automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', '') }),
+  automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', ''), email }),
   preAnamnese: NutriDuduAutomacoes.criarPreAnamnese({ repo, relogio }),
   site: NutriDuduAutomacoes.criarAgendamentoSite({ repo, relogio }),
   checkin: NutriDuduAutomacoes.criarCheckin({ repo, relogio }),

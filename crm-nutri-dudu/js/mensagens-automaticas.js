@@ -162,6 +162,13 @@ NutriDudu.mensagensAutomaticas = (function () {
     idioma: 'pt_BR',
     horaInicio: 8,
     horaFim: 20,
+    // E-mails automáticos (Resend, domínio da clínica). Respostas vão para emailResponderPara.
+    emailAtivo: false,
+    emailRemetente: 'contato@nutriduduribeiro.com.br',
+    emailNome: 'Eduardo Ribeiro – Nutricionista',
+    emailResponderPara: '',
+    emailEquipe: '',
+    emailAtivas: { lembrete: true, preAnamnese: true, checkin: true, checkinLembrete: true, aniversario: true, resumoDia: true },
     whatsappOficial: true, // false: o número da clínica está fora do ar; as mensagens vão pelo WhatsApp do profissional
     horaResumo: 7, // o resumo do dia tem horário próprio, todos os dias (inclusive domingo)
     linkSistema: '',

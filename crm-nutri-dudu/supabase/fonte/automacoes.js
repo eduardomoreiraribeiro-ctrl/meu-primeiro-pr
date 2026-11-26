@@ -48,7 +48,7 @@ const NutriDuduAutomacoes = (() => {
   // =====================================================================
   // Motor das automações
   // =====================================================================
-  function criar({ repo, whatsapp, relogio = S.criarRelogio(), linkPadrao = '' }) {
+  function criar({ repo, whatsapp, relogio = S.criarRelogio(), linkPadrao = '', email = null }) {
     const agoraIso = () => relogio.agora().toISOString();
     const uidDe = (prefixo) => utils.uid(prefixo);
 
@@ -301,6 +301,12 @@ const NutriDuduAutomacoes = (() => {
       const servicoPor = Object.fromEntries(servicos.map((s) => [s.id, s]));
       const profPor = Object.fromEntries(profissionais.map((p) => [p.id, p]));
       const relatorio = { em: inicio.toISOString(), manual, por, enviados: [], pulados: [], erros: [], foraDoHorario: false };
+
+      // E-mails automáticos (independentes do WhatsApp).
+      if (email && cfg.emailAtivo) {
+        try { await rodarEmails({ cfg, configuracoes, pessoas, consultas, lancamentos, conversas, profissionais, relatorio }); }
+        catch (erro) { relatorio.erros.push({ automacao: 'email', pessoa: '', motivo: erro.message || String(erro) }); }
+      }
 
       // WhatsApp oficial da clínica desligado (ex.: número bloqueado): nada sai pelo WhatsApp.
       if (cfg.whatsappOficial === false) {
@@ -607,6 +613,185 @@ const NutriDuduAutomacoes = (() => {
 
       await salvarStatus(relatorio, configuracoes);
       return relatorio;
+    }
+
+    // ---------------- E-mails automáticos ----------------
+
+    const LIMITE_EMAILS_EXECUCAO = 40;
+    const emailDe = (p) => {
+      const e = String(p?.email || '').trim();
+      return NutriDudu.mensagensEmail.emailValido(e) && !p.automacoesDesligadas && !p.emailDesligado ? e : '';
+    };
+
+    /** Manda um e-mail e devolve { ok, motivo }. */
+    async function mandarEmail(cfg, para, tipo, dados) {
+      const m = NutriDudu.mensagensEmail.montar(tipo, { ...dados, assinatura: cfg.emailNome });
+      try {
+        await email.enviar({
+          de: `${cfg.emailNome} <${cfg.emailRemetente}>`, para, responderPara: String(cfg.emailResponderPara || '').trim() || null,
+          assunto: m.assunto, html: m.html, texto: m.texto,
+        });
+        return { ok: true };
+      } catch (erro) {
+        return { ok: false, motivo: erro.message || String(erro) };
+      }
+    }
+
+    async function rodarEmails({ cfg, configuracoes, pessoas, consultas, lancamentos, conversas, profissionais, relatorio }) {
+      const ativas = { ...NutriDudu.mensagensAutomaticas.PADRAO.emailAtivas, ...(cfg.emailAtivas || {}) };
+      const geral = configuracoes.find((c) => c.id === 'geral') || {};
+      const agoraLocal = relogio.agoraLocal();
+      const hoje = utils.isoDia(agoraLocal);
+      let feitos = 0;
+      const registrar = (tipo, pessoa, r, detalhe) => {
+        if (r.ok) { feitos++; relatorio.enviados.push({ automacao: `email:${tipo}`, pessoa: pessoa?.nome || 'equipe', via: 'email', detalhe }); }
+        else relatorio.erros.push({ automacao: `email:${tipo}`, pessoa: pessoa?.nome || 'equipe', motivo: r.motivo });
+      };
+
+      // Resumo do dia para o profissional: todo dia, no horário do resumo, uma vez.
+      const horaResumo = Number.isFinite(Number(cfg.horaResumo)) ? Number(cfg.horaResumo) : 7;
+      const paraEquipe = String(cfg.emailEquipe || '').trim();
+      if (ativas.resumoDia && NutriDudu.mensagensEmail.emailValido(paraEquipe) && agoraLocal.getHours() >= horaResumo) {
+        const marca = configuracoes.find((c) => c.id === 'resumo_dia_email');
+        if (marca?.dia !== hoje) {
+          const [espera, checkins] = await Promise.all([lerOpcional('espera'), lerOpcional('checkins')]);
+          const rd = NutriDudu.resumoDia.montar({ consultas, pessoas, lancamentos, conversas, espera, profissionais, checkins }, { agora: relogio.agora(), local: (iso) => relogio.paraLocal(iso) });
+          const r = await mandarEmail(cfg, paraEquipe, 'resumoDia', { dia: rd.dia, resumo: rd.texto.replace(/\n*Abra o sistema para ver os detalhes\.\s*$/, '') });
+          registrar('resumoDia', null, r);
+          const doc = { id: 'resumo_dia_email', dia: hoje, em: agoraIso(), ok: r.ok, ...(r.ok ? {} : { erro: r.motivo }), atualizadoEm: agoraIso() };
+          if (marca) await repo.grava('configuracoes', { ...marca, ...doc }); else await repo.cria('configuracoes', { ...doc, criadoEm: agoraIso() });
+        }
+      }
+
+      // Pacientes: só no horário de envio (segunda a sábado).
+      if (!dentroDoHorario(cfg)) return;
+      const pessoaPor = Object.fromEntries(pessoas.map((p) => [p.id, p]));
+      const profPor = Object.fromEntries(profissionais.map((p) => [p.id, p]));
+      const base = String(cfg.linkSistema || linkPadrao || '').trim().replace(/\/+$/, '').replace(/\/index\.html$/, '');
+      const agoraMs = relogio.agora().getTime();
+      const pode = () => feitos < LIMITE_EMAILS_EXECUCAO;
+      const NOMES = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
+
+      // 1. Lembrete de consulta (até 48 h antes, pelo menos 2 h antes), uma vez.
+      if (ativas.lembrete) {
+        for (const c of consultas) {
+          if (!pode()) break;
+          if (!STATUS_FUTURO.includes(c.status) || c.email?.lembrete) continue;
+          const falta = new Date(c.inicio).getTime() - agoraMs;
+          if (falta < 2 * HORA || falta > 48 * HORA) continue;
+          const pessoa = pessoaPor[c.pessoaId];
+          const para = emailDe(pessoa);
+          if (!para) continue;
+          const quando = relogio.paraLocal(c.inicio);
+          const linkOnline = c.tipo === 'online' ? String(profPor[c.profissionalId]?.linkOnline || '').trim() : '';
+          const r = await mandarEmail(cfg, para, 'lembrete', { nome: primeiroNome(pessoa.nome), pessoa, dia: utils.diaPorExtenso(quando).toLowerCase(), hora: utils.hora(quando), linkOnline });
+          registrar('lembrete', pessoa, r, relogio.descrever(c.inicio));
+          const atual = await repo.pega('consultas', c.id);
+          if (atual && r.ok) await repo.grava('consultas', { ...atual, email: { ...(atual.email || {}), lembrete: agoraIso() }, atualizadoEm: agoraIso() });
+        }
+      }
+
+      // 2. Pré-anamnese: primeira consulta futura (mais de 2 h), uma vez por pessoa.
+      if (ativas.preAnamnese && base) {
+        const comRealizada = new Set(consultas.filter((c) => c.status === 'realizada').map((c) => c.pessoaId));
+        const jaFoi = new Set(consultas.filter((c) => c.email?.pre || c.preAnamnese?.status === 'preenchida').map((c) => c.pessoaId));
+        const primeira = {};
+        consultas.filter((c) => STATUS_FUTURO.includes(c.status) && new Date(c.inicio).getTime() - agoraMs > 2 * HORA)
+          .sort((a, b) => a.inicio.localeCompare(b.inicio)).forEach((c) => { if (!primeira[c.pessoaId]) primeira[c.pessoaId] = c; });
+        for (const c of Object.values(primeira)) {
+          if (!pode()) break;
+          if (comRealizada.has(c.pessoaId) || jaFoi.has(c.pessoaId)) continue;
+          const pessoa = pessoaPor[c.pessoaId];
+          const para = emailDe(pessoa);
+          if (!para) continue;
+          const link = await criarLink({ cfg, pessoa, consulta: c });
+          if (!link) continue;
+          const r = await mandarEmail(cfg, para, 'preAnamnese', { nome: primeiroNome(pessoa.nome), pessoa, quando: relogio.descrever(c.inicio).replace(/^./, (x) => x.toLowerCase()), link });
+          registrar('preAnamnese', pessoa, r, 'link');
+          const atual = await repo.pega('consultas', c.id);
+          if (atual && r.ok) {
+            await repo.grava('consultas', {
+              ...atual, email: { ...(atual.email || {}), pre: agoraIso() },
+              preAnamnese: { ...(atual.preAnamnese || {}), status: atual.preAnamnese?.status === 'preenchida' ? 'preenchida' : 'enviada', enviadaEm: atual.preAnamnese?.enviadaEm || agoraIso() },
+              atualizadoEm: agoraIso(),
+            });
+          }
+        }
+      }
+
+      // 3 e 4. Check-in programado (cria o link e manda) e lembrete no último dia do prazo.
+      if ((ativas.checkin || ativas.checkinLembrete) && base) {
+        const CK = NutriDudu.checkin;
+        const ckCfg = CK.configuracao(configuracoes.find((c) => c.id === 'checkin') || {});
+        const prazoTexto = (iso) => { const d = relogio.paraLocal(iso); return `${NOMES[d.getDay()]} (${utils.data(d).slice(0, 5)})`; };
+        // Com o WhatsApp oficial ligado, quem cria o check-in programado é o envio do WhatsApp.
+        if (ativas.checkin && cfg.whatsappOficial === false) {
+          for (const pessoa of pessoas) {
+            if (!pode()) break;
+            const prog = pessoa.checkinProgramado;
+            if (!prog?.ativo || prog.pausado || pessoa.status === 'inativo') continue;
+            const para = emailDe(pessoa);
+            if (!para) continue;
+            const slot = CK.ultimoEnvioDevido(prog, agoraLocal);
+            if (!slot) continue;
+            const chaveSlot = CK.isoLocal(slot);
+            if (prog.ultimoSlot === chaveSlot || agoraLocal - slot > 24 * HORA) continue;
+            const q = ckCfg.questionarios.find((x) => x.id === prog.questionarioId && x.ativo !== false);
+            if (!q) continue;
+            const codigo = codigoAleatorio();
+            const fim = new Date(slot); fim.setDate(fim.getDate() + (Number(prog.prazoDias) || 3)); fim.setHours(23, 59, 0, 0);
+            const prazo = relogio.deLocal(fim).toISOString();
+            const id = await resumo(codigo);
+            const agora = agoraIso();
+            await repo.cria('checkins', {
+              id, pessoaId: pessoa.id, questionarioId: q.id, titulo: q.titulo, perguntas: CK.montarPerguntas(q, ckCfg.perguntas), codigo,
+              enviadoEm: agora, prazo, enviadoPor: 'automatico', automatico: true, canal: 'email', respostas: null, score: null, criadoEm: agora, atualizadoEm: agora,
+            });
+            const r = await mandarEmail(cfg, para, 'checkin', { nome: primeiroNome(pessoa.nome), pessoa, titulo: q.titulo.toLowerCase(), prazo: prazoTexto(prazo), link: `${base}/c/${codigo}` });
+            registrar('checkin', pessoa, r, q.titulo);
+            const atual = await repo.pega('pessoas', pessoa.id);
+            if (r.ok) {
+              await repo.grava('pessoas', { ...atual, checkinProgramado: { ...(atual.checkinProgramado || prog), ultimoSlot: chaveSlot }, atualizadoEm: agoraIso() });
+            } else {
+              const ck = await repo.pega('checkins', id);
+              if (ck) await repo.grava('checkins', { ...ck, cancelado: true, canceladoEm: agoraIso(), motivoCancelamento: 'falha no envio do e-mail' });
+            }
+          }
+        }
+        if (ativas.checkinLembrete) {
+          const checkins = await lerOpcional('checkins');
+          for (const ck of checkins) {
+            if (!pode()) break;
+            if (ck.respondidoEm || ck.cancelado || !ck.codigo || !ck.prazo || ck.emailLembreteEm) continue;
+            if (utils.isoDia(relogio.paraLocal(ck.prazo)) !== hoje || new Date(ck.prazo).getTime() < agoraMs) continue;
+            const pessoa = pessoaPor[ck.pessoaId];
+            const para = emailDe(pessoa);
+            if (!para) continue;
+            const r = await mandarEmail(cfg, para, 'checkinLembrete', { nome: primeiroNome(pessoa.nome), pessoa, titulo: String(ck.titulo || 'check-in').toLowerCase(), link: `${base}/c/${ck.codigo}` });
+            registrar('checkinLembrete', pessoa, r, ck.titulo);
+            const atual = await repo.pega('checkins', ck.id);
+            if (atual && r.ok) await repo.grava('checkins', { ...atual, emailLembreteEm: agoraIso(), atualizadoEm: agoraIso() });
+          }
+        }
+      }
+
+      // 5. Aniversário: clientes e ex-clientes, uma vez por ano.
+      if (ativas.aniversario) {
+        const mesDia = hoje.slice(5);
+        const bissexto = new Date(agoraLocal.getFullYear(), 1, 29).getMonth() === 1;
+        const chave = `aniversario_email_${agoraLocal.getFullYear()}`;
+        for (const pessoa of pessoas) {
+          if (!pode()) break;
+          if (!['ativo', 'inativo'].includes(pessoa.status) || !pessoa.dataNascimento || pessoa.automacoes?.[chave]?.ok) continue;
+          const md = String(pessoa.dataNascimento).slice(5, 10);
+          if (md !== mesDia && !(md === '02-29' && !bissexto && mesDia === '02-28')) continue;
+          const para = emailDe(pessoa);
+          if (!para) continue;
+          const r = await mandarEmail(cfg, para, 'aniversario', { nome: primeiroNome(pessoa.nome), pessoa });
+          registrar('aniversario', pessoa, r);
+          if (r.ok) await marcar('pessoas', pessoa.id, chave, { em: agoraIso(), ok: true, via: 'email' });
+        }
+      }
     }
 
     // ---------------- Resumo do dia ----------------

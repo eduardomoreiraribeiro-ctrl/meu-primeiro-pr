@@ -25,7 +25,7 @@ async function quemEsta(cabecalho) {
 
 const envio = NutriDuduServidor.criarEnvioEquipe({
   repo, whatsapp, relogio, quemEsta,
-  automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', '') }),
+  automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', ''), email: NutriDuduServidor.emailResend({ apiKey: variavel('RESEND_API_KEY') }) }),
 });
 
 Deno.serve((req) => envio.atender(req));
