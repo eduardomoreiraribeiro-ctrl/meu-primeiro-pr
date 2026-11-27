@@ -1834,3 +1834,25 @@ td .ac-selo { padding: 0 4px; border: 0; background: none; font-size: 0.8rem; cu
 .msg-enviada { display: inline-flex; align-items: center; font-size: 0.78rem; font-weight: 600; color: var(--sucesso); background: var(--sucesso-soft); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
 .btn-reenviar { opacity: 0.75; }
 .mm-cartao + .card { margin-top: 1rem; }
+
+/* ---------- Exames bioquímicos ---------- */
+.ex-selo { display: inline-block; white-space: nowrap; font-size: 0.78rem; font-weight: 600; padding: 2px 9px; border-radius: 99px; }
+.ex-abaixo { background: var(--info-soft); color: var(--info); }
+.ex-adequado { background: var(--sucesso-soft); color: var(--sucesso); }
+.ex-acima { background: var(--perigo-soft); color: var(--perigo); }
+.ex-sem { background: var(--surface-2); color: var(--text-muted); }
+.ex-abaixo-texto { color: var(--info); font-weight: 600; }
+.ex-acima-texto { color: var(--perigo); font-weight: 600; }
+.ex-adequado-texto { color: var(--sucesso); }
+.ex-sem-texto { color: var(--text-muted); }
+.ex-tabela th[scope="row"], .ex-evolucao th[scope="row"] { text-align: left; font-weight: 600; }
+.ex-tabela tr.ex-fora { background: var(--alerta-soft); }
+.ex-resumo { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin: 6px 0 12px; font-size: 0.92rem; }
+.ex-resumo strong { display: block; margin-bottom: 4px; }
+.ex-revisao input, .ex-revisao select { width: 100%; min-width: 90px; }
+.ex-revisao .ex-curto { width: 46%; min-width: 60px; }
+.ex-revisao .ex-nota { margin-top: 4px; font-size: 0.85rem; }
+.ex-revisao td { vertical-align: top; }
+.modal.ex-modal { width: min(980px, calc(100vw - 2rem)); }
+.ex-tabela td, .ex-tabela th, .ex-evolucao td, .ex-evolucao th { vertical-align: top; }
+.ex-cartao .secao-cabecalho { align-items: flex-start; flex-wrap: wrap; gap: 8px; }

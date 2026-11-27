@@ -1,8 +1,9 @@
 // Edge Function "whatsapp-enviar" do CRM Nutri Dudu — ARQUIVO GERADO, não edite à mão.
 // Gerado por supabase/montar-funcoes.mjs a partir de js/*.js e supabase/fonte/*.js.
 // Para publicar: Supabase › Edge Functions › (nova função ou a existente) › cole este arquivo inteiro › Deploy.
-// Versão: 473122
+// Versão: d4b280
 
+import Anthropic from 'npm:@anthropic-ai/sdk@0.133.0';
 import { createClient } from 'npm:@supabase/supabase-js@2.117.2';
 
 // Os arquivos do sistema foram escritos para o navegador ("window"); no servidor, window = globalThis.
@@ -1990,15 +1991,19 @@ NutriDudu.acompanhamento = (function () {
    */
   function radar(ctx, agora = new Date()) {
     const { pessoa } = ctx;
-    if (pessoa.status === 'inativo') return { nivel: 'vermelho', rotulo: 'Inativo', motivos: ['Marcado como inativo.'] };
+    if (pessoa.status === 'inativo') return { nivel: 'vermelho', rotulo: 'Inativo', motivos: ['Marcado como inativo.'], situacao: 'inativo' };
     const alertas = NutriDudu.alertas ? NutriDudu.alertas.daPessoa(pessoa, { consultas: ctx.consultas || [], pacotes: ctx.pacotes || [], checkins: ctx.checkins || [] }, ctx.geral || {}, agora) : [];
     const motivos = alertas.map((a) => `${a.nome}: ${a.texto}`);
     // Check-ins sem resposta: os 2 últimos com prazo vencido.
     const vencidos = (ctx.checkins || []).filter((c) => !c.cancelado && c.prazo && new Date(c.prazo) < agora)
       .sort((a, b) => String(b.enviadoEm || b.criadoEm || '').localeCompare(String(a.enviadoEm || a.criadoEm || ''))).slice(0, 2);
-    if (vencidos.length === 2 && vencidos.every((c) => !c.respondidoEm)) motivos.push('Não respondeu os 2 últimos check-ins.');
-    if (alertas.some((a) => a.tipo === 'sumido')) return { nivel: 'vermelho', rotulo: 'Sumindo', motivos };
-    if (motivos.length) return { nivel: 'amarelo', rotulo: 'Atenção', motivos };
+    const semResposta = vencidos.length === 2 && vencidos.every((c) => !c.respondidoEm);
+    if (semResposta) motivos.push('Não respondeu os 2 últimos check-ins.');
+    // Situação principal (para a mensagem pronta do WhatsApp).
+    const tipo = alertas[0]?.tipo;
+    const situacao = alertas.some((a) => a.tipo === 'sumido') ? 'sumido' : tipo === 'pacote_atrasado' ? 'pacote' : tipo || (semResposta ? 'checkin_sem_resposta' : null);
+    if (alertas.some((a) => a.tipo === 'sumido')) return { nivel: 'vermelho', rotulo: 'Sumindo', motivos, situacao };
+    if (motivos.length) return { nivel: 'amarelo', rotulo: 'Atenção', motivos, situacao };
     return { nivel: 'verde', rotulo: 'Em dia', motivos: [] };
   }
 
@@ -3490,7 +3495,94 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
   };
   const json = (corpo, status = 200) => new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 
-  function criarEnvioEquipe({ repo, whatsapp, relogio = criarRelogio(), quemEsta, automacoes = null }) {
+  // ---------------- Exames bioquímicos: leitura com IA ----------------
+  // A IA lê o laudo (PDF ou foto) e devolve cada resultado com a referência do próprio laboratório.
+  // É um apoio: a nutricionista revisa e corrige antes de salvar.
+  const SITUACOES_EXAME = ['abaixo', 'adequado', 'acima', 'sem_referencia'];
+  const FERRAMENTA_EXAME = {
+    name: 'registrar_resultados',
+    description: 'Registra os resultados lidos do laudo de exames laboratoriais.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        laboratorio: { type: 'string', description: 'Nome do laboratório, se constar no laudo.' },
+        dataColeta: { type: 'string', description: 'Data da coleta no formato AAAA-MM-DD, se constar no laudo.' },
+        itens: {
+          type: 'array',
+          description: 'Um item por resultado do laudo, na ordem em que aparecem.',
+          items: {
+            type: 'object',
+            properties: {
+              nome: { type: 'string', description: 'Nome do exame, como em "Ferritina" ou "Vitamina D (25-OH)".' },
+              valor: { type: 'string', description: 'Resultado exatamente como no laudo (número ou texto).' },
+              unidade: { type: 'string' },
+              referencia: { type: 'string', description: 'Faixa de referência do laudo para o sexo e a idade do paciente. Sem faixa no laudo: a referência usual para adultos, terminando com "(referência usual)".' },
+              situacao: { type: 'string', enum: SITUACOES_EXAME },
+              nota: { type: 'string', description: 'Até 15 palavras, só se houver algo relevante para a nutrição. Vazio se não houver.' },
+            },
+            required: ['nome', 'valor', 'situacao'],
+          },
+        },
+        resumo: { type: 'string', description: 'Até 5 tópicos curtos, um por linha começando com "- ", com os pontos de atenção para a nutrição.' },
+      },
+      required: ['itens', 'resumo'],
+    },
+  };
+
+  function instrucoesExame({ sexo, idade }) {
+    return [
+      'Você ajuda um nutricionista brasileiro a ler laudos de exames laboratoriais (bioquímicos) de pacientes.',
+      'Leia o laudo anexado e registre TODOS os resultados com a ferramenta registrar_resultados.',
+      `Paciente: ${sexo === 'M' ? 'homem' : sexo === 'F' ? 'mulher' : 'sexo não informado'}${idade ? `, ${idade} anos` : ''}.`,
+      'Regras:',
+      '- Copie valores e unidades exatamente como estão no laudo. Nunca invente nem estime um valor.',
+      '- Use a faixa de referência impressa no próprio laudo, escolhendo a do sexo e da idade do paciente quando houver mais de uma.',
+      '- Sem faixa no laudo, use a referência usual para adultos e marque "(referência usual)". Se não houver referência confiável, use situacao "sem_referencia".',
+      '- situacao: "abaixo" ou "acima" quando o valor estiver fora da faixa; "adequado" quando estiver dentro.',
+      '- Não faça diagnóstico médico. O resumo traz só pontos de atenção úteis para a conduta nutricional, em português do Brasil, linguagem simples.',
+      '- Se o arquivo não for um laudo de exames ou estiver ilegível, devolva itens vazio e explique no resumo.',
+    ].join('\n');
+  }
+
+  /**
+   * Lê o laudo com o Claude. arquivo: { base64, tipo } (application/pdf ou image/jpeg|png|webp).
+   * Devolve { laboratorio, dataColeta, itens[], resumo, uso }.
+   */
+  async function analisarExame({ anthropic, modelo = 'claude-opus-5-5', arquivo, paciente = {} }) {
+    const tiposImagem = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const anexo = arquivo.tipo === 'application/pdf'
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: arquivo.base64 } }
+      : tiposImagem.includes(arquivo.tipo)
+        ? { type: 'image', source: { type: 'base64', media_type: arquivo.tipo, data: arquivo.base64 } }
+        : null;
+    if (!anexo) throw new Error('Formato não aceito: envie PDF, JPG ou PNG.');
+    const resposta = await anthropic.messages.create({
+      model: modelo,
+      max_tokens: 8000,
+      system: instrucoesExame(paciente),
+      tools: [FERRAMENTA_EXAME],
+      tool_choice: { type: 'tool', name: FERRAMENTA_EXAME.name },
+      messages: [{ role: 'user', content: [anexo, { type: 'text', text: 'Registre os resultados deste laudo.' }] }],
+    });
+    if (resposta.stop_reason === 'max_tokens') throw new Error('O laudo é muito longo para analisar de uma vez. Tente enviar as páginas em partes.');
+    if (resposta.stop_reason === 'refusal') throw new Error('A IA não conseguiu analisar este arquivo.');
+    const uso = resposta.content.find((b) => b.type === 'tool_use' && b.name === FERRAMENTA_EXAME.name);
+    const entrada = uso?.input;
+    if (!entrada || !Array.isArray(entrada.itens)) throw new Error('A IA não devolveu os resultados no formato esperado. Tente de novo.');
+    const texto = (v, max = 200) => String(v ?? '').trim().slice(0, max);
+    return {
+      laboratorio: texto(entrada.laboratorio, 120),
+      dataColeta: /^\d{4}-\d{2}-\d{2}$/.test(entrada.dataColeta || '') ? entrada.dataColeta : '',
+      itens: entrada.itens.slice(0, 200).map((i) => ({
+        nome: texto(i.nome, 120), valor: texto(i.valor, 60), unidade: texto(i.unidade, 40), referencia: texto(i.referencia, 160),
+        situacao: SITUACOES_EXAME.includes(i.situacao) ? i.situacao : 'sem_referencia', nota: texto(i.nota, 200),
+      })).filter((i) => i.nome),
+      resumo: texto(entrada.resumo, 2000),
+      uso: { entrada: resposta.usage?.input_tokens || 0, saida: resposta.usage?.output_tokens || 0 },
+    };
+  }
+
+  function criarEnvioEquipe({ repo, whatsapp, relogio = criarRelogio(), quemEsta, automacoes = null, anthropic = null, baixarExame = null, modeloExames = 'claude-opus-5-5' }) {
     /**
      * Situação de cada modelo do sistema na Meta e, se pedido, cria os que faltam
      * (texto, categoria, exemplo e botões iguais aos de js/mensagens-automaticas.js).
@@ -3539,6 +3631,25 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
       if (!usuario || !['admin', 'profissional', 'recepcao'].includes(usuario.papel)) return json({ erro: 'Seu perfil não tem permissão para isso.' }, 403);
       let corpo;
       try { corpo = await req.json(); } catch (erro) { return json({ erro: 'Pedido inválido.' }, 400); }
+      // Exames: a IA lê o laudo guardado no depósito privado "exames" (só administrador e profissional).
+      if (corpo?.acao === 'analisar-exame') {
+        if (!['admin', 'profissional'].includes(usuario.papel)) return json({ erro: 'Seu perfil não tem acesso aos dados clínicos.' }, 403);
+        if (!anthropic || !baixarExame) return json({ erro: 'A análise com IA não está configurada no servidor.' }, 503);
+        const exame = await repo.pega('exames', String(corpo.exameId || ''));
+        if (!exame?.arquivo?.chave) return json({ erro: 'Exame não encontrado.' }, 404);
+        const pessoa = await repo.pega('pessoas', exame.pessoaId);
+        const idade = pessoa?.dataNascimento ? NutriDudu.utils.idade(pessoa.dataNascimento) : null;
+        try {
+          const arquivo = await baixarExame(exame.arquivo.chave);
+          const analise = await analisarExame({ anthropic, modelo: modeloExames, arquivo: { base64: arquivo.base64, tipo: exame.arquivo.tipo || arquivo.tipo }, paciente: { sexo: pessoa?.sexo, idade } });
+          const agora = new Date().toISOString();
+          await repo.grava('exames', { ...exame, analiseIA: { ...analise, em: agora, modelo: modeloExames, por: usuario.nome } });
+          return json({ ok: true, analise: { ...analise, em: agora } });
+        } catch (erro) {
+          console.error('analisar-exame', erro);
+          return json({ erro: erro.message || 'Não foi possível analisar o exame.' }, 502);
+        }
+      }
       // Administrador: rodar as mensagens automáticas agora (sem esperar o agendamento).
       if (corpo?.acao === 'rodar-automacoes') {
         if (usuario.papel !== 'admin') return json({ erro: 'Só o administrador roda as mensagens automáticas.' }, 403);
@@ -3602,7 +3713,7 @@ Chave Pix: ${geral.chavePix || 'não cadastrada (chame a equipe)'}${blocoProjeto
   return {
     criarRelogio, repoSupabase, emailResend, whatsappCloud, outroFormatoBR, assinaturaValida, chaveTelefone, formatarDoWhatsapp,
     FERRAMENTAS, instrucoes, criarFerramentas, carregarContexto, montarHistorico, responder, custoDe, STATUS_FUTURO,
-    criarWebhook, criarEnvioEquipe, PADRAO_AGENTE, textoDaMensagem, diasDoAgente,
+    criarWebhook, criarEnvioEquipe, PADRAO_AGENTE, textoDaMensagem, diasDoAgente, analisarExame, FERRAMENTA_EXAME,
   };
 })();
 
@@ -5190,8 +5301,22 @@ async function quemEsta(cabecalho) {
   return { id: data.user.id, nome: perfil.nome || data.user.email, papel: perfil.papel };
 }
 
+/** Baixa um laudo do depósito privado "exames" e devolve { base64, tipo }. */
+async function baixarExame(chave) {
+  const { data, error } = await supabase.storage.from('exames').download(String(chave));
+  if (error || !data) throw new Error('Não encontrei o arquivo do exame.');
+  const bytes = new Uint8Array(await data.arrayBuffer());
+  if (bytes.length > 20 * 1024 * 1024) throw new Error('Arquivo grande demais (máximo 20 MB).');
+  let binario = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binario += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { base64: btoa(binario), tipo: data.type || '' };
+}
+
 const envio = NutriDuduServidor.criarEnvioEquipe({
   repo, whatsapp, relogio, quemEsta,
+  anthropic: variavel('ANTHROPIC_API_KEY') ? new Anthropic({ apiKey: variavel('ANTHROPIC_API_KEY') }) : null,
+  baixarExame,
+  modeloExames: variavel('MODELO_EXAMES', 'claude-opus-5-5'),
   automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', ''), email: NutriDuduServidor.emailResend({ apiKey: variavel('RESEND_API_KEY') }) }),
 });
 

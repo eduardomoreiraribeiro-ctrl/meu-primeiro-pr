@@ -18,7 +18,7 @@ const COMPARTILHADO = ['js/config.js', 'js/utils.js', 'js/calculos.js', 'js/agen
 
 const FUNCOES = {
   'whatsapp-webhook': { imports: ['anthropic', 'supabase'], entrada: 'supabase/fonte/entrada-webhook.js' },
-  'whatsapp-enviar': { imports: ['supabase'], entrada: 'supabase/fonte/entrada-enviar.js' },
+  'whatsapp-enviar': { imports: ['anthropic', 'supabase'], entrada: 'supabase/fonte/entrada-enviar.js' },
   'whatsapp-automacoes': { imports: ['supabase'], entrada: 'supabase/fonte/entrada-automacoes.js' },
 };
 

@@ -145,7 +145,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos', 'exames'
   ] loop
     execute format($f$
       create table if not exists public.%I (
@@ -185,7 +185,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos', 'exames'
   ] loop
     execute format('drop policy if exists "ler" on public.%I', t);
     execute format('drop policy if exists "criar" on public.%I', t);
@@ -210,7 +210,7 @@ begin
   end loop;
 
   -- c) Prontuário: só administrador e profissional (a recepção não recebe nada).
-  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins', 'acompanhamentos'] loop
+  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins', 'acompanhamentos', 'exames'] loop
     execute format('create policy "ler" on public.%I for select using (public.ve_clinico())', t);
     execute format('create policy "criar" on public.%I for insert with check (public.ve_clinico())', t);
     execute format('create policy "alterar" on public.%I for update using (public.ve_clinico()) with check (public.ve_clinico())', t);
@@ -286,7 +286,7 @@ do $$
 declare
   t text;
 begin
-  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins', 'acompanhamentos'] loop
+  foreach t in array array['anamneses', 'avaliacoes', 'fotos', 'consultas_clinico', 'checkins', 'acompanhamentos', 'exames'] loop
     execute format('drop trigger if exists auditar on public.%I', t);
     execute format('create trigger auditar after insert or update or delete on public.%I
                     for each row execute function public.auditar()', t);
@@ -313,6 +313,24 @@ create policy "fotos: clínico substitui" on storage.objects
 drop policy if exists "fotos: clínico apaga" on storage.objects;
 create policy "fotos: clínico apaga" on storage.objects
   for delete using (bucket_id = 'fotos' and public.ve_clinico());
+
+-- Exames bioquímicos (PDF ou foto do laudo): depósito privado, só administrador e profissional; até 20 MB.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('exames', 'exames', false, 20971520, array['application/pdf', 'image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set public = false, file_size_limit = 20971520, allowed_mime_types = array['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+
+drop policy if exists "exames: clínico lê" on storage.objects;
+create policy "exames: clínico lê" on storage.objects
+  for select using (bucket_id = 'exames' and public.ve_clinico());
+drop policy if exists "exames: clínico envia" on storage.objects;
+create policy "exames: clínico envia" on storage.objects
+  for insert with check (bucket_id = 'exames' and public.ve_clinico());
+drop policy if exists "exames: clínico substitui" on storage.objects;
+create policy "exames: clínico substitui" on storage.objects
+  for update using (bucket_id = 'exames' and public.ve_clinico());
+drop policy if exists "exames: clínico apaga" on storage.objects;
+create policy "exames: clínico apaga" on storage.objects
+  for delete using (bucket_id = 'exames' and public.ve_clinico());
 
 
 -- ---------------------------------------------------------------------
@@ -354,7 +372,7 @@ begin
   foreach t in array array[
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'consultas_clinico', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos'
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos', 'exames'
   ] loop
     begin
       execute format('alter publication supabase_realtime add table public.%I', t);

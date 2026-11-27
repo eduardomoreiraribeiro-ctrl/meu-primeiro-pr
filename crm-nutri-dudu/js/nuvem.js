@@ -9,12 +9,12 @@ NutriDudu.nuvem = (function () {
   const TABELAS = [
     'configuracoes', 'profissionais', 'horarios', 'bloqueios', 'servicos',
     'pessoas', 'consultas', 'anamneses', 'avaliacoes', 'fotos',
-    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos',
+    'pacotes', 'lancamentos', 'interacoes', 'conversas', 'mensagens', 'espera', 'checkins', 'acompanhamentos', 'exames',
   ];
   // Campos clínicos guardados à parte (a recepção nem recebe esses dados).
   const CLINICOS = { consultas: { tabela: 'consultas_clinico', campos: ['anotacoes', 'conduta'] } };
   // Tabelas de fases novas: se ainda não existirem no banco, o sistema abre sem elas.
-  const OPCIONAIS = ['espera', 'checkins', 'acompanhamentos'];
+  const OPCIONAIS = ['espera', 'checkins', 'acompanhamentos', 'exames'];
   const PAGINA = 1000;
   const BUCKET = 'fotos';
 
@@ -332,6 +332,34 @@ NutriDudu.nuvem = (function () {
     }
   }
 
+  // ---------------- Exames (Storage privado "exames") ----------------
+
+  const BUCKET_EXAMES = 'exames';
+  async function exameSalvar(chave, blob) {
+    const { error } = await obterCliente().storage.from(BUCKET_EXAMES).upload(chave, blob, { upsert: true, contentType: blob.type || 'application/octet-stream' });
+    if (error) falhar(error, 'Não foi possível enviar o arquivo do exame.');
+  }
+  async function exameLer(chave) {
+    const { data, error } = await obterCliente().storage.from(BUCKET_EXAMES).download(chave);
+    if (error || !data) return null;
+    return data;
+  }
+  async function exameRemover(chave) {
+    const { error } = await obterCliente().storage.from(BUCKET_EXAMES).remove([chave]);
+    if (error) falhar(error, 'Não foi possível apagar o arquivo do exame.');
+  }
+  /** Pede ao servidor a leitura do laudo com IA. */
+  async function analisarExame(exameId) {
+    const { data, error } = await obterCliente().functions.invoke('whatsapp-enviar', { body: { acao: 'analisar-exame', exameId } });
+    if (error) {
+      let msg = '';
+      try { msg = (await error.context?.json())?.erro || ''; } catch (e) { /* resposta sem JSON */ }
+      throw new Error(msg || 'Não foi possível falar com o servidor. Confira se a função "whatsapp-enviar" foi atualizada no Supabase.');
+    }
+    if (data?.erro) throw new Error(data.erro);
+    return data.analise;
+  }
+
   // ---------------- WhatsApp e Assistente (fase 10) ----------------
 
   /** Envia uma mensagem da equipe pelo WhatsApp (função whatsapp-enviar no Supabase). */
@@ -408,5 +436,6 @@ NutriDudu.nuvem = (function () {
     sessaoAtual, entrar, sair, trocarSenha, carregarPerfil, perfilAtual, veClinico, listarPerfis, atualizarPerfil, registrarAcesso,
     carregarTudo, criar, alterar, apagar, gravarLote, substituirTudo, ouvir, parar,
     fotoSalvar, fotoLer, fotoRemover, fotosLimpar,
+    exameSalvar, exameLer, exameRemover, analisarExame,
   };
 })();

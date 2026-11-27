@@ -23,8 +23,22 @@ async function quemEsta(cabecalho) {
   return { id: data.user.id, nome: perfil.nome || data.user.email, papel: perfil.papel };
 }
 
+/** Baixa um laudo do depósito privado "exames" e devolve { base64, tipo }. */
+async function baixarExame(chave) {
+  const { data, error } = await supabase.storage.from('exames').download(String(chave));
+  if (error || !data) throw new Error('Não encontrei o arquivo do exame.');
+  const bytes = new Uint8Array(await data.arrayBuffer());
+  if (bytes.length > 20 * 1024 * 1024) throw new Error('Arquivo grande demais (máximo 20 MB).');
+  let binario = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) binario += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return { base64: btoa(binario), tipo: data.type || '' };
+}
+
 const envio = NutriDuduServidor.criarEnvioEquipe({
   repo, whatsapp, relogio, quemEsta,
+  anthropic: variavel('ANTHROPIC_API_KEY') ? new Anthropic({ apiKey: variavel('ANTHROPIC_API_KEY') }) : null,
+  baixarExame,
+  modeloExames: variavel('MODELO_EXAMES', 'claude-opus-5-5'),
   automacoes: NutriDuduAutomacoes.criar({ repo, whatsapp, relogio, linkPadrao: variavel('SITE_URL', ''), email: NutriDuduServidor.emailResend({ apiKey: variavel('RESEND_API_KEY') }) }),
 });
 

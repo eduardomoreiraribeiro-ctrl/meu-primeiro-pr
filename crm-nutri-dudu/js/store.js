@@ -32,6 +32,7 @@ NutriDudu.store = (function () {
     espera: 'esp',
     checkins: 'chk',
     acompanhamentos: 'acp',
+    exames: 'exa',
   };
 
   const nuvem = () => NutriDudu.nuvem?.ativa();
