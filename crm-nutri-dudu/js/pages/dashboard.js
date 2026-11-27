@@ -381,10 +381,27 @@ NutriDudu.pages.dashboard = (function () {
 
     let corpo;
     if (modo === 'mensagens') {
+      const pessoaPorIdTodas = porId(todasPessoas);
+      const enviadas = NutriDudu.mensagensProntas ? NutriDudu.mensagensProntas.enviadasHoje(await store.list('interacoes')) : [];
+      const cartaoEnviadas = `
+        <section class="card acao">
+          <div class="secao-cabecalho">
+            <h2 class="card-title">✓ Enviadas hoje</h2>
+            <span class="contador">${enviadas.length}</span>
+          </div>
+          <p class="muted small card-sub">Tudo que você abriu no WhatsApp hoje, por aqui ou pelos botões 💬 WhatsApp das outras telas</p>
+          ${enviadas.length ? `<ul class="lista-acao">${enviadas.map((i) => {
+            const pe = pessoaPorIdTodas[i.pessoaId];
+            const [tipo] = String(i.descricao).split(':');
+            return `<li><span class="item-acao-texto">${pe ? linkPessoa(pe) : 'Paciente'}<span class="muted small bloco">${utils.escapeHtml(tipo)}${/já enviado/.test(i.descricao) ? ' · marcado como já enviado' : ''}</span></span>
+              <span class="item-acao-botoes"><span class="msg-enviada">✓ ${utils.hora(i.dataHora)}</span></span></li>`;
+          }).join('')}</ul>` : '<p class="muted">Nenhuma mensagem enviada hoje ainda.</p>'}
+        </section>`;
       corpo = `
         ${ui.cabecalho('Mensagens do dia', 'O que mandar hoje pelo seu WhatsApp: toque em "Abrir no WhatsApp", confira e envie')}
         ${manuais ? NutriDudu.mensagensManuais.cartao(manuais)
-          : `<div class="card"><p>As mensagens estão saindo sozinhas pelo WhatsApp da clínica, então não tem fila pra mandar à mão.</p><p class="muted small">Isso muda em Configurações → Mensagens automáticas.</p></div>`}`;
+          : `<div class="card"><p>As mensagens estão saindo sozinhas pelo WhatsApp da clínica, então não tem fila pra mandar à mão.</p><p class="muted small">Isso muda em Configurações → Mensagens automáticas.</p></div>`}
+        ${cartaoEnviadas}`;
     } else if (modo === 'pendencias') {
       corpo = `
         ${ui.cabecalho('Pendências', 'O que precisa de atenção: confirmar consultas, retornos, check-ins em queda, leads e aniversários')}

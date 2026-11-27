@@ -100,8 +100,34 @@ NutriDudu.mensagensProntas = (function () {
     return '';
   };
 
+  // Por quantos dias o botão mostra "✓ Enviada" (depois disso, a situação pode ter mudado).
+  const JANELA_DIAS = { checkin_queda: 7, checkin_sem_resposta: 7, cobranca: 7, pacote: 15, pacote_atrasado: 15, confirmar: 3, aniversario: 2 };
+
+  /** Chave do envio: por consulta, por cobrança, por ano (aniversário) ou só pela situação. */
+  function chave(situacao, ctx = {}) {
+    if (situacao === 'confirmar' && ctx.consulta) return `confirmar:${ctx.consulta.id}`;
+    if (situacao === 'cobranca' && ctx.lancamento) return `cobranca:${ctx.lancamento.id}`;
+    if (situacao === 'aniversario') return `aniversario:${new Date().getFullYear()}`;
+    return situacao;
+  }
+
+  /** Quando a mensagem desta situação foi enviada (ISO) ou null. */
+  function enviadaEm(pessoa, situacao, ctx = {}, agora = new Date()) {
+    const em = pessoa?.prontas?.[chave(situacao, ctx)];
+    if (!em) return null;
+    const dias = JANELA_DIAS[situacao] ?? 30;
+    return agora - new Date(em) < dias * 864e5 ? em : null;
+  }
+
+  const rotuloEnviada = (iso) => {
+    const { utils } = NutriDudu;
+    const quando = utils.isoDia(iso) === utils.isoDia(new Date()) ? `hoje às ${utils.hora(iso)}` : utils.data(iso).slice(0, 5);
+    return `✓ Enviada ${quando}`;
+  };
+
   /**
    * Botão "WhatsApp" que abre a conversa com a mensagem pronta (sem mensagem: abre a conversa em branco).
+   * Se a mensagem já foi enviada, mostra "✓ Enviada" e o botão vira "Enviar de novo".
    * opcoes: { rotulo, classe }.
    */
   function botao(pessoa, situacao, ctx = {}, { rotulo = 'WhatsApp', classe = 'btn btn-pequeno' } = {}) {
@@ -110,19 +136,23 @@ NutriDudu.mensagensProntas = (function () {
     if (!fone) return '';
     const t = situacao ? texto(situacao, pessoa, ctx) : '';
     const href = `https://wa.me/${fone}${t ? `?text=${encodeURIComponent(t)}` : ''}`;
-    return `<a class="${classe}" href="${escapeHtml(href)}" target="_blank" rel="noopener"${t ? ` data-msg-pronta="${escapeHtml(situacao)}" data-pessoa="${escapeHtml(pessoa.id)}" title="Abre o WhatsApp com a mensagem pronta"` : ''} aria-label="WhatsApp de ${escapeHtml(pessoa.nome)}">${t ? '💬 ' : ''}${escapeHtml(rotulo)}</a>`;
+    const em = t ? enviadaEm(pessoa, situacao, ctx) : null;
+    const link = `<a class="${classe}${em ? ' btn-reenviar' : ''}" href="${escapeHtml(href)}" target="_blank" rel="noopener"${t ? ` data-msg-pronta="${escapeHtml(situacao)}" data-chave="${escapeHtml(chave(situacao, ctx))}" data-pessoa="${escapeHtml(pessoa.id)}" title="Abre o WhatsApp com a mensagem pronta"` : ''} aria-label="WhatsApp de ${escapeHtml(pessoa.nome)}">${em ? 'Enviar de novo' : `${t ? '💬 ' : ''}${escapeHtml(rotulo)}`}</a>`;
+    return em ? `<span class="msg-enviada" title="Mensagem aberta no WhatsApp em ${escapeHtml(NutriDudu.utils.data(em))} às ${escapeHtml(NutriDudu.utils.hora(em))}">${escapeHtml(rotuloEnviada(em))}</span> ${link}` : link;
   }
 
-  /** Anota no histórico (e marca retorno/reativação, para a fila do dia não repetir). */
-  async function registrar(pessoaId, situacao) {
+  /** Anota que foi enviada (no cadastro e no histórico) e marca retorno/reativação, para a fila do dia não repetir. */
+  async function registrar(pessoaId, situacao, chaveEnvio = situacao) {
     const { store, permissoes } = NutriDudu;
     const s = SITUACOES[situacao];
     if (!s) return;
     const agoraIso = new Date().toISOString();
     try {
-      if (s.grupo) {
-        const p = await store.get('pessoas', pessoaId);
-        if (p) await store.update('pessoas', p.id, { automacoes: { ...(p.automacoes || {}), [s.grupo]: { em: agoraIso, ok: true, via: 'manual' } } });
+      const p = await store.get('pessoas', pessoaId);
+      if (p) {
+        const mudancas = { prontas: { ...(p.prontas || {}), [chaveEnvio]: agoraIso } };
+        if (s.grupo) mudancas.automacoes = { ...(p.automacoes || {}), [s.grupo]: { em: agoraIso, ok: true, via: 'manual' } };
+        await store.update('pessoas', p.id, mudancas);
       }
       await store.create('interacoes', {
         pessoaId, dataHora: agoraIso, tipo: 'nota', autor: permissoes.atual(), automatico: true,
@@ -133,11 +163,25 @@ NutriDudu.mensagensProntas = (function () {
     }
   }
 
-  // Um ouvinte só, para todos os botões (em qualquer tela).
+  // Um ouvinte só, para todos os botões (em qualquer tela). Marca na hora, sem esperar a tela recarregar.
   document.addEventListener('click', (e) => {
     const a = e.target.closest?.('a[data-msg-pronta]');
-    if (a) registrar(a.dataset.pessoa, a.dataset.msgPronta);
+    if (!a) return;
+    if (!a.classList.contains('btn-reenviar')) {
+      a.insertAdjacentHTML('beforebegin', `<span class="msg-enviada">${NutriDudu.utils.escapeHtml(rotuloEnviada(new Date().toISOString()))}</span> `);
+      a.classList.add('btn-reenviar');
+      a.textContent = 'Enviar de novo';
+    }
+    registrar(a.dataset.pessoa, a.dataset.msgPronta, a.dataset.chave || a.dataset.msgPronta);
   });
 
-  return { SITUACOES, texto, botao, registrar };
+  /** Mensagens abertas no WhatsApp hoje (prontas e da fila do dia), da mais recente para a mais antiga. */
+  function enviadasHoje(interacoes, agora = new Date()) {
+    const hoje = NutriDudu.utils.isoDia(agora);
+    return interacoes
+      .filter((i) => i.automatico && NutriDudu.utils.isoDia(i.dataHora) === hoje && /aberta no WhatsApp|marcado como já enviado/.test(i.descricao || ''))
+      .sort((a, b) => String(b.dataHora).localeCompare(String(a.dataHora)));
+  }
+
+  return { SITUACOES, texto, botao, registrar, enviadaEm, enviadasHoje };
 })();

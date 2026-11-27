@@ -1829,3 +1829,8 @@ td .ac-selo { padding: 0 4px; border: 0; background: none; font-size: 0.8rem; cu
   .nav-grupo { display: none; }
   .nav-link { flex: 0 0 auto; min-width: 62px; }
 }
+
+/* Mensagem pronta já enviada */
+.msg-enviada { display: inline-flex; align-items: center; font-size: 0.78rem; font-weight: 600; color: var(--sucesso); background: var(--sucesso-soft); border-radius: 99px; padding: 3px 10px; white-space: nowrap; }
+.btn-reenviar { opacity: 0.75; }
+.mm-cartao + .card { margin-top: 1rem; }
